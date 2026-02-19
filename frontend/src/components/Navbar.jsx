@@ -1,0 +1,178 @@
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X, Gift, Activity, Settings, ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const Navbar = () => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  const navLinks = [
+    { 
+      label: "Bonuslar", 
+      icon: Gift,
+      children: [
+        { label: "Deneme Bonusu", href: "/deneme-bonusu" },
+        { label: "Hoşgeldin Bonusu", href: "/hosgeldin-bonusu" },
+        { label: "Tüm Bonuslar", href: "/bonus/deneme" }
+      ]
+    },
+    { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
+    { label: "Admin", href: "/admin", icon: Settings }
+  ];
+
+  const isActive = (href) => location.pathname === href;
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 h-16" data-testid="navbar">
+      <div className="container mx-auto h-full px-6 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2 group" data-testid="nav-logo">
+          <div className="w-10 h-10 rounded-lg bg-neon-green flex items-center justify-center">
+            <span className="font-heading text-black text-xl font-black">DS</span>
+          </div>
+          <div className="hidden sm:block">
+            <span className="font-heading text-lg font-bold tracking-tight uppercase group-hover:text-neon-green transition-colors">
+              DSBN
+            </span>
+          </div>
+        </Link>
+
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex items-center gap-1">
+          {navLinks.map((link, index) => (
+            link.children ? (
+              <DropdownMenu key={index}>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="font-heading uppercase tracking-wide text-sm hover:text-neon-green"
+                    data-testid={`nav-dropdown-${link.label.toLowerCase()}`}
+                  >
+                    <link.icon className="w-4 h-4 mr-2" />
+                    {link.label}
+                    <ChevronDown className="w-4 h-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {link.children.map((child, childIndex) => (
+                    <DropdownMenuItem key={childIndex} asChild>
+                      <Link 
+                        to={child.href}
+                        className={isActive(child.href) ? "text-neon-green" : ""}
+                        data-testid={`nav-link-${child.label.toLowerCase().replace(/\s+/g, '-')}`}
+                      >
+                        {child.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                key={index}
+                variant="ghost"
+                asChild
+                className={`font-heading uppercase tracking-wide text-sm ${
+                  isActive(link.href) ? "text-neon-green" : "hover:text-neon-green"
+                }`}
+              >
+                <Link to={link.href} data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                  <link.icon className="w-4 h-4 mr-2" />
+                  {link.label}
+                </Link>
+              </Button>
+            )
+          ))}
+        </div>
+
+        {/* CTA Button */}
+        <div className="hidden md:block">
+          <Button 
+            className="bg-neon-green text-black font-bold uppercase tracking-wide text-sm hover:bg-neon-green/90 neon-glow press"
+            asChild
+            data-testid="nav-cta-btn"
+          >
+            <Link to="/deneme-bonusu">
+              <Gift className="w-4 h-4 mr-2" />
+              Bonus Al
+            </Link>
+          </Button>
+        </div>
+
+        {/* Mobile Menu Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          data-testid="mobile-menu-btn"
+        >
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </Button>
+      </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed inset-x-0 top-16 bottom-0 bg-background/95 backdrop-blur-lg md:hidden z-40"
+            data-testid="mobile-menu"
+          >
+            <div className="flex flex-col items-center justify-center h-full gap-8">
+              <Link 
+                to="/deneme-bonusu" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="font-heading text-2xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
+              >
+                Deneme Bonusu
+              </Link>
+              <Link 
+                to="/hosgeldin-bonusu" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="font-heading text-2xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
+              >
+                Hoşgeldin Bonusu
+              </Link>
+              <Link 
+                to="/spor-haberleri" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="font-heading text-2xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
+              >
+                Spor Haberleri
+              </Link>
+              <Link 
+                to="/admin" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="font-heading text-2xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
+              >
+                Admin
+              </Link>
+              <Button 
+                className="bg-neon-green text-black font-bold uppercase tracking-wide hover:bg-neon-green/90 neon-glow mt-4"
+                asChild
+              >
+                <Link to="/deneme-bonusu" onClick={() => setMobileMenuOpen(false)}>
+                  <Gift className="w-5 h-5 mr-2" />
+                  Bonus Al
+                </Link>
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
+  );
+};
+
+export default Navbar;
