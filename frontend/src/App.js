@@ -65,6 +65,7 @@ function AppLayout({ isLoading }) {
           <Route path="/bonus/:type" element={<BonusGuidePage />} />
           <Route path="/spor-haberleri" element={<SportsNewsPage />} />
           <Route path="/makale/:slug" element={<ArticlePage />} />
+          <Route path="/mac/:slug" element={<MatchDetailPage />} />
 
           {/* Admin routes — SADECE admin subdomainde kayıtlıdır */}
           {adminDomain && (
