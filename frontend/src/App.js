@@ -11,6 +11,7 @@ import SportsNewsPage from "@/pages/SportsNewsPage";
 import ArticlePage from "@/pages/ArticlePage";
 import AdminPage from "@/pages/AdminPage";
 import LoginPage from "@/pages/LoginPage";
+import MatchDetailPage from "@/pages/MatchDetailPage";
 
 // Components
 import Navbar from "@/components/Navbar";
