@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Wand2, BarChart3, FileText, Gift, RefreshCw,
   Globe, TrendingUp, Target, Link2, Calendar, Server, Check,
-  AlertCircle, Loader2, Copy, ExternalLink, Settings
+  AlertCircle, Loader2, Copy, ExternalLink, Settings, LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
