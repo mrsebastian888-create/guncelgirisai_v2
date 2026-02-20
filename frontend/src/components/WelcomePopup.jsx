@@ -8,9 +8,11 @@ const WelcomePopup = ({ onClose }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if popup was shown this session
-    const popupShown = sessionStorage.getItem("popup_shown");
-    if (!popupShown) {
+    // Check if age was already verified
+    const ageVerified = localStorage.getItem("age_verified");
+    if (ageVerified) {
+      onClose?.();
+    } else {
       setIsVisible(true);
     }
   }, []);
