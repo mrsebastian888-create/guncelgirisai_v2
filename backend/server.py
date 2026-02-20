@@ -1,69 +1,433 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends
+"""
+Multi-Tenant Authority Platform API
+Production-Ready Backend with Hardening
+Version: 3.0.0
+"""
+
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from contextlib import asynccontextmanager
 import os
+import sys
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Dict, Any
+import json
+import time
 import uuid
+import hashlib
+import subprocess
+import asyncio
+from pathlib import Path
 from datetime import datetime, timezone, timedelta
+from typing import List, Optional, Dict, Any, Callable
+from pydantic import BaseModel, Field, ConfigDict
+from collections import defaultdict
 import httpx
 import re
-import json
-import hashlib
-import asyncio
+
+# ============== CONFIGURATION ==============
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Environment validation with fail-fast
+def get_required_env(key: str, default: str = None) -> str:
+    """Get required environment variable with fail-fast behavior"""
+    value = os.environ.get(key, default)
+    if value is None:
+        print(f"[FATAL] Required environment variable '{key}' is not set.", file=sys.stderr)
+        print(f"[FATAL] Please set {key} in your .env file or environment.", file=sys.stderr)
+        sys.exit(1)
+    return value
 
-# Environment variables
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-FOOTBALL_API_KEY = os.environ.get('FOOTBALL_DATA_API_KEY', 'demo')
-CLOUDFLARE_API_TOKEN = os.environ.get('CLOUDFLARE_API_TOKEN', '')
-CLOUDFLARE_ACCOUNT_ID = os.environ.get('CLOUDFLARE_ACCOUNT_ID', '')
+def get_optional_env(key: str, default: str = "") -> str:
+    """Get optional environment variable with default"""
+    return os.environ.get(key, default)
 
-# Create the main app
-app = FastAPI(title="Multi-Tenant Authority Platform API")
+# Required environment variables
+MONGO_URL = get_required_env("MONGO_URL")
+DB_NAME = get_required_env("DB_NAME")
+
+# Optional environment variables
+EMERGENT_LLM_KEY = get_optional_env("EMERGENT_LLM_KEY")
+FOOTBALL_API_KEY = get_optional_env("FOOTBALL_DATA_API_KEY", "demo")
+CLOUDFLARE_API_TOKEN = get_optional_env("CLOUDFLARE_API_TOKEN")
+CLOUDFLARE_ACCOUNT_ID = get_optional_env("CLOUDFLARE_ACCOUNT_ID")
+
+# CORS configuration
+CORS_ORIGINS = get_optional_env("CORS_ORIGINS", "https://guncelgiris.ai,https://www.guncelgiris.ai")
+CORS_ALLOW_CREDENTIALS = get_optional_env("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
+
+# Rate limiting configuration
+RATE_LIMIT_REQUESTS = int(get_optional_env("RATE_LIMIT_REQUESTS", "60"))
+RATE_LIMIT_WINDOW = int(get_optional_env("RATE_LIMIT_WINDOW", "60"))
+
+# Build info
+GIT_COMMIT = get_optional_env("GIT_COMMIT", "")
+BUILD_TIME = get_optional_env("BUILD_TIME", datetime.now(timezone.utc).isoformat())
+
+# Production mode
+DEBUG_MODE = get_optional_env("DEBUG_MODE", "false").lower() == "true"
+
+# ============== STRUCTURED LOGGING ==============
+
+class JSONFormatter(logging.Formatter):
+    """JSON formatter for structured logging"""
+    def format(self, record):
+        log_record = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno
+        }
+        if hasattr(record, 'request_id'):
+            log_record["request_id"] = record.request_id
+        if hasattr(record, 'extra_data'):
+            log_record.update(record.extra_data)
+        if record.exc_info:
+            log_record["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_record)
+
+# Configure logging
+logger = logging.getLogger("api")
+logger.setLevel(logging.INFO if not DEBUG_MODE else logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(JSONFormatter())
+logger.handlers = [handler]
+
+# ============== RATE LIMITER ==============
+
+class InMemoryRateLimiter:
+    """Simple in-memory rate limiter per IP"""
+    def __init__(self, requests_per_window: int = 60, window_seconds: int = 60):
+        self.requests_per_window = requests_per_window
+        self.window_seconds = window_seconds
+        self.requests: Dict[str, List[float]] = defaultdict(list)
+    
+    def is_allowed(self, client_ip: str) -> tuple[bool, int]:
+        """Check if request is allowed, returns (allowed, remaining)"""
+        now = time.time()
+        window_start = now - self.window_seconds
+        
+        # Clean old requests
+        self.requests[client_ip] = [
+            req_time for req_time in self.requests[client_ip]
+            if req_time > window_start
+        ]
+        
+        current_count = len(self.requests[client_ip])
+        remaining = max(0, self.requests_per_window - current_count)
+        
+        if current_count >= self.requests_per_window:
+            return False, 0
+        
+        self.requests[client_ip].append(now)
+        return True, remaining - 1
+    
+    def get_retry_after(self, client_ip: str) -> int:
+        """Get seconds until rate limit resets"""
+        if not self.requests[client_ip]:
+            return 0
+        oldest = min(self.requests[client_ip])
+        return max(0, int(self.window_seconds - (time.time() - oldest)))
+
+rate_limiter = InMemoryRateLimiter(RATE_LIMIT_REQUESTS, RATE_LIMIT_WINDOW)
+
+# ============== DATABASE ==============
+
+client: AsyncIOMotorClient = None
+db = None
+
+async def connect_to_mongo():
+    """Connect to MongoDB with validation"""
+    global client, db
+    try:
+        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000)
+        # Ping to verify connection
+        await client.admin.command('ping')
+        db = client[DB_NAME]
+        logger.info("MongoDB connection established", extra={"extra_data": {"database": DB_NAME}})
+        return True
+    except Exception as e:
+        logger.error(f"MongoDB connection failed: {str(e)}")
+        return False
+
+async def disconnect_from_mongo():
+    """Disconnect from MongoDB"""
+    global client
+    if client:
+        client.close()
+        logger.info("MongoDB connection closed")
+
+async def ping_mongo() -> tuple[bool, float]:
+    """Ping MongoDB and return status with latency"""
+    try:
+        start = time.time()
+        await client.admin.command('ping')
+        latency = (time.time() - start) * 1000
+        return True, latency
+    except Exception as e:
+        logger.error(f"MongoDB ping failed: {str(e)}")
+        return False, 0
+
+# ============== LIFESPAN ==============
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler"""
+    # Startup
+    logger.info("Starting application...")
+    
+    connected = await connect_to_mongo()
+    if not connected:
+        logger.error("[FATAL] Cannot start without database connection")
+        sys.exit(1)
+    
+    logger.info("Application started successfully", extra={
+        "extra_data": {
+            "version": get_git_commit(),
+            "build_time": BUILD_TIME,
+            "debug_mode": DEBUG_MODE
+        }
+    })
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down application...")
+    await disconnect_from_mongo()
+    logger.info("Application shutdown complete")
+
+# ============== UTILITY FUNCTIONS ==============
+
+def get_git_commit() -> str:
+    """Get git commit hash"""
+    if GIT_COMMIT:
+        return GIT_COMMIT
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.stdout.strip() if result.returncode == 0 else "unknown"
+    except:
+        return "unknown"
+
+def get_client_ip(request: Request) -> str:
+    """Extract client IP from request"""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def generate_request_id() -> str:
+    """Generate unique request ID"""
+    return str(uuid.uuid4())[:8]
+
+def slugify(text: str) -> str:
+    """Convert text to URL-friendly slug"""
+    text = text.lower()
+    for old, new in [('ı', 'i'), ('İ', 'i'), ('ş', 's'), ('Ş', 's'), ('ğ', 'g'), ('Ğ', 'g'), 
+                     ('ü', 'u'), ('Ü', 'u'), ('ö', 'o'), ('Ö', 'o'), ('ç', 'c'), ('Ç', 'c')]:
+        text = text.replace(old, new)
+    text = re.sub(r'[^a-z0-9\s-]', '', text)
+    text = re.sub(r'[\s_]+', '-', text)
+    return text.strip('-')
+
+def extract_bonus_value(bonus_amount: str) -> int:
+    """Extract numeric value from bonus amount string"""
+    numbers = re.findall(r'\d+', bonus_amount.replace('.', '').replace(',', ''))
+    return int(numbers[0]) if numbers else 0
+
+# ============== APP INITIALIZATION ==============
+
+app = FastAPI(
+    title="Multi-Tenant Authority Platform API",
+    version="3.0.0",
+    docs_url="/docs" if DEBUG_MODE else None,
+    redoc_url="/redoc" if DEBUG_MODE else None,
+    lifespan=lifespan
+)
+
 api_router = APIRouter(prefix="/api")
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# ============== MIDDLEWARE ==============
+
+@app.middleware("http")
+async def request_middleware(request: Request, call_next):
+    """Add request ID, logging, and rate limiting"""
+    request_id = generate_request_id()
+    client_ip = get_client_ip(request)
+    start_time = time.time()
+    
+    # Add request_id to state
+    request.state.request_id = request_id
+    
+    # Rate limiting for /api routes
+    if request.url.path.startswith("/api"):
+        allowed, remaining = rate_limiter.is_allowed(client_ip)
+        if not allowed:
+            retry_after = rate_limiter.get_retry_after(client_ip)
+            logger.warning("Rate limit exceeded", extra={
+                "extra_data": {"client_ip": client_ip, "path": request.url.path},
+                "request_id": request_id
+            })
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "Rate limit exceeded",
+                    "retry_after": retry_after,
+                    "request_id": request_id
+                },
+                headers={
+                    "Retry-After": str(retry_after),
+                    "X-RateLimit-Remaining": "0",
+                    "X-Request-ID": request_id
+                }
+            )
+    
+    # Process request
+    try:
+        response = await call_next(request)
+        
+        # Add headers
+        response.headers["X-Request-ID"] = request_id
+        if request.url.path.startswith("/api"):
+            _, remaining = rate_limiter.is_allowed(client_ip)
+            response.headers["X-RateLimit-Remaining"] = str(remaining)
+        
+        # Log request
+        duration = (time.time() - start_time) * 1000
+        logger.info("Request completed", extra={
+            "extra_data": {
+                "method": request.method,
+                "path": request.url.path,
+                "status": response.status_code,
+                "duration_ms": round(duration, 2),
+                "client_ip": client_ip
+            },
+            "request_id": request_id
+        })
+        
+        return response
+    except Exception as e:
+        logger.error(f"Request failed: {str(e)}", extra={
+            "extra_data": {"path": request.url.path},
+            "request_id": request_id
+        })
+        raise
+
+# CORS middleware
+cors_origins = [origin.strip() for origin in CORS_ORIGINS.split(",") if origin.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=CORS_ALLOW_CREDENTIALS,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# ============== EXCEPTION HANDLER ==============
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler - no stack traces to client"""
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    
+    # Log full error server-side
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True, extra={
+        "request_id": request_id,
+        "extra_data": {"path": request.url.path}
+    })
+    
+    # Return safe error to client
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal server error",
+            "message": "An unexpected error occurred" if not DEBUG_MODE else str(exc),
+            "request_id": request_id
+        },
+        headers={"X-Request-ID": request_id}
+    )
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """HTTP exception handler"""
+    request_id = getattr(request.state, 'request_id', 'unknown')
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "request_id": request_id
+        },
+        headers={"X-Request-ID": request_id}
+    )
+
+# ============== HEALTH CHECK ENDPOINTS ==============
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "ok"}
+
+@app.get("/version")
+async def version_info():
+    """Version information endpoint"""
+    return {
+        "commit": get_git_commit(),
+        "buildTime": BUILD_TIME,
+        "version": "3.0.0"
+    }
+
+@app.get("/db-check")
+async def db_check():
+    """Database connectivity check"""
+    is_connected, latency = await ping_mongo()
+    
+    if is_connected:
+        return {
+            "status": "connected",
+            "database": DB_NAME,
+            "latency_ms": round(latency, 2)
+        }
+    else:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "disconnected",
+                "database": DB_NAME,
+                "error": "Database connection failed"
+            }
+        )
 
 # ============== PYDANTIC MODELS ==============
 
-# DOMAIN / MULTI-TENANT MODELS
 class Domain(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    domain_name: str  # example.com
-    display_name: str  # Site display name
-    focus: str = "bonus"  # bonus, spor, hibrit
-    theme: Dict[str, str] = {}  # primary_color, secondary_color, etc.
+    domain_name: str
+    display_name: str
+    focus: str = "bonus"
+    theme: Dict[str, str] = {}
     logo_url: str = ""
     favicon_url: str = ""
-    # Cloudflare integration
     cloudflare_zone_id: Optional[str] = None
-    cloudflare_status: str = "pending"  # pending, active, error
+    cloudflare_status: str = "pending"
     nameservers: List[str] = []
     ssl_status: str = "pending"
-    # Settings
     is_active: bool = True
     meta_title: str = ""
     meta_description: str = ""
     google_analytics_id: str = ""
-    # Auto content settings
     auto_article_enabled: bool = True
     auto_news_enabled: bool = True
     content_language: str = "tr"
-    # Timestamps
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -75,15 +439,6 @@ class DomainCreate(BaseModel):
     logo_url: str = ""
     meta_title: str = ""
     meta_description: str = ""
-
-class DomainSite(BaseModel):
-    """Links bonus sites to specific domains"""
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    domain_id: str
-    site_id: str  # Reference to BonusSite
-    custom_order: int = 0
-    is_active: bool = True
 
 class BonusSite(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -97,18 +452,15 @@ class BonusSite(BaseModel):
     rating: float = 4.5
     features: List[str] = []
     turnover_requirement: float = 10.0
-    # Performance (per domain tracked separately)
     global_cta_clicks: int = 0
     global_affiliate_clicks: int = 0
     global_impressions: int = 0
-    # Status
     is_active: bool = True
-    is_global: bool = True  # Available to all domains
+    is_global: bool = True
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class DomainPerformance(BaseModel):
-    """Track performance per domain per site"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     domain_id: str
@@ -126,7 +478,7 @@ class DomainPerformance(BaseModel):
 class Article(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    domain_id: Optional[str] = None  # None = global article
+    domain_id: Optional[str] = None
     title: str
     slug: str
     excerpt: str
@@ -137,28 +489,16 @@ class Article(BaseModel):
     author: str = "Admin"
     is_published: bool = True
     is_ai_generated: bool = False
-    is_auto_generated: bool = False  # Auto article engine
+    is_auto_generated: bool = False
     seo_title: str = ""
     seo_description: str = ""
-    schema_type: str = "Article"  # Article, FAQ, NewsArticle
+    schema_type: str = "Article"
     internal_links: List[str] = []
     view_count: int = 0
     content_hash: str = ""
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     content_updated_at: Optional[str] = None
-
-class AutoContentJob(BaseModel):
-    """Scheduled auto content generation jobs"""
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    domain_id: Optional[str] = None
-    job_type: str  # article, news, seo_update
-    topic: str
-    status: str = "pending"  # pending, running, completed, failed
-    result: Dict[str, Any] = {}
-    scheduled_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    completed_at: Optional[str] = None
 
 class Category(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -169,6 +509,14 @@ class Category(BaseModel):
     description: str = ""
     type: str
     order: int = 0
+
+class DomainSite(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    domain_id: str
+    site_id: str
+    custom_order: int = 0
+    is_active: bool = True
 
 class PerformanceEventCreate(BaseModel):
     domain_id: str
@@ -184,35 +532,15 @@ class KeywordGapRequest(BaseModel):
 
 # ============== HELPER FUNCTIONS ==============
 
-def slugify(text: str) -> str:
-    text = text.lower()
-    for old, new in [('ı', 'i'), ('İ', 'i'), ('ş', 's'), ('Ş', 's'), ('ğ', 'g'), ('Ğ', 'g'), 
-                     ('ü', 'u'), ('Ü', 'u'), ('ö', 'o'), ('Ö', 'o'), ('ç', 'c'), ('Ç', 'c')]:
-        text = text.replace(old, new)
-    text = re.sub(r'[^a-z0-9\s-]', '', text)
-    text = re.sub(r'[\s_]+', '-', text)
-    return text.strip('-')
-
-def extract_bonus_value(bonus_amount: str) -> int:
-    numbers = re.findall(r'\d+', bonus_amount.replace('.', '').replace(',', ''))
-    return int(numbers[0]) if numbers else 0
-
-async def generate_ai_content(prompt: str, system_message: str = "Sen profesyonel bir Türkçe içerik yazarısın.") -> str:
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=str(uuid.uuid4()), system_message=system_message).with_model("openai", "gpt-5.2")
-        return await chat.send_message(UserMessage(text=prompt))
-    except Exception as e:
-        logger.error(f"AI error: {e}")
-        return f"AI hatası: {str(e)}"
-
 def calculate_heuristic_score(site: dict) -> float:
+    """Calculate heuristic score for ranking"""
     score = min(site.get('bonus_value', 0) / 25, 40)
     score += max(0, 20 - site.get('turnover_requirement', 10))
     score += site.get('rating', 4.0) * 4
     return score
 
 def calculate_performance_score(perf: dict) -> float:
+    """Calculate performance score from tracking data"""
     impressions = max(perf.get('impressions', 0), 1)
     cta_clicks = perf.get('cta_clicks', 0)
     cta_rate = (cta_clicks / impressions) * 100
@@ -221,122 +549,47 @@ def calculate_performance_score(perf: dict) -> float:
     score += min(perf.get('avg_scroll_depth', 0) / 4, 25)
     return score
 
-# ============== CLOUDFLARE INTEGRATION ==============
-
-async def cloudflare_create_zone(domain_name: str) -> Dict[str, Any]:
-    """Create zone in Cloudflare"""
-    if not CLOUDFLARE_API_TOKEN or not CLOUDFLARE_ACCOUNT_ID:
-        return {"error": "Cloudflare credentials not configured", "status": "skipped"}
-    
+async def generate_ai_content(prompt: str, system_message: str = "Sen profesyonel bir Türkçe içerik yazarısın.") -> str:
+    """Generate AI content using Emergent integrations"""
     try:
-        async with httpx.AsyncClient() as http:
-            response = await http.post(
-                "https://api.cloudflare.com/client/v4/zones",
-                headers={"Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}", "Content-Type": "application/json"},
-                json={"name": domain_name, "account": {"id": CLOUDFLARE_ACCOUNT_ID}, "type": "full"}
-            )
-            data = response.json()
-            if data.get("success"):
-                result = data["result"]
-                return {
-                    "zone_id": result["id"],
-                    "nameservers": result.get("name_servers", []),
-                    "status": result.get("status", "pending")
-                }
-            return {"error": data.get("errors", []), "status": "error"}
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=str(uuid.uuid4()), system_message=system_message).with_model("openai", "gpt-5.2")
+        return await chat.send_message(UserMessage(text=prompt))
     except Exception as e:
-        logger.error(f"Cloudflare error: {e}")
-        return {"error": str(e), "status": "error"}
+        logger.error(f"AI content generation failed: {str(e)}")
+        return f"AI içerik üretimi başarısız: {str(e)}"
 
-async def cloudflare_add_dns_records(zone_id: str, domain_name: str, target_ip: str = "76.76.21.21") -> Dict[str, Any]:
-    """Add A and CNAME records"""
-    if not CLOUDFLARE_API_TOKEN:
-        return {"status": "skipped"}
-    
-    records = [
-        {"type": "A", "name": domain_name, "content": target_ip, "proxied": True},
-        {"type": "CNAME", "name": f"www.{domain_name}", "content": domain_name, "proxied": True}
-    ]
-    
-    results = []
-    async with httpx.AsyncClient() as http:
-        for record in records:
-            try:
-                response = await http.post(
-                    f"https://api.cloudflare.com/client/v4/zones/{zone_id}/dns_records",
-                    headers={"Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}", "Content-Type": "application/json"},
-                    json=record
-                )
-                results.append(response.json())
-            except Exception as e:
-                results.append({"error": str(e)})
-    
-    return {"records_created": len(results), "results": results}
-
-async def cloudflare_enable_ssl(zone_id: str) -> Dict[str, Any]:
-    """Enable SSL for zone"""
-    if not CLOUDFLARE_API_TOKEN:
-        return {"status": "skipped"}
-    
-    try:
-        async with httpx.AsyncClient() as http:
-            # Set SSL mode to Full
-            await http.patch(
-                f"https://api.cloudflare.com/client/v4/zones/{zone_id}/settings/ssl",
-                headers={"Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}", "Content-Type": "application/json"},
-                json={"value": "full"}
-            )
-            # Enable HTTPS redirect
-            await http.patch(
-                f"https://api.cloudflare.com/client/v4/zones/{zone_id}/settings/always_use_https",
-                headers={"Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}", "Content-Type": "application/json"},
-                json={"value": "on"}
-            )
-            return {"ssl_mode": "full", "https_redirect": "on"}
-    except Exception as e:
-        return {"error": str(e)}
-
-# ============== DOMAIN MANAGEMENT ENDPOINTS ==============
+# ============== API ROUTES ==============
 
 @api_router.get("/")
-async def root():
-    return {"message": "Multi-Tenant Authority Platform API", "version": "3.0.0"}
+async def api_root():
+    """API root endpoint"""
+    return {
+        "message": "Multi-Tenant Authority Platform API",
+        "version": "3.0.0",
+        "status": "operational"
+    }
 
+# Domain Management
 @api_router.post("/domains", response_model=Domain)
 async def create_domain(domain: DomainCreate):
-    """Create a new domain with Cloudflare automation"""
-    # Check if domain exists
+    """Create a new domain"""
     existing = await db.domains.find_one({"domain_name": domain.domain_name})
     if existing:
         raise HTTPException(status_code=400, detail="Domain already exists")
     
     domain_obj = Domain(**domain.model_dump())
-    
-    # Create Cloudflare zone
-    cf_result = await cloudflare_create_zone(domain.domain_name)
-    if cf_result.get("zone_id"):
-        domain_obj.cloudflare_zone_id = cf_result["zone_id"]
-        domain_obj.nameservers = cf_result.get("nameservers", [])
-        domain_obj.cloudflare_status = cf_result.get("status", "pending")
-        
-        # Add DNS records
-        await cloudflare_add_dns_records(cf_result["zone_id"], domain.domain_name)
-        
-        # Enable SSL
-        ssl_result = await cloudflare_enable_ssl(cf_result["zone_id"])
-        domain_obj.ssl_status = "active" if not ssl_result.get("error") else "pending"
-    
     await db.domains.insert_one(domain_obj.model_dump())
     
-    # Copy global sites to this domain
+    # Copy global sites to domain
     global_sites = await db.bonus_sites.find({"is_global": True, "is_active": True}, {"_id": 0}).to_list(100)
     for site in global_sites:
         domain_site = DomainSite(domain_id=domain_obj.id, site_id=site["id"])
         await db.domain_sites.insert_one(domain_site.model_dump())
-        # Create performance record
         perf = DomainPerformance(domain_id=domain_obj.id, site_id=site["id"], performance_score=calculate_heuristic_score(site))
         await db.domain_performance.insert_one(perf.model_dump())
     
+    logger.info(f"Domain created: {domain.domain_name}")
     return domain_obj
 
 @api_router.get("/domains")
@@ -347,7 +600,7 @@ async def list_domains():
 
 @api_router.get("/domains/{domain_id}")
 async def get_domain(domain_id: str):
-    """Get domain details"""
+    """Get domain by ID"""
     domain = await db.domains.find_one({"id": domain_id}, {"_id": 0})
     if not domain:
         raise HTTPException(status_code=404, detail="Domain not found")
@@ -355,7 +608,7 @@ async def get_domain(domain_id: str):
 
 @api_router.get("/domains/by-name/{domain_name}")
 async def get_domain_by_name(domain_name: str):
-    """Get domain by domain name"""
+    """Get domain by name"""
     domain = await db.domains.find_one({"domain_name": domain_name}, {"_id": 0})
     if not domain:
         raise HTTPException(status_code=404, detail="Domain not found")
@@ -368,25 +621,21 @@ async def delete_domain(domain_id: str):
     await db.domain_sites.delete_many({"domain_id": domain_id})
     await db.domain_performance.delete_many({"domain_id": domain_id})
     await db.articles.delete_many({"domain_id": domain_id})
+    logger.info(f"Domain deleted: {domain_id}")
     return {"message": "Domain deleted"}
 
-# ============== DOMAIN-SPECIFIC SITE MANAGEMENT ==============
-
+# Domain Sites
 @api_router.get("/domains/{domain_id}/sites")
 async def get_domain_sites(domain_id: str):
-    """Get sites for a specific domain, sorted by performance"""
-    # Get domain site mappings
+    """Get sites for a domain sorted by performance"""
     domain_sites = await db.domain_sites.find({"domain_id": domain_id, "is_active": True}, {"_id": 0}).to_list(100)
     site_ids = [ds["site_id"] for ds in domain_sites]
     
-    # Get performances
     performances = await db.domain_performance.find({"domain_id": domain_id}, {"_id": 0}).sort("performance_score", -1).to_list(100)
     perf_map = {p["site_id"]: p for p in performances}
     
-    # Get sites
     sites = await db.bonus_sites.find({"id": {"$in": site_ids}, "is_active": True}, {"_id": 0}).to_list(100)
     
-    # Merge and sort
     result = []
     for site in sites:
         perf = perf_map.get(site["id"], {})
@@ -402,32 +651,32 @@ async def get_domain_sites(domain_id: str):
     
     return result
 
-@api_router.post("/domains/{domain_id}/sites/{site_id}/add")
-async def add_site_to_domain(domain_id: str, site_id: str):
-    """Add a site to a domain"""
-    existing = await db.domain_sites.find_one({"domain_id": domain_id, "site_id": site_id})
-    if existing:
-        await db.domain_sites.update_one({"domain_id": domain_id, "site_id": site_id}, {"$set": {"is_active": True}})
-    else:
-        domain_site = DomainSite(domain_id=domain_id, site_id=site_id)
-        await db.domain_sites.insert_one(domain_site.model_dump())
-        site = await db.bonus_sites.find_one({"id": site_id}, {"_id": 0})
-        if site:
-            perf = DomainPerformance(domain_id=domain_id, site_id=site_id, performance_score=calculate_heuristic_score(site))
-            await db.domain_performance.insert_one(perf.model_dump())
-    return {"message": "Site added to domain"}
+# Bonus Sites
+@api_router.get("/bonus-sites")
+async def get_all_bonus_sites(limit: int = 50):
+    """Get all global bonus sites"""
+    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).to_list(limit)
+    return sites
 
-@api_router.post("/domains/{domain_id}/sites/{site_id}/remove")
-async def remove_site_from_domain(domain_id: str, site_id: str):
-    """Remove a site from a domain"""
-    await db.domain_sites.update_one({"domain_id": domain_id, "site_id": site_id}, {"$set": {"is_active": False}})
-    return {"message": "Site removed from domain"}
+@api_router.post("/bonus-sites")
+async def create_bonus_site(site: Dict[str, Any]):
+    """Create a new bonus site"""
+    site_obj = BonusSite(**site)
+    site_obj.bonus_value = extract_bonus_value(site_obj.bonus_amount)
+    await db.bonus_sites.insert_one(site_obj.model_dump())
+    logger.info(f"Bonus site created: {site_obj.name}")
+    return site_obj
 
-# ============== PERFORMANCE TRACKING ==============
+@api_router.delete("/bonus-sites/{site_id}")
+async def delete_bonus_site(site_id: str):
+    """Delete a bonus site"""
+    await db.bonus_sites.delete_one({"id": site_id})
+    return {"message": "Site deleted"}
 
+# Performance Tracking
 @api_router.post("/track/event")
 async def track_event(event: PerformanceEventCreate):
-    """Track performance event for domain-site pair"""
+    """Track performance event"""
     update = {}
     if event.event_type == "cta_click":
         update = {"$inc": {"cta_clicks": 1}}
@@ -447,7 +696,7 @@ async def track_event(event: PerformanceEventCreate):
 
 @api_router.post("/domains/{domain_id}/update-rankings")
 async def update_domain_rankings(domain_id: str):
-    """Update site rankings for a domain based on performance"""
+    """Update site rankings for a domain"""
     performances = await db.domain_performance.find({"domain_id": domain_id}, {"_id": 0}).to_list(100)
     
     for perf in performances:
@@ -456,17 +705,13 @@ async def update_domain_rankings(domain_id: str):
             continue
         
         has_data = perf.get("impressions", 0) > 10
-        if has_data:
-            score = calculate_performance_score(perf)
-        else:
-            score = calculate_heuristic_score(site)
+        score = calculate_performance_score(perf) if has_data else calculate_heuristic_score(site)
         
         await db.domain_performance.update_one(
             {"domain_id": domain_id, "site_id": perf["site_id"]},
             {"$set": {"performance_score": score}}
         )
     
-    # Update ranks and featured status
     performances = await db.domain_performance.find({"domain_id": domain_id}, {"_id": 0}).sort("performance_score", -1).to_list(100)
     for i, perf in enumerate(performances):
         await db.domain_performance.update_one(
@@ -476,32 +721,16 @@ async def update_domain_rankings(domain_id: str):
     
     return {"updated": len(performances)}
 
-# ============== GLOBAL BONUS SITES ==============
-
-@api_router.get("/bonus-sites")
-async def get_all_bonus_sites(limit: int = 50):
-    """Get all global bonus sites"""
-    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).to_list(limit)
-    return sites
-
-@api_router.post("/bonus-sites")
-async def create_bonus_site(site: Dict[str, Any]):
-    """Create a new global bonus site"""
-    site_obj = BonusSite(**site)
-    site_obj.bonus_value = extract_bonus_value(site_obj.bonus_amount)
-    await db.bonus_sites.insert_one(site_obj.model_dump())
-    return site_obj
-
-@api_router.delete("/bonus-sites/{site_id}")
-async def delete_bonus_site(site_id: str):
-    await db.bonus_sites.delete_one({"id": site_id})
-    return {"message": "Site deleted"}
-
-# ============== ARTICLES (DOMAIN-SPECIFIC) ==============
+# Articles
+@api_router.get("/articles")
+async def get_articles(limit: int = 50):
+    """Get all articles"""
+    articles = await db.articles.find({"is_published": True}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return articles
 
 @api_router.get("/domains/{domain_id}/articles")
 async def get_domain_articles(domain_id: str, limit: int = 20):
-    """Get articles for a domain (including global articles)"""
+    """Get articles for a domain"""
     articles = await db.articles.find(
         {"$or": [{"domain_id": domain_id}, {"domain_id": None}], "is_published": True},
         {"_id": 0}
@@ -518,179 +747,78 @@ async def create_domain_article(domain_id: str, article: Dict[str, Any]):
     article["content_updated_at"] = datetime.now(timezone.utc).isoformat()
     article_obj = Article(**article)
     await db.articles.insert_one(article_obj.model_dump())
+    logger.info(f"Article created: {article_obj.title}")
     return article_obj
 
-@api_router.get("/articles")
-async def get_all_articles(limit: int = 50):
-    articles = await db.articles.find({"is_published": True}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
-    return articles
-
-# ============== AUTO CONTENT ENGINE ==============
-
+# Auto Content
 @api_router.post("/auto-content/generate-article")
 async def auto_generate_article(domain_id: Optional[str] = None, topic: str = "deneme bonusu rehberi"):
     """Auto generate SEO article"""
-    # Check if similar article exists
     existing = await db.articles.find_one({"title": {"$regex": topic, "$options": "i"}, "domain_id": domain_id})
     if existing:
         return {"status": "skipped", "reason": "Similar article exists", "article_id": existing.get("id")}
     
-    prompt = f"""
-    Konu: {topic}
+    prompt = f"""Konu: {topic}
+SEO uyumlu, özgün bir makale yaz. 800-1000 kelime. HTML formatında."""
     
-    SEO uyumlu, özgün bir makale yaz. Yapı:
-    1. H2 başlıkları kullan
-    2. Detaylı açıklamalar ekle
-    3. Liste ve maddeler kullan
-    4. 800-1000 kelime
-    5. Doğal iç link yerleri için [İÇ_LİNK: konu] işaretle
-    6. FAQ bölümü ekle (3-4 soru)
-    
-    İçeriğin %80'i bilgilendirici, %20'si doğal yönlendirme olsun.
-    Spam CTA kullanma.
-    
-    HTML formatında yaz (<h2>, <p>, <ul>, <li> kullan).
-    """
-    
-    content = await generate_ai_content(prompt, "Sen Türkçe SEO içerik uzmanısın. Google E-E-A-T kriterlerine uygun içerik üretirsin.")
+    content = await generate_ai_content(prompt)
     
     article = Article(
         domain_id=domain_id,
         title=topic.title(),
         slug=slugify(topic),
-        excerpt=f"{topic} hakkında detaylı rehber ve güncel bilgiler.",
+        excerpt=f"{topic} hakkında detaylı rehber.",
         content=content,
         category="bonus",
         tags=[slugify(t) for t in topic.split()],
         is_ai_generated=True,
         is_auto_generated=True,
-        schema_type="Article",
         content_hash=hashlib.md5(content.encode()).hexdigest(),
         content_updated_at=datetime.now(timezone.utc).isoformat()
     )
     
     await db.articles.insert_one(article.model_dump())
-    return {"status": "created", "article_id": article.id, "title": article.title}
-
-@api_router.post("/auto-content/generate-news")
-async def auto_generate_news(domain_id: Optional[str] = None):
-    """Auto generate sports news from API data"""
-    # Get match data
-    matches = await get_demo_matches("PL")
-    if not matches.get("matches"):
-        return {"status": "no_data"}
-    
-    match = matches["matches"][0]
-    topic = f"{match['home_team']} vs {match['away_team']} Maç Analizi"
-    
-    prompt = f"""
-    Maç: {match['home_team']} {match.get('home_score', '?')} - {match.get('away_score', '?')} {match['away_team']}
-    Lig: {match.get('league', 'Premier League')}
-    
-    Bu maç için kısa ve etkileyici bir haber/analiz yaz:
-    1. Skor özeti
-    2. Önemli anlar
-    3. Oyuncu performansları
-    4. Sonraki maç beklentisi
-    
-    200-300 kelime. Doğal bir şekilde "bahis analizleri için sitemizi ziyaret edin" gibi bir cümle ekle.
-    HTML formatında yaz.
-    """
-    
-    content = await generate_ai_content(prompt, "Sen spor gazetecisisin.")
-    
-    article = Article(
-        domain_id=domain_id,
-        title=topic,
-        slug=slugify(topic),
-        excerpt=f"{match['home_team']} - {match['away_team']} maç özeti ve analizi.",
-        content=content,
-        category="spor",
-        tags=["futbol", slugify(match['home_team']), slugify(match['away_team'])],
-        is_ai_generated=True,
-        is_auto_generated=True,
-        schema_type="NewsArticle",
-        content_hash=hashlib.md5(content.encode()).hexdigest(),
-        content_updated_at=datetime.now(timezone.utc).isoformat()
-    )
-    
-    await db.articles.insert_one(article.model_dump())
+    logger.info(f"Auto article generated: {article.title}")
     return {"status": "created", "article_id": article.id, "title": article.title}
 
 @api_router.post("/auto-content/bulk-generate")
 async def bulk_generate_content(domain_id: Optional[str] = None, count: int = 5):
-    """Bulk generate content for a domain"""
+    """Bulk generate content"""
     topics = [
         "Deneme Bonusu Nedir Nasıl Alınır 2026",
         "En Yüksek Hoşgeldin Bonusu Veren Siteler",
         "Çevrim Şartı Nedir Nasıl Hesaplanır",
         "Yatırımsız Bonus Fırsatları Rehberi",
-        "Canlı Bahis Stratejileri ve Taktikleri",
-        "Casino Kayıp Bonusu Nasıl Kullanılır",
-        "Mobil Bahis Uygulamaları Karşılaştırma",
-        "Bahis Sitesi Seçerken Dikkat Edilecekler"
+        "Canlı Bahis Stratejileri ve Taktikleri"
     ]
     
     results = []
     for topic in topics[:count]:
         result = await auto_generate_article(domain_id, topic)
         results.append(result)
-        await asyncio.sleep(1)  # Rate limiting
+        await asyncio.sleep(1)
     
     return {"generated": len([r for r in results if r.get("status") == "created"]), "results": results}
 
-# ============== AI & SEO TOOLS ==============
-
+# AI Tools
 @api_router.post("/ai/generate-content")
 async def generate_content(request: Dict[str, Any]):
     """Generate AI content"""
     topic = request.get("topic", "")
-    content_type = request.get("content_type", "article")
-    
-    if content_type == "article":
-        prompt = f"Konu: {topic}\n\nSEO uyumlu, 800 kelimelik makale yaz. HTML formatında."
-    elif content_type == "faq":
-        prompt = f"Konu: {topic}\n\n5 soru-cevap içeren FAQ bölümü yaz. Schema.org FAQ formatına uygun."
-    else:
-        prompt = topic
-    
-    content = await generate_ai_content(prompt)
+    content = await generate_ai_content(f"Konu: {topic}\nSEO uyumlu makale yaz.")
     return {"content": content, "generated_at": datetime.now(timezone.utc).isoformat()}
 
 @api_router.post("/ai/competitor-analysis")
 async def competitor_analysis(request: Dict[str, Any]):
-    """Analyze competitor domain"""
+    """Analyze competitor"""
     url = request.get("competitor_url", "")
-    prompt = f"""
-    Rakip Site: {url}
-    
-    Analiz et:
-    1. Site yapısı tahmini
-    2. İçerik stratejisi
-    3. SEO güçlü/zayıf yönler
-    4. Bizim için fırsatlar
-    5. Aksiyon önerileri
-    
-    Kopyalama önerme, özgün strateji sun.
-    """
-    
-    content = await generate_ai_content(prompt, "Sen SEO analisti ve rakip araştırma uzmanısın.")
+    content = await generate_ai_content(f"Rakip site analizi: {url}")
     return {"analysis": content, "url": url}
 
 @api_router.post("/ai/keyword-gap-analysis")
 async def keyword_gap_analysis(request: KeywordGapRequest):
-    """Find keyword opportunities"""
-    prompt = f"""
-    Mevcut Kelimeler: {', '.join(request.keywords)}
-    
-    Türkçe bahis/bonus sektörü için:
-    1. Kaçırılan fırsatlar
-    2. Long-tail önerileri
-    3. İçerik planı
-    4. Öncelik sıralaması
-    """
-    
-    content = await generate_ai_content(prompt, "Sen SEO anahtar kelime uzmanısın.")
+    """Keyword gap analysis"""
+    content = await generate_ai_content(f"Anahtar kelime analizi: {', '.join(request.keywords)}")
     return {"analysis": content, "keywords": request.keywords}
 
 @api_router.get("/ai/weekly-seo-report")
@@ -701,29 +829,13 @@ async def weekly_seo_report(domain_id: Optional[str] = None):
         "total_domains": await db.domains.count_documents({}),
         "total_sites": await db.bonus_sites.count_documents({"is_active": True})
     }
-    
-    prompt = f"""
-    Haftalık SEO Raporu:
-    - Toplam Makale: {stats['total_articles']}
-    - Aktif Domain: {stats['total_domains']}
-    - Bonus Sitesi: {stats['total_sites']}
-    
-    Özet ve öneriler sun:
-    1. Performans değerlendirmesi
-    2. İçerik önerileri
-    3. Gelecek hafta aksiyonları
-    """
-    
-    content = await generate_ai_content(prompt, "Sen SEO raporlama uzmanısın.")
+    content = await generate_ai_content(f"Haftalık SEO raporu: {json.dumps(stats)}")
     return {"report": content, "stats": stats}
 
-# ============== SPORTS API ==============
-
+# Sports
 @api_router.get("/sports/matches")
 async def get_matches(league: str = "PL"):
-    return await get_demo_matches(league)
-
-async def get_demo_matches(league: str):
+    """Get match data"""
     return {
         "matches": [
             {"home_team": "Galatasaray", "away_team": "Fenerbahçe", "home_score": 2, "away_score": 1, "league": "Süper Lig", "status": "FINISHED"},
@@ -733,10 +845,10 @@ async def get_demo_matches(league: str):
         "competition": league
     }
 
-# ============== STATS ==============
-
+# Stats
 @api_router.get("/stats/dashboard")
 async def get_dashboard_stats(domain_id: Optional[str] = None):
+    """Get dashboard statistics"""
     query = {"domain_id": domain_id} if domain_id else {}
     return {
         "total_domains": await db.domains.count_documents({}),
@@ -745,42 +857,16 @@ async def get_dashboard_stats(domain_id: Optional[str] = None):
         "auto_generated_articles": await db.articles.count_documents({**query, "is_auto_generated": True} if domain_id else {"is_auto_generated": True})
     }
 
-# ============== SCHEMA MARKUP HELPER ==============
-
-@api_router.get("/schema/{article_id}")
-async def get_article_schema(article_id: str):
-    """Get JSON-LD schema for article"""
-    article = await db.articles.find_one({"id": article_id}, {"_id": 0})
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    
-    schema = {
-        "@context": "https://schema.org",
-        "@type": article.get("schema_type", "Article"),
-        "headline": article["title"],
-        "description": article.get("seo_description") or article["excerpt"],
-        "datePublished": article["created_at"],
-        "dateModified": article.get("content_updated_at") or article["updated_at"],
-        "author": {"@type": "Person", "name": article.get("author", "Admin")}
-    }
-    
-    if article.get("image_url"):
-        schema["image"] = article["image_url"]
-    
-    return schema
-
-# ============== SEED DATA ==============
-
+# Seed
 @api_router.post("/seed")
 async def seed_database():
-    """Seed with initial data"""
+    """Seed database with initial data"""
     await db.bonus_sites.delete_many({})
     await db.domains.delete_many({})
     await db.domain_sites.delete_many({})
     await db.domain_performance.delete_many({})
     await db.articles.delete_many({})
     
-    # Global bonus sites
     sites = [
         {"name": "MAXWIN", "logo_url": "https://images.unsplash.com/photo-1709873582570-4f17d43921d4?w=100&h=100&fit=crop", "bonus_type": "deneme", "bonus_amount": "750 TL", "affiliate_url": "https://cutt.ly/glockmaxwn", "rating": 4.9, "features": ["Hızlı Ödeme", "7/24 Destek"], "turnover_requirement": 8.0},
         {"name": "HILTONBET", "logo_url": "https://images.unsplash.com/photo-1763089221979-ebb2a748358a?w=100&h=100&fit=crop", "bonus_type": "deneme", "bonus_amount": "500 TL", "affiliate_url": "https://hiltonbetortak.com/affiliates/?btag=2652418", "rating": 4.8, "features": ["Yüksek Oranlar", "Canlı Bahis"], "turnover_requirement": 10.0},
@@ -797,20 +883,8 @@ async def seed_database():
         site_obj.bonus_value = extract_bonus_value(site_obj.bonus_amount)
         await db.bonus_sites.insert_one(site_obj.model_dump())
     
+    logger.info("Database seeded successfully")
     return {"message": "Seeded", "sites": len(sites)}
 
-# ============== APP SETUP ==============
-
+# Include router
 app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
