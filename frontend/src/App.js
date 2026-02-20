@@ -36,6 +36,7 @@ const ADMIN_PATHS = ["/admin", "/admin-login"];
 function AppLayout({ isLoading }) {
   const [showPopup, setShowPopup] = useState(true);
   const location = useLocation();
+  const adminDomain = isAdminDomain();
   const isAdminPath = ADMIN_PATHS.some((p) => location.pathname.startsWith(p));
 
   if (isLoading) {
@@ -55,21 +56,28 @@ function AppLayout({ isLoading }) {
       {!isAdminPath && <Navbar />}
       <main className={isAdminPath ? "" : "pt-16"}>
         <Routes>
+          {/* Public routes — her subdomainde görünür */}
           <Route path="/" element={<HomePage />} />
           <Route path="/deneme-bonusu" element={<BonusGuidePage type="deneme" />} />
           <Route path="/hosgeldin-bonusu" element={<BonusGuidePage type="hosgeldin" />} />
           <Route path="/bonus/:type" element={<BonusGuidePage />} />
           <Route path="/spor-haberleri" element={<SportsNewsPage />} />
           <Route path="/makale/:slug" element={<ArticlePage />} />
-          <Route path="/admin-login" element={<LoginPage />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminPage />
-              </ProtectedRoute>
-            }
-          />
+
+          {/* Admin routes — SADECE admin subdomainde kayıtlıdır */}
+          {adminDomain && (
+            <Route path="/admin-login" element={<LoginPage />} />
+          )}
+          {adminDomain && (
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPage />
+                </ProtectedRoute>
+              }
+            />
+          )}
         </Routes>
       </main>
       {!isAdminPath && <Footer />}
