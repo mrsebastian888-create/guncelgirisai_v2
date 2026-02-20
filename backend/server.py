@@ -28,6 +28,7 @@ import httpx
 import re
 from passlib.context import CryptContext
 import jwt as pyjwt
+from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 # ============== CONFIGURATION ==============
 
