@@ -22,7 +22,18 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - Admin Panel with CRUD operations
 - AI Content Generation
 
-### v3.0 - Production Hardening & CI/CD + Admin Auth ✅
+### v4.0 - Homepage Redesign (v2) ✅
+1. **BonusRow.jsx** — Ranked horizontal list card (screenshot tasarımına uygun)
+2. **HomePage.jsx** — Tam yeniden tasarım:
+   - Compact hero + stadyum arka plan + neon grid
+   - Canlı skor ticker (maçlar gösteriliyor)
+   - Filtre tab'lı ranked bonus listesi (Tüm/Deneme/Hoşgeldin/Kayıp)
+   - Görsel kategori slider (6 kategori, gerçek fotoğraflar)
+   - Neden Bizi Seç bölümü
+   - FAQ accordion + CTA banner
+3. **Backend** — `/api/categories` endpoint eklendi (hardcoded 6 kategori)
+
+
 1. **Bug Fixes (server.py)**
    - Rate limiter çift sayım sorunu düzeltildi
    - `ping_mongo()` guard clause eklendi
