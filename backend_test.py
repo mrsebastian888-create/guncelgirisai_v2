@@ -71,10 +71,10 @@ class TurkishSportsBonusAPITester:
         return self.run_test("Seed Database", "POST", "seed", 200)
 
     def test_bonus_sites_endpoints(self):
-        """Test all bonus sites endpoints"""
+        """Test all bonus sites endpoints with focus on AI ranking"""
         print("\n📊 TESTING BONUS SITES ENDPOINTS")
         
-        # Get all bonus sites
+        # Get all bonus sites (should be sorted by performance_score)
         success, data = self.run_test("Get All Bonus Sites", "GET", "bonus-sites", 200)
         if not success:
             return False
@@ -82,14 +82,40 @@ class TurkishSportsBonusAPITester:
         sites_count = len(data) if isinstance(data, list) else 0
         print(f"   Found {sites_count} bonus sites")
         
+        # Check for real sites from the required list
+        if isinstance(data, list) and len(data) > 0:
+            expected_sites = ['MAXWIN', 'HILTONBET', 'ELEXBET', 'FESTWIN', 'CASINO DIOR', 'BETCI', 'ALFABAHIS', 'TULIPBET']
+            site_names = [site.get('name', '') for site in data]
+            found_real_sites = [name for name in expected_sites if name in site_names]
+            print(f"   Real sites found: {found_real_sites} (should be 8)")
+            
+            # Check if sites are sorted by performance_score
+            scores = [site.get('performance_score', 0) for site in data[:5]]
+            is_sorted = all(scores[i] >= scores[i+1] for i in range(len(scores)-1))
+            print(f"   Sites sorted by performance score: {is_sorted}")
+            print(f"   Top 5 performance scores: {scores}")
+            
+            # Check for featured badges (top 2 should be featured)
+            featured_sites = [site for site in data if site.get('is_featured', False)]
+            print(f"   Featured sites count: {len(featured_sites)} (should be 2)")
+            
+            # Check rank numbers
+            for i, site in enumerate(data[:5]):
+                rank = site.get('order', 0)
+                name = site.get('name', '')
+                turnover = site.get('turnover_requirement', 0)
+                print(f"   #{rank}: {name} - Turnover: {turnover}x")
+        
         # Get featured bonus sites
         self.run_test("Get Featured Bonus Sites", "GET", "bonus-sites?is_featured=true", 200)
         
         # Get deneme bonus sites
         self.run_test("Get Deneme Bonus Sites", "GET", "bonus-sites?bonus_type=deneme", 200)
         
-        # Get limited results
-        self.run_test("Get Limited Bonus Sites", "GET", "bonus-sites?limit=3", 200)
+        # Get limited results (should return 8 sites max as per requirement)
+        success, limited_data = self.run_test("Get Limited Sites (8)", "GET", "bonus-sites?limit=8", 200)
+        if success and isinstance(limited_data, list):
+            print(f"   Limited query returned {len(limited_data)} sites (max 8)")
         
         # Test single site endpoint if sites exist
         if isinstance(data, list) and len(data) > 0:
