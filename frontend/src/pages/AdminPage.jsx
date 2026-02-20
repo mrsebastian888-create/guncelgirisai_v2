@@ -208,7 +208,6 @@ const AdminPage = () => {
   const [newDomain, setNewDomain] = useState({ domain_name: "", display_name: "", focus: "bonus", meta_title: "" });
   const [newSite, setNewSite] = useState({ name: "", logo_url: "", bonus_type: "deneme", bonus_amount: "", affiliate_url: "", rating: 4.5, features: "", turnover_requirement: 10 });
   const [aiTopic, setAiTopic] = useState("");
-  const [competitorUrl, setCompetitorUrl] = useState("");
 
   useEffect(() => { fetchData(); }, [selectedDomain]);
 
