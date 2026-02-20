@@ -106,7 +106,7 @@ function MatchCard({ match, featured, partnerSite }) {
         </Link>
         {partnerSite && (
           <a
-            href={`${window.location.origin.replace("3000", "8001")}/api/go/${partnerSite.id}/${match.id}`}
+            href={`/api/go/${partnerSite.id}/${match.id}`}
             target="_blank"
             rel="noopener noreferrer sponsored"
             title="Önerilen platform — sponsorlu bağlantı"
