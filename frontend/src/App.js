@@ -63,7 +63,15 @@ function App() {
             <Route path="/bonus/:type" element={<BonusGuidePage />} />
             <Route path="/spor-haberleri" element={<SportsNewsPage />} />
             <Route path="/makale/:slug" element={<ArticlePage />} />
-            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin-login" element={<LoginPage />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminPage />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </main>
         <Footer />
