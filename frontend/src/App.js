@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -21,23 +21,12 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
-function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [showPopup, setShowPopup] = useState(true);
+const ADMIN_PATHS = ["/admin", "/admin-login"];
 
-  useEffect(() => {
-    // Seed database on first load
-    const seedData = async () => {
-      try {
-        await axios.post(`${API}/seed`);
-      } catch (e) {
-        console.log("Seed completed or already seeded");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    seedData();
-  }, []);
+function AppLayout({ isLoading }) {
+  const [showPopup, setShowPopup] = useState(true);
+  const location = useLocation();
+  const isAdminPath = ADMIN_PATHS.some((p) => location.pathname.startsWith(p));
 
   if (isLoading) {
     return (
@@ -52,32 +41,53 @@ function App() {
 
   return (
     <div className="App min-h-screen bg-background text-foreground">
-      <BrowserRouter>
-        {showPopup && <WelcomePopup onClose={() => setShowPopup(false)} />}
-        <Navbar />
-        <main className="pt-16">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/deneme-bonusu" element={<BonusGuidePage type="deneme" />} />
-            <Route path="/hosgeldin-bonusu" element={<BonusGuidePage type="hosgeldin" />} />
-            <Route path="/bonus/:type" element={<BonusGuidePage />} />
-            <Route path="/spor-haberleri" element={<SportsNewsPage />} />
-            <Route path="/makale/:slug" element={<ArticlePage />} />
-            <Route path="/admin-login" element={<LoginPage />} />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminPage />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </main>
-        <Footer />
-        <Toaster position="top-right" richColors />
-      </BrowserRouter>
+      {!isAdminPath && showPopup && <WelcomePopup onClose={() => setShowPopup(false)} />}
+      {!isAdminPath && <Navbar />}
+      <main className={isAdminPath ? "" : "pt-16"}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/deneme-bonusu" element={<BonusGuidePage type="deneme" />} />
+          <Route path="/hosgeldin-bonusu" element={<BonusGuidePage type="hosgeldin" />} />
+          <Route path="/bonus/:type" element={<BonusGuidePage />} />
+          <Route path="/spor-haberleri" element={<SportsNewsPage />} />
+          <Route path="/makale/:slug" element={<ArticlePage />} />
+          <Route path="/admin-login" element={<LoginPage />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPage />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </main>
+      {!isAdminPath && <Footer />}
+      <Toaster position="top-right" richColors />
     </div>
+  );
+}
+
+function App() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const seedData = async () => {
+      try {
+        await axios.post(`${API}/seed`);
+      } catch (e) {
+        console.log("Seed completed or already seeded");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    seedData();
+  }, []);
+
+  return (
+    <BrowserRouter>
+      <AppLayout isLoading={isLoading} />
+    </BrowserRouter>
   );
 }
 
