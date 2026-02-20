@@ -221,8 +221,8 @@ export default function MatchDetailPage() {
             <Shield className="w-4 h-4 inline mr-1.5" />
             <strong>Sorumluluk Reddi:</strong> Bu sayfadaki içerikler yalnızca bilgilendirme amaçlıdır. Herhangi bir kazanç garantisi verilmemektedir. Bahis bağımlılığı konusunda yardım için: <strong>182</strong> numaralı hattı arayabilirsiniz.
           </div>
-
         </div>
       </div>
-    );
+    </>
+  );
 }
