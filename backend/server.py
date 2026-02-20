@@ -66,6 +66,22 @@ JWT_SECRET = get_optional_env("JWT_SECRET", "changeme-set-in-env")
 JWT_EXPIRE_HOURS = int(get_optional_env("JWT_EXPIRE_HOURS", "24"))
 ODDS_API_KEY = get_optional_env("ODDS_API_KEY", "")
 
+# ============== SPORTS CACHE ==============
+
+_scores_cache: Dict[str, Any] = {"data": None, "ts": 0, "error_count": 0, "last_error": None}
+_CACHE_TTL = 120  # seconds
+_featured_match_override: Optional[str] = None  # match id override from admin
+_ai_insight_enabled: bool = True
+
+SPORT_KEYS = [
+    "soccer_turkey_super_league",
+    "soccer_epl",
+    "soccer_spain_la_liga",
+    "soccer_germany_bundesliga",
+    "soccer_italy_serie_a",
+    "soccer_uefa_champs_league",
+]
+
 # CORS configuration
 CORS_ORIGINS = get_optional_env("CORS_ORIGINS", "https://guncelgiris.ai,https://www.guncelgiris.ai")
 CORS_ALLOW_CREDENTIALS = get_optional_env("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
