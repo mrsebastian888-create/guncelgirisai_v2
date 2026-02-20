@@ -29,7 +29,7 @@ const HomePage = () => {
     const fetchData = async () => {
       try {
         const [sitesRes, articlesRes, categoriesRes, matchesRes] = await Promise.all([
-          axios.get(`${API}/bonus-sites?is_featured=true&limit=6`),
+          axios.get(`${API}/bonus-sites?limit=6`),
           axios.get(`${API}/articles?limit=6`),
           axios.get(`${API}/categories`),
           axios.get(`${API}/sports/matches?league=PL`)
