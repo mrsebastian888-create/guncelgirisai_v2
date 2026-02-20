@@ -50,7 +50,7 @@ const HomePage = () => {
         setBonusSites(sitesRes.data);
         setArticles(articlesRes.data);
         setCategories(categoriesRes.data);
-        setMatches(matchesRes.data.matches || []);
+        setMatches(matchesRes.data || []);
       } catch (error) {
         console.error("Error:", error);
       } finally {
