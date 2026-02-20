@@ -271,8 +271,9 @@ async def request_middleware(request: Request, call_next):
     request.state.request_id = request_id
     
     # Rate limiting for /api routes
+    rl_remaining: Optional[int] = None
     if request.url.path.startswith("/api"):
-        allowed, remaining = rate_limiter.is_allowed(client_ip)
+        allowed, rl_remaining = rate_limiter.is_allowed(client_ip)
         if not allowed:
             retry_after = rate_limiter.get_retry_after(client_ip)
             logger.warning("Rate limit exceeded", extra={
@@ -299,9 +300,8 @@ async def request_middleware(request: Request, call_next):
         
         # Add headers
         response.headers["X-Request-ID"] = request_id
-        if request.url.path.startswith("/api"):
-            _, remaining = rate_limiter.is_allowed(client_ip)
-            response.headers["X-RateLimit-Remaining"] = str(remaining)
+        if rl_remaining is not None:
+            response.headers["X-RateLimit-Remaining"] = str(rl_remaining)
         
         # Log request
         duration = (time.time() - start_time) * 1000
