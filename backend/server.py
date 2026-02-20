@@ -1212,8 +1212,80 @@ async def verify_token(request: Request):
         raise HTTPException(status_code=401, detail="Token geçersiz veya süresi dolmuş")
     return {"valid": True, "username": username}
 
+# ============== PERIGON NEWS ==============
+
+_news_cache: Dict[str, Any] = {"data": None, "ts": 0}
+_NEWS_TTL = 600  # 10 dakika cache
+
+async def _fetch_perigon_news(size: int = 20, topic: Optional[str] = None) -> list:
+    params: Dict[str, Any] = {
+        "apiKey": PERIGON_API_KEY,
+        "category": "Sports",
+        "language": "en",
+        "sortBy": "date",
+        "showReprints": "false",
+        "hasImage": "true",
+        "size": size,
+    }
+    if topic:
+        params["topic"] = topic
+
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get("https://api.goperigon.com/v1/all", params=params)
+        resp.raise_for_status()
+        articles = resp.json().get("articles", [])
+
+    return [
+        {
+            "id": a.get("articleId", ""),
+            "title": a.get("title", ""),
+            "description": a.get("shortSummary") or a.get("description", ""),
+            "content": a.get("content", ""),
+            "image": a.get("imageUrl", ""),
+            "url": a.get("url", ""),
+            "source": (a.get("source") or {}).get("domain", ""),
+            "published_at": a.get("pubDate", ""),
+            "topics": [t["name"] for t in (a.get("topics") or [])],
+            "slug": re.sub(r"[^a-z0-9]+", "-", (a.get("title") or "").lower()).strip("-")[:80],
+            "category": "sports",
+        }
+        for a in articles
+        if a.get("title") and a.get("imageUrl")
+    ]
+
+@api_router.get("/news")
+async def get_news(size: int = 20, topic: Optional[str] = None, refresh: bool = False):
+    """Get sports news from Perigon API with caching"""
+    if not PERIGON_API_KEY:
+        raise HTTPException(status_code=503, detail="Perigon API key not configured")
+
+    now_ts = time.time()
+    cache_key = f"{topic or 'all'}-{size}"
+
+    # Serve from cache if fresh
+    if (
+        not refresh
+        and _news_cache.get("data")
+        and _news_cache.get("cache_key") == cache_key
+        and (now_ts - _news_cache.get("ts", 0)) < _NEWS_TTL
+    ):
+        return {"articles": _news_cache["data"], "from_cache": True, "count": len(_news_cache["data"])}
+
+    try:
+        articles = await _fetch_perigon_news(size=size, topic=topic)
+        _news_cache["data"] = articles
+        _news_cache["ts"] = now_ts
+        _news_cache["cache_key"] = cache_key
+        return {"articles": articles, "from_cache": False, "count": len(articles)}
+    except Exception as e:
+        logger.error(f"Perigon API error: {e}")
+        if _news_cache.get("data"):
+            return {"articles": _news_cache["data"], "from_cache": True, "stale": True, "count": len(_news_cache["data"])}
+        raise HTTPException(status_code=503, detail=f"News API unavailable: {str(e)}")
+
 @api_router.get("/categories")
-async def get_categories():    """Get hardcoded bonus/sport categories"""
+async def get_categories():
+    """Get hardcoded bonus/sport categories"""
     return [
         {"id": "1", "name": "Deneme Bonusu", "slug": "deneme-bonusu", "type": "bonus",
          "image": "https://images.unsplash.com/photo-1566563255308-753861417000?w=600&q=80",
