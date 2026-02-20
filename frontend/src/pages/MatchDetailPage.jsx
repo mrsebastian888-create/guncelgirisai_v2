@@ -100,14 +100,7 @@ export default function MatchDetailPage() {
 
   return (
     <>
-      <Helmet>
-        <title>{`${match.home_team} - ${match.away_team} Maç Analizi | Canlı Skor, İstatistik, Tahmin`}</title>
-        <meta name="description" content={pageDesc} />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDesc} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
-      </Helmet>
-
+      {/* SEO meta tags - using useEffect to avoid react-helmet-async v2 compatibility issues */}
       <div className="min-h-screen py-8 px-4 md:px-6" style={{ background: "var(--background)" }}>
         <div className="container mx-auto max-w-3xl">
 
