@@ -915,6 +915,30 @@ async def verify_token(request: Request):
         raise HTTPException(status_code=401, detail="Token geçersiz veya süresi dolmuş")
     return {"valid": True, "username": username}
 
+@api_router.get("/categories")
+async def get_categories():
+    """Get hardcoded bonus/sport categories"""
+    return [
+        {"id": "1", "name": "Deneme Bonusu", "slug": "deneme-bonusu", "type": "bonus",
+         "image": "https://images.unsplash.com/photo-1566563255308-753861417000?w=600&q=80",
+         "description": "Yatırımsız ücretsiz bonus"},
+        {"id": "2", "name": "Hoşgeldin Bonusu", "slug": "hosgeldin-bonusu", "type": "bonus",
+         "image": "https://images.pexels.com/photos/7594382/pexels-photo-7594382.jpeg?w=600&q=80",
+         "description": "Yeni üye bonusları"},
+        {"id": "3", "name": "Kayıp Bonusu", "slug": "kayip-bonusu", "type": "bonus",
+         "image": "https://images.pexels.com/photos/7594162/pexels-photo-7594162.jpeg?w=600&q=80",
+         "description": "Kayıplarını geri kazan"},
+        {"id": "4", "name": "Spor Bahisleri", "slug": "spor-bahisleri", "type": "spor",
+         "image": "https://images.pexels.com/photos/12201296/pexels-photo-12201296.jpeg?w=600&q=80",
+         "description": "Canlı bahis fırsatları"},
+        {"id": "5", "name": "Canlı Casino", "slug": "canli-casino", "type": "bonus",
+         "image": "https://images.pexels.com/photos/7594615/pexels-photo-7594615.jpeg?w=600&q=80",
+         "description": "Gerçek krupiyerler"},
+        {"id": "6", "name": "Free Spin", "slug": "free-spin", "type": "bonus",
+         "image": "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=80",
+         "description": "Ücretsiz döndürme hakkı"},
+    ]
+
 # Seed
 @api_router.post("/seed")
 async def seed_database():
