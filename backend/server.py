@@ -862,6 +862,516 @@ async def weekly_seo_report(domain_id: Optional[str] = None):
     content = await generate_ai_content(f"Haftalık SEO raporu: {json.dumps(stats)}")
     return {"report": content, "stats": stats}
 
+# ============== ADVANCED SEO ASSISTANT ==============
+
+class SeoKeywordRequest(BaseModel):
+    keywords: List[str]
+    language: str = "tr"
+    niche: str = "bonus"
+
+class SeoAuditRequest(BaseModel):
+    url: Optional[str] = None
+    domain_id: Optional[str] = None
+
+class SeoContentScoreRequest(BaseModel):
+    article_id: Optional[str] = None
+    title: str = ""
+    content: str = ""
+    target_keyword: str = ""
+
+class SeoCompetitorRequest(BaseModel):
+    competitor_url: str
+    our_domain: str = ""
+
+class SeoMetaRequest(BaseModel):
+    topic: str
+    page_type: str = "article"
+    keywords: List[str] = []
+
+class SeoInternalLinkRequest(BaseModel):
+    article_id: Optional[str] = None
+    content: str = ""
+
+class SeoContentOptimizeRequest(BaseModel):
+    article_id: Optional[str] = None
+    content: str = ""
+    title: str = ""
+    target_keyword: str = ""
+
+@api_router.get("/seo/dashboard")
+async def seo_dashboard(domain_id: Optional[str] = None):
+    """Comprehensive SEO dashboard with metrics"""
+    query = {"domain_id": domain_id} if domain_id else {}
+
+    total_articles = await db.articles.count_documents(query if domain_id else {})
+    published = await db.articles.count_documents({**query, "is_published": True} if domain_id else {"is_published": True})
+    ai_generated = await db.articles.count_documents({**query, "is_ai_generated": True} if domain_id else {"is_ai_generated": True})
+    total_sites = await db.bonus_sites.count_documents({"is_active": True})
+    total_domains = await db.domains.count_documents({})
+    total_reports = await db.seo_reports.count_documents(query if domain_id else {})
+
+    articles = await db.articles.find(
+        query if domain_id else {},
+        {"_id": 0, "title": 1, "seo_title": 1, "seo_description": 1, "content": 1, "slug": 1, "tags": 1, "view_count": 1}
+    ).to_list(200)
+
+    missing_meta = sum(1 for a in articles if not a.get("seo_title") or not a.get("seo_description"))
+    short_content = sum(1 for a in articles if len((a.get("content") or "").split()) < 300)
+    no_tags = sum(1 for a in articles if not a.get("tags"))
+    total_views = sum(a.get("view_count", 0) for a in articles)
+
+    health_score = 100
+    if total_articles > 0:
+        health_score -= int((missing_meta / total_articles) * 30)
+        health_score -= int((short_content / total_articles) * 25)
+        health_score -= int((no_tags / total_articles) * 15)
+    if total_articles < 10:
+        health_score -= 15
+    if total_sites < 5:
+        health_score -= 10
+    health_score = max(0, min(100, health_score))
+
+    return {
+        "health_score": health_score,
+        "total_articles": total_articles,
+        "published_articles": published,
+        "ai_generated_articles": ai_generated,
+        "total_bonus_sites": total_sites,
+        "total_domains": total_domains,
+        "total_reports": total_reports,
+        "total_views": total_views,
+        "issues": {
+            "missing_meta": missing_meta,
+            "short_content": short_content,
+            "no_tags": no_tags,
+        },
+        "recommendations": [
+            f"{missing_meta} makale eksik meta başlık/açıklama" if missing_meta else None,
+            f"{short_content} makale 300 kelimeden kısa" if short_content else None,
+            f"{no_tags} makale etiketsiz" if no_tags else None,
+            "Daha fazla içerik üretilmeli" if total_articles < 10 else None,
+        ],
+    }
+
+@api_router.post("/seo/keyword-research")
+async def seo_keyword_research(req: SeoKeywordRequest):
+    """AI-powered keyword research with scoring and suggestions"""
+    prompt = f"""Sen bir SEO uzmanısın. Aşağıdaki anahtar kelimeler için detaylı bir analiz yap.
+
+Anahtar Kelimeler: {', '.join(req.keywords)}
+Niş: {req.niche}
+Dil: {req.language}
+
+Şu JSON formatında yanıt ver (sadece JSON, başka bir şey yazma):
+{{
+  "keywords": [
+    {{
+      "keyword": "anahtar kelime",
+      "search_volume_estimate": "yüksek/orta/düşük",
+      "competition": "yüksek/orta/düşük",
+      "difficulty_score": 65,
+      "cpc_estimate": "düşük/orta/yüksek",
+      "intent": "bilgilendirme/ticari/navigasyonel",
+      "recommendation": "kısa açıklama"
+    }}
+  ],
+  "related_keywords": ["ilgili1", "ilgili2", "ilgili3", "ilgili4", "ilgili5"],
+  "long_tail_suggestions": ["uzun kuyruk 1", "uzun kuyruk 2", "uzun kuyruk 3"],
+  "content_ideas": ["içerik fikri 1", "içerik fikri 2", "içerik fikri 3"],
+  "summary": "genel değerlendirme"
+}}"""
+
+    result = await generate_ai_content(prompt, "Sen bir SEO ve dijital pazarlama uzmanısın. Sadece JSON formatında yanıt ver.")
+
+    # Try to parse JSON from response
+    parsed = None
+    try:
+        cleaned = result.strip()
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+        parsed = json.loads(cleaned)
+    except Exception:
+        parsed = {"raw_analysis": result, "keywords": req.keywords}
+
+    # Save report
+    report = {
+        "id": str(uuid.uuid4()),
+        "type": "keyword_research",
+        "input": {"keywords": req.keywords, "niche": req.niche},
+        "result": parsed,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.seo_reports.insert_one({**report})
+    report.pop("_id", None)
+
+    return parsed
+
+@api_router.post("/seo/site-audit")
+async def seo_site_audit(req: SeoAuditRequest):
+    """Comprehensive SEO audit of current site content"""
+    articles = await db.articles.find(
+        {"domain_id": req.domain_id} if req.domain_id else {},
+        {"_id": 0, "title": 1, "seo_title": 1, "seo_description": 1, "content": 1, "slug": 1, "tags": 1, "category": 1}
+    ).to_list(50)
+
+    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "name": 1, "bonus_type": 1}).to_list(50)
+
+    article_summaries = []
+    for a in articles[:20]:
+        word_count = len((a.get("content") or "").split())
+        article_summaries.append({
+            "title": a.get("title", ""),
+            "has_seo_title": bool(a.get("seo_title")),
+            "has_seo_desc": bool(a.get("seo_description")),
+            "word_count": word_count,
+            "has_tags": bool(a.get("tags")),
+            "category": a.get("category", ""),
+        })
+
+    prompt = f"""Sen bir SEO denetçisisin. Aşağıdaki site verilerini analiz et ve kapsamlı bir SEO denetim raporu oluştur.
+
+Site Verileri:
+- Toplam Makale: {len(articles)}
+- Bonus Siteleri: {len(sites)}
+- Makale Özetleri: {json.dumps(article_summaries[:10], ensure_ascii=False)}
+
+Şu JSON formatında yanıt ver (sadece JSON):
+{{
+  "overall_score": 72,
+  "categories": [
+    {{
+      "name": "Teknik SEO",
+      "score": 75,
+      "issues": ["sorun 1", "sorun 2"],
+      "fixes": ["çözüm 1", "çözüm 2"]
+    }},
+    {{
+      "name": "İçerik Kalitesi",
+      "score": 68,
+      "issues": ["sorun 1"],
+      "fixes": ["çözüm 1"]
+    }},
+    {{
+      "name": "On-Page SEO",
+      "score": 70,
+      "issues": ["sorun 1"],
+      "fixes": ["çözüm 1"]
+    }},
+    {{
+      "name": "Kullanıcı Deneyimi",
+      "score": 80,
+      "issues": [],
+      "fixes": []
+    }}
+  ],
+  "priority_actions": ["öncelikli aksiyon 1", "öncelikli aksiyon 2", "öncelikli aksiyon 3"],
+  "summary": "genel değerlendirme"
+}}"""
+
+    result = await generate_ai_content(prompt, "Sen bir SEO denetçisi ve teknik SEO uzmanısın. Sadece JSON formatında yanıt ver.")
+
+    parsed = None
+    try:
+        cleaned = result.strip()
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+        parsed = json.loads(cleaned)
+    except Exception:
+        parsed = {"raw_analysis": result, "overall_score": 0}
+
+    report = {
+        "id": str(uuid.uuid4()),
+        "type": "site_audit",
+        "input": {"domain_id": req.domain_id, "url": req.url},
+        "result": parsed,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.seo_reports.insert_one({**report})
+    report.pop("_id", None)
+
+    return parsed
+
+@api_router.post("/seo/content-score")
+async def seo_content_score(req: SeoContentScoreRequest):
+    """Score content for SEO quality"""
+    content = req.content
+    title = req.title
+
+    if req.article_id and not content:
+        article = await db.articles.find_one({"id": req.article_id}, {"_id": 0})
+        if article:
+            content = article.get("content", "")
+            title = article.get("title", "")
+
+    if not content:
+        raise HTTPException(status_code=400, detail="İçerik gerekli")
+
+    word_count = len(content.split())
+
+    prompt = f"""Sen bir SEO içerik analisti olarak bu makaleyi değerlendir.
+
+Başlık: {title}
+Hedef Anahtar Kelime: {req.target_keyword or 'belirtilmedi'}
+Kelime Sayısı: {word_count}
+İçerik (ilk 500 kelime): {' '.join(content.split()[:500])}
+
+Şu JSON formatında yanıt ver (sadece JSON):
+{{
+  "overall_score": 75,
+  "scores": {{
+    "keyword_usage": 70,
+    "readability": 80,
+    "structure": 65,
+    "meta_quality": 60,
+    "content_depth": 75
+  }},
+  "strengths": ["güçlü yön 1", "güçlü yön 2"],
+  "weaknesses": ["zayıf yön 1", "zayıf yön 2"],
+  "improvements": ["iyileştirme 1", "iyileştirme 2", "iyileştirme 3"],
+  "keyword_density": "yüzde tahmini",
+  "recommended_word_count": 1200,
+  "summary": "özet değerlendirme"
+}}"""
+
+    result = await generate_ai_content(prompt, "Sen bir SEO içerik analisti ve editörüsün. Sadece JSON formatında yanıt ver.")
+
+    parsed = None
+    try:
+        cleaned = result.strip()
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+        parsed = json.loads(cleaned)
+    except Exception:
+        parsed = {"raw_analysis": result, "overall_score": 0}
+
+    return {**parsed, "word_count": word_count, "title": title}
+
+@api_router.post("/seo/competitor-deep")
+async def seo_competitor_deep(req: SeoCompetitorRequest):
+    """Deep competitor analysis with structured insights"""
+    prompt = f"""Sen bir SEO rakip analiz uzmanısın. Aşağıdaki rakip siteyi analiz et.
+
+Rakip Site: {req.competitor_url}
+Bizim Sitemiz: {req.our_domain or 'belirtilmedi'}
+Niş: Bonus/Bahis/Spor içerik sitesi
+
+Şu JSON formatında yanıt ver (sadece JSON):
+{{
+  "competitor_profile": {{
+    "domain": "{req.competitor_url}",
+    "estimated_authority": "yüksek/orta/düşük",
+    "content_strategy": "açıklama",
+    "strengths": ["güçlü yön 1", "güçlü yön 2"],
+    "weaknesses": ["zayıf yön 1", "zayıf yön 2"]
+  }},
+  "keyword_gaps": ["anahtar kelime 1", "anahtar kelime 2", "anahtar kelime 3", "anahtar kelime 4", "anahtar kelime 5"],
+  "content_opportunities": ["fırsat 1", "fırsat 2", "fırsat 3"],
+  "backlink_strategies": ["strateji 1", "strateji 2"],
+  "action_plan": [
+    {{"priority": "yüksek", "action": "aksiyon 1", "impact": "beklenen etki"}},
+    {{"priority": "orta", "action": "aksiyon 2", "impact": "beklenen etki"}},
+    {{"priority": "düşük", "action": "aksiyon 3", "impact": "beklenen etki"}}
+  ],
+  "summary": "genel değerlendirme"
+}}"""
+
+    result = await generate_ai_content(prompt, "Sen bir SEO ve dijital pazarlama rakip analiz uzmanısın. Sadece JSON formatında yanıt ver.")
+
+    parsed = None
+    try:
+        cleaned = result.strip()
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+        parsed = json.loads(cleaned)
+    except Exception:
+        parsed = {"raw_analysis": result}
+
+    report = {
+        "id": str(uuid.uuid4()),
+        "type": "competitor_analysis",
+        "input": {"competitor_url": req.competitor_url, "our_domain": req.our_domain},
+        "result": parsed,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.seo_reports.insert_one({**report})
+    report.pop("_id", None)
+
+    return parsed
+
+@api_router.post("/seo/meta-generator")
+async def seo_meta_generator(req: SeoMetaRequest):
+    """Generate SEO-optimized meta titles and descriptions"""
+    prompt = f"""Sen bir SEO meta etiket uzmanısın. Aşağıdaki konu için optimize edilmiş meta etiketler oluştur.
+
+Konu: {req.topic}
+Sayfa Tipi: {req.page_type}
+Hedef Anahtar Kelimeler: {', '.join(req.keywords) if req.keywords else 'belirtilmedi'}
+Niş: Bonus/Bahis/Spor
+
+Şu JSON formatında yanıt ver (sadece JSON):
+{{
+  "options": [
+    {{
+      "meta_title": "başlık (max 60 karakter)",
+      "meta_description": "açıklama (max 160 karakter)",
+      "focus_keyword": "odak kelime"
+    }},
+    {{
+      "meta_title": "alternatif başlık",
+      "meta_description": "alternatif açıklama",
+      "focus_keyword": "odak kelime"
+    }},
+    {{
+      "meta_title": "üçüncü alternatif",
+      "meta_description": "üçüncü açıklama",
+      "focus_keyword": "odak kelime"
+    }}
+  ],
+  "og_title": "Open Graph başlık",
+  "og_description": "Open Graph açıklama",
+  "schema_suggestion": "Article/FAQPage/HowTo"
+}}"""
+
+    result = await generate_ai_content(prompt, "Sen bir SEO ve meta etiket optimizasyon uzmanısın. Sadece JSON formatında yanıt ver.")
+
+    parsed = None
+    try:
+        cleaned = result.strip()
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+        parsed = json.loads(cleaned)
+    except Exception:
+        parsed = {"raw_result": result}
+
+    return parsed
+
+@api_router.post("/seo/internal-links")
+async def seo_internal_links(req: SeoInternalLinkRequest):
+    """Suggest internal links based on content and existing articles"""
+    content = req.content
+    if req.article_id and not content:
+        article = await db.articles.find_one({"id": req.article_id}, {"_id": 0})
+        if article:
+            content = article.get("content", "")
+
+    all_articles = await db.articles.find(
+        {"is_published": True},
+        {"_id": 0, "title": 1, "slug": 1, "category": 1, "tags": 1}
+    ).to_list(50)
+
+    article_list = [{"title": a["title"], "slug": a["slug"], "category": a.get("category", "")} for a in all_articles]
+
+    prompt = f"""Sen bir SEO iç link uzmanısın. Aşağıdaki içerik için iç bağlantı önerileri yap.
+
+İçerik (ilk 300 kelime): {' '.join((content or '').split()[:300])}
+
+Mevcut Makaleler:
+{json.dumps(article_list[:20], ensure_ascii=False)}
+
+Şu JSON formatında yanıt ver (sadece JSON):
+{{
+  "suggestions": [
+    {{
+      "anchor_text": "bağlantı metni",
+      "target_slug": "hedef-makale-slug",
+      "target_title": "hedef makale başlığı",
+      "reason": "neden bu bağlantı öneriliyor"
+    }}
+  ],
+  "missing_content": ["bu konuda makale yazılmalı 1", "bu konuda makale yazılmalı 2"],
+  "link_strategy": "genel iç bağlantı stratejisi önerisi"
+}}"""
+
+    result = await generate_ai_content(prompt, "Sen bir SEO iç bağlantı ve site mimarisi uzmanısın. Sadece JSON formatında yanıt ver.")
+
+    parsed = None
+    try:
+        cleaned = result.strip()
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+        parsed = json.loads(cleaned)
+    except Exception:
+        parsed = {"raw_result": result}
+
+    return parsed
+
+@api_router.post("/seo/content-optimizer")
+async def seo_content_optimizer(req: SeoContentOptimizeRequest):
+    """AI-powered content optimization suggestions"""
+    content = req.content
+    title = req.title
+    if req.article_id and not content:
+        article = await db.articles.find_one({"id": req.article_id}, {"_id": 0})
+        if article:
+            content = article.get("content", "")
+            title = article.get("title", "")
+
+    if not content:
+        raise HTTPException(status_code=400, detail="İçerik gerekli")
+
+    prompt = f"""Sen bir SEO içerik optimizasyon uzmanısın. Bu makaleyi analiz et ve somut iyileştirme önerileri ver.
+
+Başlık: {title}
+Hedef Anahtar Kelime: {req.target_keyword or 'belirtilmedi'}
+İçerik (ilk 600 kelime): {' '.join(content.split()[:600])}
+
+Şu JSON formatında yanıt ver (sadece JSON):
+{{
+  "optimized_title": "optimize edilmiş başlık önerisi",
+  "title_improvements": ["başlık iyileştirme 1", "başlık iyileştirme 2"],
+  "content_improvements": [
+    {{"section": "Giriş", "current_issue": "mevcut sorun", "suggestion": "iyileştirme önerisi"}},
+    {{"section": "Ana İçerik", "current_issue": "mevcut sorun", "suggestion": "iyileştirme önerisi"}},
+    {{"section": "Sonuç", "current_issue": "mevcut sorun", "suggestion": "iyileştirme önerisi"}}
+  ],
+  "keyword_suggestions": ["eklenecek anahtar kelime 1", "eklenecek anahtar kelime 2"],
+  "structural_suggestions": ["yapısal öneri 1", "yapısal öneri 2"],
+  "readability_tips": ["okunabilirlik ipucu 1", "okunabilirlik ipucu 2"],
+  "estimated_improvement": "tahmini SEO etkisi açıklaması"
+}}"""
+
+    result = await generate_ai_content(prompt, "Sen bir SEO içerik optimizasyon uzmanısın. Sadece JSON formatında yanıt ver.")
+
+    parsed = None
+    try:
+        cleaned = result.strip()
+        if "```json" in cleaned:
+            cleaned = cleaned.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned:
+            cleaned = cleaned.split("```")[1].split("```")[0].strip()
+        parsed = json.loads(cleaned)
+    except Exception:
+        parsed = {"raw_result": result}
+
+    return parsed
+
+@api_router.get("/seo/reports")
+async def get_seo_reports(report_type: Optional[str] = None, limit: int = 20):
+    """Get saved SEO reports"""
+    query: Dict[str, Any] = {}
+    if report_type:
+        query["type"] = report_type
+    reports = await db.seo_reports.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return {"reports": reports, "count": len(reports)}
+
+@api_router.delete("/seo/reports/{report_id}")
+async def delete_seo_report(report_id: str):
+    """Delete a SEO report"""
+    await db.seo_reports.delete_one({"id": report_id})
+    return {"message": "Rapor silindi"}
+
 # Sports
 @api_router.get("/sports/matches")
 async def get_matches(league: str = "PL"):
