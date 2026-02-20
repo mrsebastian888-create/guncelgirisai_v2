@@ -755,12 +755,16 @@ async def analyze_competitor(request: CompetitorAnalysisRequest):
         "analyzed_at": datetime.now(timezone.utc).isoformat()
     }
 
+class KeywordGapRequest(BaseModel):
+    keywords: List[str]
+    competitor_keywords: List[str] = []
+
 @api_router.post("/ai/keyword-gap-analysis")
-async def keyword_gap_analysis(keywords: List[str], competitor_keywords: List[str] = []):
+async def keyword_gap_analysis(request: KeywordGapRequest):
     """Find keyword gaps and opportunities"""
     prompt = f"""
-    Mevcut Anahtar Kelimelerimiz: {', '.join(keywords)}
-    Rakip Anahtar Kelimeleri: {', '.join(competitor_keywords) if competitor_keywords else 'Belirtilmedi'}
+    Mevcut Anahtar Kelimelerimiz: {', '.join(request.keywords)}
+    Rakip Anahtar Kelimeleri: {', '.join(request.competitor_keywords) if request.competitor_keywords else 'Belirtilmedi'}
     
     Türkçe bahis ve bonus sektörü için anahtar kelime boşluk analizi yap:
     
@@ -790,7 +794,7 @@ async def keyword_gap_analysis(keywords: List[str], competitor_keywords: List[st
     
     return {
         "analysis": content,
-        "input_keywords": keywords,
+        "input_keywords": request.keywords,
         "analyzed_at": datetime.now(timezone.utc).isoformat()
     }
 
