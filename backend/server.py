@@ -166,6 +166,8 @@ async def disconnect_from_mongo():
 
 async def ping_mongo() -> tuple[bool, float]:
     """Ping MongoDB and return status with latency"""
+    if not client:
+        return False, 0
     try:
         start = time.time()
         await client.admin.command('ping')
