@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="20" time="112.227" timestamp="2026-02-20T22:10:51.846406+00:00" hostname="agent-env-c825399c-63ee-4995-b7aa-0890c76138cc"><testcase classname="tests.test_seo_assistant.TestSEODashboard" name="test_seo_dashboard_returns_200" time="0.404" /><testcase classname="tests.test_seo_assistant.TestSEODashboard" name="test_seo_dashboard_with_domain_id" time="0.129" /><testcase classname="tests.test_seo_assistant.TestKeywordResearch" name="test_keyword_research_basic" time="11.896" /><testcase classname="tests.test_seo_assistant.TestKeywordResearch" name="test_keyword_research_single_keyword" time="7.471" /><testcase classname="tests.test_seo_assistant.TestSiteAudit" name="test_site_audit_returns_structured_data" time="29.199" /><testcase classname="tests.test_seo_assistant.TestCompetitorAnalysis" name="test_competitor_analysis" time="20.418" /><testcase classname="tests.test_seo_assistant.TestMetaGenerator" name="test_meta_generator_returns_options" time="5.401" /><testcase classname="tests.test_seo_assistant.TestContentOptimizer" name="test_content_optimizer_with_content" time="16.759" /><testcase classname="tests.test_seo_assistant.TestContentOptimizer" name="test_content_optimizer_requires_content" time="1.839" /><testcase classname="tests.test_seo_assistant.TestContentScore" name="test_content_score" time="8.160" /><testcase classname="tests.test_seo_assistant.TestInternalLinks" name="test_internal_links_suggestions" time="8.425" /><testcase classname="tests.test_seo_assistant.TestSEOReports" name="test_get_reports_list" time="0.141" /><testcase classname="tests.test_seo_assistant.TestSEOReports" name="test_get_reports_with_filter" time="0.188" /><testcase classname="tests.test_seo_assistant.TestSEOReports" name="test_delete_report_nonexistent" time="0.116" /><testcase classname="tests.test_seo_assistant.TestAdminLogin" name="test_admin_login_success" time="0.374" /><testcase classname="tests.test_seo_assistant.TestAdminLogin" name="test_admin_login_invalid_password" time="0.388" /><testcase classname="tests.test_seo_assistant.TestAdminLogin" name="test_admin_login_invalid_username" time="0.141" /><testcase classname="tests.test_seo_assistant.TestHomepageEndpoints" name="test_homepage_bonus_sites" time="0.186" /><testcase classname="tests.test_seo_assistant.TestHomepageEndpoints" name="test_homepage_articles" time="0.216" /><testcase classname="tests.test_seo_assistant.TestHomepageEndpoints" name="test_health_endpoint" time="0.137"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+tests/test_seo_assistant.py:355: in test_health_endpoint
+    data = response.json()
+           ^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase></testsuite></testsuites>
