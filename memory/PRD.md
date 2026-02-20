@@ -1,14 +1,7 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v3.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v5.0
 
 ## Original Problem Statement
 Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI destekli ve kendi kendini optimize eden içerik platformu.
-
-## User Choices/Requirements
-1. **AI Performansa Göre Otomatik Sıralama** - CTA tıklama, affiliate click, scroll depth, time on page metrikleri
-2. **Gerçek Site Listesi** - MAXWIN, HILTONBET, ELEXBET, FESTWIN, CASINO DIOR, BETCI, ALFABAHIS, TULIPBET
-3. **Freshness Engine** - Gerçek değişiklikte güncelleme, kampanya arşivleme
-4. **SEO Asistanı** - Rakip analizi, anahtar kelime boşluğu, haftalık rapor, iç link önerileri
-5. **Gelişmiş AI SEO Asistanı** - Kapsamlı SEO aracı seti (Dashboard, Keyword Research, Site Audit, Competitor Analysis, Meta Generator, Content Optimizer)
 
 ## Tech Stack
 - **Frontend**: React 19, Tailwind CSS, Framer Motion, shadcn/ui
@@ -19,107 +12,87 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 
 ## What's Been Implemented
 
-### v1.0 - Base MVP
+### v1-v3: Base MVP + Match Hub + Production Hardening
 - Homepage, Bonus Guide Pages, Sports News, Article Pages
-- Admin Panel with CRUD operations
-- AI Content Generation
+- Admin Panel with JWT Authentication
+- AI Content Generation, Match Hub with live scores
+- Health checks, rate limiting, CI/CD, domain-based admin access
 
-### v2.0 - Match Hub Module
-- Robust Scores API (cache + retry + fallback)
-- MatchHub component (cards, league badge, status, score, CTAs)
-- AI Mini-Insight (Gemini-flash)
-- Match Detail Page with SEO schema
-- Partner Tracking endpoint
-- Admin Controls (API status, AI toggle, featured match)
+### v4: Homepage Overhaul
+- Hero section, filterable bonus list, category slider, FAQ, CTA banner
 
-### v3.0 - Production Hardening
-- Health checks, versioning, DB checks
-- Structured logging (JSON formatter)
-- Rate limiting (IP-based)
-- CI/CD Pipeline (GitHub Actions)
-- JWT Admin Authentication
-- Domain-Based Access Control (admin-guncelgiris.co)
+### v5.0: Gelişmiş AI SEO Asistanı (Feb 2026)
+- 10 new /api/seo/* endpoints (dashboard, keyword-research, site-audit, competitor-deep, meta-generator, content-optimizer, content-score, internal-links, reports CRUD)
+- SeoAssistant.jsx component with 6 sub-tabs + reports history
 
-### v4.0 - Homepage Overhaul
-- Hero section with neon grid
-- Filterable bonus list
-- Category slider
-- FAQ accordion
-- CTA banner
+### v5.1: Admin Panel Tamamlama (Feb 2026) - CURRENT
+**Siteler Tab:**
+- Inline edit mode (name, bonus_type, amount, URL, features, rating)
+- Delete with confirmation
+- PUT /api/bonus-sites/{id} endpoint
 
-### v5.0 - Gelişmiş AI SEO Asistanı (February 2026) ✅ NEW
-Backend Endpoints (10 new):
-- `GET /api/seo/dashboard` - SEO health score, metrics, issues, recommendations
-- `POST /api/seo/keyword-research` - AI keyword analysis with scoring, related keywords, content ideas
-- `POST /api/seo/site-audit` - Comprehensive SEO audit with category scores and priority actions
-- `POST /api/seo/content-score` - Article SEO quality scoring
-- `POST /api/seo/competitor-deep` - Deep competitor analysis with action plans
-- `POST /api/seo/meta-generator` - Generate meta titles/descriptions with SERP preview
-- `POST /api/seo/internal-links` - Internal linking suggestions
-- `POST /api/seo/content-optimizer` - Content optimization recommendations
-- `GET /api/seo/reports` - Historical SEO reports
-- `DELETE /api/seo/reports/{id}` - Delete reports
+**Makaleler Tab:**
+- New article creation form (title, category, SEO title, description, tags, content)
+- Inline edit with publish/draft toggle
+- Delete with confirmation  
+- Search by title/content + category filter
+- Content preview (expand/collapse)
+- POST /api/articles, PUT /api/articles/{id}, DELETE /api/articles/{id}, GET /api/articles/{id}
 
-Frontend Component (SeoAssistant.jsx):
-- SEO Score Dashboard with visual ring, stats cards, issues
-- Keyword Research Tool (search volume, competition, difficulty, intent)
-- Site Audit Tool (category scores, priority actions)
-- Competitor Analysis (profile, keyword gaps, action plan)
-- Meta Tag Generator (3 options with SERP preview)
-- Content Optimizer (title improvements, content improvements, readability)
-- Reports History (filter, expand, delete)
+**Domainler Tab:**
+- Inline edit (display_name, focus, meta_title)
+- PUT /api/domains/{id} endpoint
 
-## Database Schema
-```
-bonus_sites: {id, name, logo_url, bonus_type, bonus_amount, bonus_value, affiliate_url, rating, features, turnover_requirement, is_active}
-articles: {id, title, slug, content, content_hash, content_updated_at, seo_title, seo_description, tags, category}
-domains: {id, domain_name, display_name, focus, theme, cloudflare_zone_id}
-seo_reports: {id, type, input, result, created_at}
-users: {username, hashed_password}
-```
+**Admin Domain:** adminguncelgiris.company
 
 ## API Endpoints
+### Auth
 - POST /api/auth/login
-- GET /api/bonus-sites, POST /api/bonus-sites
-- GET /api/articles, POST /api/domains/{id}/articles
-- GET /api/sports/scores, GET /api/sports/featured
-- GET /api/sports/match/{id}
-- GET /api/news (Perigon API)
-- GET /api/seo/dashboard
-- POST /api/seo/keyword-research
-- POST /api/seo/site-audit
-- POST /api/seo/content-score
-- POST /api/seo/competitor-deep
-- POST /api/seo/meta-generator
-- POST /api/seo/internal-links
-- POST /api/seo/content-optimizer
-- GET /api/seo/reports
-- DELETE /api/seo/reports/{id}
+
+### Domains CRUD
+- GET /api/domains, POST /api/domains, PUT /api/domains/{id}, DELETE /api/domains/{id}
+
+### Bonus Sites CRUD  
+- GET /api/bonus-sites, POST /api/bonus-sites, PUT /api/bonus-sites/{id}, DELETE /api/bonus-sites/{id}
+
+### Articles CRUD
+- GET /api/articles, POST /api/articles, PUT /api/articles/{id}, DELETE /api/articles/{id}, GET /api/articles/{id}
+- GET /api/articles?search=term&category=bonus
+
+### SEO Assistant
+- GET /api/seo/dashboard, POST /api/seo/keyword-research, POST /api/seo/site-audit
+- POST /api/seo/competitor-deep, POST /api/seo/meta-generator, POST /api/seo/content-optimizer
+- POST /api/seo/content-score, POST /api/seo/internal-links
+- GET /api/seo/reports, DELETE /api/seo/reports/{id}
+
+### Sports & Auto Content
+- GET /api/sports/scores, GET /api/sports/match/{id}
+- POST /api/auto-content/generate-article, POST /api/auto-content/bulk-generate
+- GET /api/news
+
+## Database Schema
+- bonus_sites, articles, domains, seo_reports, domain_sites, domain_performance, users
 
 ## Prioritized Backlog
-
-### P0 (Done) ✅
-- [x] AI performance ranking system
-- [x] Real site list integration
-- [x] SEO assistant tools (basic)
-- [x] Performance tracking infrastructure
+### P0 (Done)
+- [x] Admin panel full CRUD (sites, articles, domains)
+- [x] AI SEO Assistant
 - [x] Match Hub with live scores
-- [x] Admin authentication (JWT)
-- [x] Gelişmiş AI SEO Asistanı
+- [x] Admin JWT authentication + domain isolation
 
-### P1 (Next Phase)
-- [ ] Complete Perigon News API integration (SportsNewsPage)
-- [ ] Deployment guidance (Atlas, Railway, Vercel)
+### P1 (Next)
+- [ ] Complete Perigon News API integration (/spor-haberleri)
+- [ ] Deployment to production (Vercel + Railway + Atlas)
 - [ ] GoDaddy API Integration (DNS automation)
-- [ ] AMP Implementation (mobile SEO)
+- [ ] AMP Implementation
 
 ### P2 (Future)
 - [ ] Multi-language support
-- [ ] Scheduled reports via email
-- [ ] A/B testing for CTA buttons
-- [ ] Mobile app (PWA)
+- [ ] Scheduled SEO reports
+- [ ] A/B testing for CTAs
+- [ ] server.py modular refactoring
 
-## Testing Status
-- Backend: 20/20 tests passed (SEO endpoints)
-- Frontend: All tabs, admin login, homepage verified
-- Test file: /app/backend/tests/test_seo_assistant.py
+## Testing
+- iteration_4.json: SEO Assistant - 20/20 backend, all frontend passed
+- iteration_5.json: Admin CRUD - 19/19 backend, all frontend passed
+- Test file: /app/backend/tests/test_admin_crud.py
