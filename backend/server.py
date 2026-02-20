@@ -846,15 +846,62 @@ async def weekly_seo_report(domain_id: Optional[str] = None):
 # Sports
 @api_router.get("/sports/matches")
 async def get_matches(league: str = "PL"):
-    """Get match data"""
-    return {
-        "matches": [
-            {"home_team": "Galatasaray", "away_team": "Fenerbahçe", "home_score": 2, "away_score": 1, "league": "Süper Lig", "status": "FINISHED"},
-            {"home_team": "Beşiktaş", "away_team": "Trabzonspor", "home_score": 1, "away_score": 1, "league": "Süper Lig", "status": "FINISHED"},
-            {"home_team": "Arsenal", "away_team": "Chelsea", "home_score": 3, "away_score": 1, "league": "Premier League", "status": "FINISHED"},
-        ],
-        "competition": league
-    }
+    """Legacy endpoint — redirects to /sports/scores"""
+    return await get_live_scores()
+
+@api_router.get("/sports/scores")
+async def get_live_scores():
+    """Fetch live & recent scores from The Odds API — top 10 matches"""
+    if not ODDS_API_KEY:
+        raise HTTPException(status_code=503, detail="Odds API key not configured")
+
+    SPORT_KEYS = [
+        "soccer_turkey_super_league",
+        "soccer_epl",
+        "soccer_spain_la_liga",
+        "soccer_germany_bundesliga",
+        "soccer_italy_serie_a",
+        "soccer_uefa_champs_league",
+    ]
+
+    all_matches = []
+    async with httpx.AsyncClient(timeout=10) as client:
+        for sport_key in SPORT_KEYS:
+            try:
+                resp = await client.get(
+                    f"https://api.the-odds-api.com/v4/sports/{sport_key}/scores",
+                    params={"apiKey": ODDS_API_KEY, "daysFrom": "1", "dateFormat": "iso"},
+                )
+                if resp.status_code == 200:
+                    matches = resp.json()
+                    for m in matches:
+                        scores = m.get("scores") or []
+                        home_score = next((s["score"] for s in scores if s["name"] == m["home_team"]), None)
+                        away_score = next((s["score"] for s in scores if s["name"] == m["away_team"]), None)
+                        all_matches.append({
+                            "id": m["id"],
+                            "sport_key": sport_key,
+                            "sport_title": m.get("sport_title", ""),
+                            "home_team": m["home_team"],
+                            "away_team": m["away_team"],
+                            "commence_time": m["commence_time"],
+                            "completed": m.get("completed", False),
+                            "home_score": home_score,
+                            "away_score": away_score,
+                            "last_update": m.get("last_update"),
+                        })
+            except Exception as e:
+                logger.warning(f"Odds API error for {sport_key}: {e}")
+                continue
+
+    # Önce canlı, sonra tamamlanan (en yeni), sonra yaklaşan
+    now = datetime.now(timezone.utc).isoformat()
+    live = [m for m in all_matches if not m["completed"] and m["commence_time"] < now]
+    completed_matches = [m for m in all_matches if m["completed"]]
+    upcoming = [m for m in all_matches if not m["completed"] and m["commence_time"] >= now]
+
+    sorted_matches = live + sorted(completed_matches, key=lambda x: x["commence_time"], reverse=True) + upcoming
+    return sorted_matches[:10]
 
 # Stats
 @api_router.get("/stats/dashboard")
