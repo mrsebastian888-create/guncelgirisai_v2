@@ -866,35 +866,64 @@ async def get_matches(league: str = "PL"):
     """Legacy endpoint — redirects to /sports/scores"""
     return await get_live_scores()
 
-@api_router.get("/sports/scores")
-async def get_live_scores():
-    """Fetch live & recent scores from The Odds API — top 10 matches"""
-    if not ODDS_API_KEY:
-        raise HTTPException(status_code=503, detail="Odds API key not configured")
+# ── helpers ──────────────────────────────────────────────────────────
 
-    SPORT_KEYS = [
-        "soccer_turkey_super_league",
-        "soccer_epl",
-        "soccer_spain_la_liga",
-        "soccer_germany_bundesliga",
-        "soccer_italy_serie_a",
-        "soccer_uefa_champs_league",
-    ]
+def _normalize_match(m: dict, sport_key: str) -> dict:
+    scores = m.get("scores") or []
+    home_score = next((s["score"] for s in scores if s["name"] == m["home_team"]), None)
+    away_score = next((s["score"] for s in scores if s["name"] == m["away_team"]), None)
+    slug_date = m["commence_time"][:10]
+    home_slug = re.sub(r"[^a-z0-9]+", "-", m["home_team"].lower()).strip("-")
+    away_slug = re.sub(r"[^a-z0-9]+", "-", m["away_team"].lower()).strip("-")
+    return {
+        "id": m["id"],
+        "sport_key": sport_key,
+        "sport_title": m.get("sport_title", ""),
+        "home_team": m["home_team"],
+        "away_team": m["away_team"],
+        "commence_time": m["commence_time"],
+        "completed": m.get("completed", False),
+        "home_score": home_score,
+        "away_score": away_score,
+        "last_update": m.get("last_update"),
+        "slug": f"{home_slug}-vs-{away_slug}-{slug_date}",
+    }
 
+async def _fetch_scores_from_api() -> list:
+    """Fetch scores from Odds API with retry"""
     all_matches = []
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=12) as client:
         for sport_key in SPORT_KEYS:
+            for attempt in range(2):
+                try:
+                    resp = await client.get(
+                        f"https://api.the-odds-api.com/v4/sports/{sport_key}/scores",
+                        params={"apiKey": ODDS_API_KEY, "daysFrom": "1", "dateFormat": "iso"},
+                    )
+                    if resp.status_code == 200:
+                        for m in resp.json():
+                            all_matches.append(_normalize_match(m, sport_key))
+                    break
+                except Exception as e:
+                    if attempt == 1:
+                        logger.warning(f"Odds API score error {sport_key}: {e}")
+    return all_matches
+
+async def _fetch_upcoming_fallback() -> list:
+    """Fallback: fetch upcoming fixtures (next 24h)"""
+    all_matches = []
+    async with httpx.AsyncClient(timeout=12) as client:
+        for sport_key in SPORT_KEYS[:3]:  # limit to top 3 leagues for fallback
             try:
                 resp = await client.get(
-                    f"https://api.the-odds-api.com/v4/sports/{sport_key}/scores",
-                    params={"apiKey": ODDS_API_KEY, "daysFrom": "1", "dateFormat": "iso"},
+                    f"https://api.the-odds-api.com/v4/sports/{sport_key}/events",
+                    params={"apiKey": ODDS_API_KEY, "dateFormat": "iso"},
                 )
                 if resp.status_code == 200:
-                    matches = resp.json()
-                    for m in matches:
-                        scores = m.get("scores") or []
-                        home_score = next((s["score"] for s in scores if s["name"] == m["home_team"]), None)
-                        away_score = next((s["score"] for s in scores if s["name"] == m["away_team"]), None)
+                    for m in resp.json()[:5]:
+                        slug_date = m["commence_time"][:10]
+                        home_slug = re.sub(r"[^a-z0-9]+", "-", m["home_team"].lower()).strip("-")
+                        away_slug = re.sub(r"[^a-z0-9]+", "-", m["away_team"].lower()).strip("-")
                         all_matches.append({
                             "id": m["id"],
                             "sport_key": sport_key,
@@ -902,23 +931,224 @@ async def get_live_scores():
                             "home_team": m["home_team"],
                             "away_team": m["away_team"],
                             "commence_time": m["commence_time"],
-                            "completed": m.get("completed", False),
-                            "home_score": home_score,
-                            "away_score": away_score,
-                            "last_update": m.get("last_update"),
+                            "completed": False,
+                            "home_score": None,
+                            "away_score": None,
+                            "last_update": None,
+                            "slug": f"{home_slug}-vs-{away_slug}-{slug_date}",
                         })
             except Exception as e:
-                logger.warning(f"Odds API error for {sport_key}: {e}")
-                continue
+                logger.warning(f"Odds API upcoming error {sport_key}: {e}")
+    return all_matches
 
-    # Önce canlı, sonra tamamlanan (en yeni), sonra yaklaşan
+def _sort_matches(matches: list) -> list:
     now = datetime.now(timezone.utc).isoformat()
-    live = [m for m in all_matches if not m["completed"] and m["commence_time"] < now]
-    completed_matches = [m for m in all_matches if m["completed"]]
-    upcoming = [m for m in all_matches if not m["completed"] and m["commence_time"] >= now]
+    live = [m for m in matches if not m["completed"] and m["commence_time"] <= now]
+    completed = sorted([m for m in matches if m["completed"]], key=lambda x: x["commence_time"], reverse=True)
+    upcoming = sorted([m for m in matches if not m["completed"] and m["commence_time"] > now], key=lambda x: x["commence_time"])
+    return live + completed + upcoming
 
-    sorted_matches = live + sorted(completed_matches, key=lambda x: x["commence_time"], reverse=True) + upcoming
-    return sorted_matches[:10]
+async def _get_scores_cached() -> tuple[list, bool]:
+    """Returns (matches, is_cached). Populates / refreshes cache."""
+    now_ts = time.time()
+    # Cache still fresh
+    if _scores_cache["data"] is not None and (now_ts - _scores_cache["ts"]) < _CACHE_TTL:
+        return _scores_cache["data"], True
+
+    try:
+        matches = await _fetch_scores_from_api()
+        if not matches:
+            matches = await _fetch_upcoming_fallback()
+        _scores_cache["data"] = _sort_matches(matches)[:10]
+        _scores_cache["ts"] = now_ts
+        _scores_cache["error_count"] = 0
+        _scores_cache["last_error"] = None
+        return _scores_cache["data"], False
+    except Exception as e:
+        _scores_cache["error_count"] = _scores_cache.get("error_count", 0) + 1
+        _scores_cache["last_error"] = str(e)
+        logger.error(f"Scores fetch failed: {e}")
+        # Return stale cache if available
+        if _scores_cache["data"]:
+            return _scores_cache["data"], True
+        return [], False
+
+async def _generate_ai_insight(home_team: str, away_team: str, league: str) -> str:
+    """Generate 2-3 line neutral AI match insight in Turkish"""
+    if not _ai_insight_enabled or not EMERGENT_LLM_KEY:
+        return ""
+    try:
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"insight-{home_team}-{away_team}",
+            system_message=(
+                "Sen bir spor analisti asistanısın. Kısa, tarafsız ve bilgilendirici maç analizleri yazıyorsun. "
+                "Kesinlikle 'kesin gol atar', 'garantili kazanır' gibi ifadeler kullanma. "
+                "Sadece genel olası senaryoları, dikkat edilmesi gereken faktörleri belirt."
+            )
+        ).with_model("gemini", "gemini-3-flash-preview")
+
+        msg = UserMessage(text=(
+            f"'{home_team}' - '{away_team}' ({league}) maçı için 2-3 cümlelik "
+            f"Türkçe, kısa ve tarafsız bir analiz yaz. "
+            f"Form durumunu, güçlü yönleri ve olası senaryoları belirt. "
+            f"'Bu yazı bilgi amaçlıdır' şeklinde başla."
+        ))
+        response = await chat.send_message(msg)
+        return response[:300] if response else ""
+    except Exception as e:
+        logger.warning(f"AI insight error: {e}")
+        return ""
+
+# ── endpoints ────────────────────────────────────────────────────────
+
+@api_router.get("/sports/scores")
+async def get_live_scores():
+    """Fetch live & recent scores with cache + fallback"""
+    if not ODDS_API_KEY:
+        raise HTTPException(status_code=503, detail="Odds API key not configured")
+    matches, from_cache = await _get_scores_cached()
+    return {"matches": matches, "from_cache": from_cache, "count": len(matches)}
+
+@api_router.get("/sports/featured")
+async def get_featured_match():
+    """Returns featured match + AI mini-insight"""
+    global _featured_match_override
+    matches, _ = await _get_scores_cached()
+    if not matches:
+        return None
+
+    # Pick featured: manual override > live Turkish match > first match
+    featured = None
+    if _featured_match_override:
+        featured = next((m for m in matches if m["id"] == _featured_match_override), None)
+    if not featured:
+        featured = next((m for m in matches if m["sport_key"] == "soccer_turkey_super_league"), None)
+    if not featured:
+        featured = matches[0]
+
+    insight = ""
+    if _ai_insight_enabled:
+        insight = await _generate_ai_insight(
+            featured["home_team"], featured["away_team"], featured["sport_title"]
+        )
+
+    return {**featured, "ai_insight": insight}
+
+@api_router.get("/sports/match/{match_id}")
+async def get_match_detail(match_id: str):
+    """Returns match details with AI analysis + recommended partner"""
+    matches, _ = await _get_scores_cached()
+    match = next((m for m in matches if m["id"] == match_id), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+
+    # AI analysis (longer, for detail page)
+    analysis = ""
+    if _ai_insight_enabled and EMERGENT_LLM_KEY:
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=f"analysis-{match_id}",
+                system_message="Sen bir spor analisti asistanısın. Yapılandırılmış, tarafsız Türkçe maç analizleri yazıyorsun."
+            ).with_model("gemini", "gemini-3-flash-preview")
+            msg = UserMessage(text=(
+                f"'{match['home_team']}' - '{match['away_team']}' ({match['sport_title']}) maçı için "
+                f"yapılandırılmış bir Türkçe analiz yaz. "
+                f"Şu başlıkları kullan: 1) Genel Bakış 2) Dikkat Edilmesi Gerekenler 3) Olası Senaryolar. "
+                f"Her bölüm 2-3 cümle. Tarafsız ol, garanti ifade kullanma. "
+                f"Sonunda: 'Bu analiz yalnızca bilgi amaçlıdır.' ekle."
+            ))
+            analysis = await chat.send_message(msg)
+        except Exception as e:
+            logger.warning(f"Match detail AI error: {e}")
+
+    # Recommended partner (top rated bonus site)
+    partner = None
+    try:
+        top_site = await db.bonus_sites.find_one(
+            {"is_active": True},
+            {"_id": 0, "id": 1, "name": 1, "affiliate_url": 1, "bonus_amount": 1},
+            sort=[("performance_score", -1)]
+        )
+        if top_site:
+            partner = top_site
+    except Exception:
+        pass
+
+    return {**match, "ai_analysis": analysis, "recommended_partner": partner}
+
+@api_router.get("/sports/match-by-slug/{slug}")
+async def get_match_by_slug(slug: str):
+    """Find match by URL slug"""
+    matches, _ = await _get_scores_cached()
+    match = next((m for m in matches if m.get("slug") == slug), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="Match not found")
+    return await get_match_detail(match["id"])
+
+@api_router.get("/go/{partner_id}/{match_id}")
+async def tracking_redirect(partner_id: str, match_id: str, request: Request):
+    """Tracking redirect for partner CTAs"""
+    from fastapi.responses import RedirectResponse
+    # Log the click
+    try:
+        await db.clicks.insert_one({
+            "partner_id": partner_id,
+            "match_id": match_id,
+            "ip": request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown"),
+            "user_agent": request.headers.get("User-Agent", ""),
+            "ts": datetime.now(timezone.utc).isoformat(),
+        })
+        # Get partner affiliate URL
+        partner = await db.bonus_sites.find_one({"id": partner_id}, {"_id": 0, "affiliate_url": 1})
+        url = partner["affiliate_url"] if partner else "/"
+    except Exception as e:
+        logger.warning(f"Tracking redirect error: {e}")
+        url = "/"
+    return RedirectResponse(url=url, status_code=302)
+
+@api_router.get("/admin/api-status")
+async def get_api_status():
+    """Admin: API health and cache info"""
+    age = time.time() - _scores_cache.get("ts", 0)
+    return {
+        "odds_api_configured": bool(ODDS_API_KEY),
+        "cache_age_seconds": round(age),
+        "cache_ttl_seconds": _CACHE_TTL,
+        "is_stale": age > _CACHE_TTL,
+        "cached_match_count": len(_scores_cache.get("data") or []),
+        "error_count": _scores_cache.get("error_count", 0),
+        "last_error": _scores_cache.get("last_error"),
+        "ai_insight_enabled": _ai_insight_enabled,
+        "featured_match_override": _featured_match_override,
+        "last_fetch_time": datetime.fromtimestamp(_scores_cache["ts"], tz=timezone.utc).isoformat() if _scores_cache["ts"] else None,
+    }
+
+class FeaturedMatchRequest(BaseModel):
+    match_id: Optional[str] = None
+
+class AiToggleRequest(BaseModel):
+    enabled: bool
+
+@api_router.post("/admin/featured-match")
+async def set_featured_match(req: FeaturedMatchRequest):
+    global _featured_match_override
+    _featured_match_override = req.match_id
+    return {"ok": True, "featured_match_id": _featured_match_override}
+
+@api_router.post("/admin/ai-toggle")
+async def toggle_ai_insight(req: AiToggleRequest):
+    global _ai_insight_enabled
+    _ai_insight_enabled = req.enabled
+    return {"ok": True, "ai_insight_enabled": _ai_insight_enabled}
+
+@api_router.post("/admin/refresh-scores")
+async def refresh_scores():
+    """Force refresh scores cache"""
+    _scores_cache["ts"] = 0  # invalidate cache
+    matches, _ = await _get_scores_cached()
+    return {"ok": True, "count": len(matches)}
 
 # Stats
 @api_router.get("/stats/dashboard")
