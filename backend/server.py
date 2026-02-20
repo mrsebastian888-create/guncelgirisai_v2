@@ -795,6 +795,10 @@ async def create_article(article: Dict[str, Any]):
         raise HTTPException(status_code=400, detail="Başlık gerekli")
     if not article.get("slug"):
         article["slug"] = slugify(article["title"])
+    # Auto-generate excerpt from content if not provided
+    if not article.get("excerpt") and article.get("content"):
+        excerpt_text = article["content"][:200].strip()
+        article["excerpt"] = excerpt_text + "..." if len(article["content"]) > 200 else excerpt_text
     article["content_hash"] = hashlib.md5(article.get("content", "").encode()).hexdigest()
     article["content_updated_at"] = datetime.now(timezone.utc).isoformat()
     article_obj = Article(**article)
