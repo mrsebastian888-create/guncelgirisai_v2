@@ -25,7 +25,6 @@ const Navbar = () => {
       ]
     },
     { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
-    { label: "Admin", href: "/admin", icon: Settings }
   ];
 
   const isActive = (href) => location.pathname === href;
