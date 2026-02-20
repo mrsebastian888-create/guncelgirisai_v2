@@ -294,33 +294,6 @@ const AdminPage = () => {
     }
   };
 
-  const handleCompetitorAnalysis = async () => {
-    if (!competitorUrl) return;
-    setGenerating(true);
-    try {
-      const res = await axios.post(`${API}/ai/competitor-analysis`, { competitor_url: competitorUrl });
-      setGeneratedContent(res.data.analysis);
-      toast.success("Analiz tamamlandı");
-    } catch (error) {
-      toast.error("Analiz yapılamadı");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleWeeklyReport = async () => {
-    setGenerating(true);
-    try {
-      const res = await axios.get(`${API}/ai/weekly-seo-report${selectedDomain ? `?domain_id=${selectedDomain}` : ''}`);
-      setGeneratedContent(res.data.report);
-      toast.success("Rapor oluşturuldu");
-    } catch (error) {
-      toast.error("Rapor oluşturulamadı");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-neon-green" /></div>;
 
   return (
