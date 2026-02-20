@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import axios from "axios";
-import { API } from "@/App";
+import { API, isAdminDomain } from "@/App";
 
 export default function ProtectedRoute({ children }) {
   const [status, setStatus] = useState("checking"); // checking | ok | fail
 
   useEffect(() => {
+    // İlk kontrol: doğru subdomainde mi?
+    if (!isAdminDomain()) {
+      setStatus("fail");
+      return;
+    }
+
     const token = localStorage.getItem("admin_token");
     if (!token) {
       setStatus("fail");
@@ -33,6 +39,8 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (status === "fail") {
+    // Admin domaininde değilse 404 gibi davran, değilse login sayfasına gönder
+    if (!isAdminDomain()) return <Navigate to="/" replace />;
     return <Navigate to="/admin-login" replace />;
   }
 
