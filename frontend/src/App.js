@@ -14,6 +14,7 @@ import AdminPage from "@/pages/AdminPage";
 // Components
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import WelcomePopup from "@/components/WelcomePopup";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
