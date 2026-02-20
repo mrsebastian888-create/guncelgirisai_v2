@@ -446,6 +446,9 @@ const AdminPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+    </motion.div>
+  );
+      </div>
     </div>
   );
 };
