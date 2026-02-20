@@ -369,14 +369,17 @@ class TurkishSportsBonusAPITester:
             print(f"   Competitor analysis length: {len(analysis)} characters")
         
         # Test keyword gap analysis
-        keywords = ["deneme bonusu", "bahis siteleri", "casino bonus"]
+        keyword_request = {
+            "keywords": ["deneme bonusu", "bahis siteleri", "casino bonus"],
+            "competitor_keywords": ["bonus veren siteler", "güvenilir bahis"]
+        }
         
         success, data = self.run_test(
             "AI Keyword Gap Analysis",
             "POST",
             "ai/keyword-gap-analysis",
             200,
-            keywords,
+            keyword_request,
             timeout=45
         )
         
