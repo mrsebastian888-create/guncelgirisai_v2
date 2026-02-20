@@ -22,14 +22,17 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - Admin Panel with CRUD operations
 - AI Content Generation
 
-### v3.0 - Production Hardening & CI/CD ✅
+### v3.0 - Production Hardening & CI/CD + Admin Auth ✅
 1. **Bug Fixes (server.py)**
-   - Rate limiter çift sayım sorunu düzeltildi (`is_allowed()` tek seferlik çağrılıyor)
-   - `ping_mongo()` guard clause eklendi (`if not client: return False, 0`)
-2. **CI/CD Pipeline (GitHub Actions)**
-   - `.github/workflows/backend-test.yml` — Python lint + test
-   - `.github/workflows/frontend-build.yml` — Yarn build doğrulama
-3. **Health Endpoints** - `/health`, `/version`, `/db-check` tümü çalışıyor
+   - Rate limiter çift sayım sorunu düzeltildi
+   - `ping_mongo()` guard clause eklendi
+2. **CI/CD Pipeline** — `.github/workflows/` altında backend + frontend workflows
+3. **Admin Authentication (JWT)**
+   - `/api/auth/login` ve `/api/auth/verify` endpoint'leri
+   - `bcrypt` ile hash'lenmiş şifre — `.env`'de saklı
+   - Frontend: `LoginPage.js`, `ProtectedRoute.js`
+   - `/admin` rotası korumalı, `/admin-login` yeni giriş sayfası
+   - Admin sayfalarında navbar/footer/popup gizlendi
 
 
 1. **AI Performance Ranking System**
