@@ -56,6 +56,12 @@ FOOTBALL_API_KEY = get_optional_env("FOOTBALL_DATA_API_KEY", "demo")
 CLOUDFLARE_API_TOKEN = get_optional_env("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_ACCOUNT_ID = get_optional_env("CLOUDFLARE_ACCOUNT_ID")
 
+# Admin auth config
+ADMIN_USERNAME = get_optional_env("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD_HASH = get_optional_env("ADMIN_PASSWORD_HASH", "")
+JWT_SECRET = get_optional_env("JWT_SECRET", "changeme-set-in-env")
+JWT_EXPIRE_HOURS = int(get_optional_env("JWT_EXPIRE_HOURS", "24"))
+
 # CORS configuration
 CORS_ORIGINS = get_optional_env("CORS_ORIGINS", "https://guncelgiris.ai,https://www.guncelgiris.ai")
 CORS_ALLOW_CREDENTIALS = get_optional_env("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
