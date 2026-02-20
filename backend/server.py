@@ -703,6 +703,19 @@ async def delete_bonus_site(site_id: str):
     await db.bonus_sites.delete_one({"id": site_id})
     return {"message": "Site deleted"}
 
+@api_router.put("/bonus-sites/{site_id}")
+async def update_bonus_site(site_id: str, data: Dict[str, Any]):
+    """Update a bonus site"""
+    data.pop("id", None)
+    data.pop("_id", None)
+    if "bonus_amount" in data:
+        data["bonus_value"] = extract_bonus_value(data["bonus_amount"])
+    if "features" in data and isinstance(data["features"], str):
+        data["features"] = [f.strip() for f in data["features"].split(",") if f.strip()]
+    await db.bonus_sites.update_one({"id": site_id}, {"$set": data})
+    updated = await db.bonus_sites.find_one({"id": site_id}, {"_id": 0})
+    return updated
+
 # Performance Tracking
 @api_router.post("/track/event")
 async def track_event(event: PerformanceEventCreate):
