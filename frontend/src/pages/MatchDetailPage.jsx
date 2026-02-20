@@ -204,6 +204,7 @@ export default function MatchDetailPage() {
                   href={`/api/go/${match.recommended_partner.id}/${match.id}`}
                   target="_blank"
                   rel="noopener noreferrer sponsored"
+  data-testid="partner-cta-btn"
                   className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-heading font-bold uppercase text-sm transition-all active:scale-95"
                   style={{ background: "var(--neon-green)", color: "#000" }}
                   data-testid="partner-cta-btn"
