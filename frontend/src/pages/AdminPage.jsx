@@ -5,7 +5,8 @@ import { API } from "@/App";
 import { toast } from "sonner";
 import {
   Settings, Plus, Trash2, Edit, Save, Wand2, BarChart3,
-  FileText, Gift, Activity, RefreshCw, ChevronDown, ChevronUp
+  FileText, Gift, Activity, RefreshCw, ChevronDown, ChevronUp,
+  TrendingUp, Target, Globe, Link2, Calendar, Award, Archive
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,21 +32,15 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
 
 const AdminPage = () => {
   const [stats, setStats] = useState(null);
   const [bonusSites, setBonusSites] = useState([]);
   const [articles, setArticles] = useState([]);
+  const [rankingReport, setRankingReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState("");
@@ -53,15 +48,19 @@ const AdminPage = () => {
   // Form states
   const [newSite, setNewSite] = useState({
     name: "", logo_url: "", bonus_type: "deneme", bonus_amount: "",
-    affiliate_url: "", rating: 4.5, features: [], is_featured: false, order: 0
+    affiliate_url: "", rating: 4.5, features: [], is_featured: false, 
+    order: 0, turnover_requirement: 10.0
   });
   const [newArticle, setNewArticle] = useState({
     title: "", excerpt: "", content: "", category: "bonus",
     tags: [], image_url: "", seo_title: "", seo_description: ""
   });
   const [aiRequest, setAiRequest] = useState({
-    topic: "", content_type: "article", keywords: "", tone: "professional", word_count: 800
+    topic: "", content_type: "article", keywords: "", tone: "professional", 
+    word_count: 800, target_url: ""
   });
+  const [competitorUrl, setCompetitorUrl] = useState("");
+  const [keywordGapInput, setKeywordGapInput] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -69,14 +68,16 @@ const AdminPage = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, sitesRes, articlesRes] = await Promise.all([
+      const [statsRes, sitesRes, articlesRes, rankingRes] = await Promise.all([
         axios.get(`${API}/stats/dashboard`),
         axios.get(`${API}/bonus-sites?limit=50`),
-        axios.get(`${API}/articles?limit=50`)
+        axios.get(`${API}/articles?limit=50`),
+        axios.get(`${API}/ai/ranking-report`)
       ]);
       setStats(statsRes.data);
       setBonusSites(sitesRes.data);
       setArticles(articlesRes.data);
+      setRankingReport(rankingRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Veri yüklenirken hata oluştu");
@@ -85,21 +86,44 @@ const AdminPage = () => {
     }
   };
 
+  const handleUpdateRankings = async () => {
+    try {
+      await axios.post(`${API}/ai/update-rankings`);
+      toast.success("Sıralamalar güncellendi");
+      fetchData();
+    } catch (error) {
+      toast.error("Sıralama güncellenirken hata oluştu");
+    }
+  };
+
   const handleCreateSite = async () => {
     try {
       const siteData = {
         ...newSite,
-        features: newSite.features.length > 0 ? newSite.features : []
+        features: typeof newSite.features === 'string' 
+          ? newSite.features.split(',').map(f => f.trim()).filter(f => f)
+          : newSite.features
       };
       await axios.post(`${API}/bonus-sites`, siteData);
       toast.success("Bonus sitesi eklendi");
       fetchData();
       setNewSite({
         name: "", logo_url: "", bonus_type: "deneme", bonus_amount: "",
-        affiliate_url: "", rating: 4.5, features: [], is_featured: false, order: 0
+        affiliate_url: "", rating: 4.5, features: [], is_featured: false, 
+        order: 0, turnover_requirement: 10.0
       });
     } catch (error) {
       toast.error("Site eklenirken hata oluştu");
+    }
+  };
+
+  const handleArchiveSite = async (id) => {
+    try {
+      await axios.post(`${API}/bonus-sites/${id}/archive`);
+      toast.success("Site arşivlendi");
+      fetchData();
+    } catch (error) {
+      toast.error("Site arşivlenirken hata oluştu");
     }
   };
 
@@ -159,13 +183,61 @@ const AdminPage = () => {
     }
   };
 
-  const handleGetSeoSuggestions = async (articleId) => {
+  const handleCompetitorAnalysis = async () => {
+    if (!competitorUrl) return;
+    setGenerating(true);
     try {
-      const response = await axios.post(`${API}/ai/seo-suggestions?article_id=${articleId}`);
-      toast.success("SEO önerileri alındı");
-      setGeneratedContent(response.data.suggestions);
+      const response = await axios.post(`${API}/ai/competitor-analysis`, {
+        competitor_url: competitorUrl,
+        analysis_depth: "detailed"
+      });
+      setGeneratedContent(response.data.analysis);
+      toast.success("Rakip analizi tamamlandı");
     } catch (error) {
-      toast.error("SEO analizi yapılırken hata oluştu");
+      toast.error("Rakip analizi yapılırken hata oluştu");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleKeywordGapAnalysis = async () => {
+    if (!keywordGapInput) return;
+    setGenerating(true);
+    try {
+      const keywords = keywordGapInput.split(",").map(k => k.trim()).filter(k => k);
+      const response = await axios.post(`${API}/ai/keyword-gap-analysis`, keywords);
+      setGeneratedContent(response.data.analysis);
+      toast.success("Anahtar kelime analizi tamamlandı");
+    } catch (error) {
+      toast.error("Analiz yapılırken hata oluştu");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleWeeklyReport = async () => {
+    setGenerating(true);
+    try {
+      const response = await axios.get(`${API}/ai/weekly-seo-report`);
+      setGeneratedContent(response.data.report);
+      toast.success("Haftalık rapor oluşturuldu");
+    } catch (error) {
+      toast.error("Rapor oluşturulurken hata oluştu");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleInternalLinkSuggestions = async (articleId) => {
+    setGenerating(true);
+    try {
+      const response = await axios.post(`${API}/ai/internal-link-suggestions?article_id=${articleId}`);
+      setGeneratedContent(response.data.suggestions);
+      toast.success("İç link önerileri hazırlandı");
+    } catch (error) {
+      toast.error("İç link analizi yapılırken hata oluştu");
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -186,63 +258,93 @@ const AdminPage = () => {
             <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight uppercase">
               Admin Panel
             </h1>
-            <p className="text-muted-foreground mt-1">İçerik yönetimi ve AI araçları</p>
+            <p className="text-muted-foreground mt-1">AI destekli içerik yönetimi ve performans optimizasyonu</p>
           </div>
-          <Button onClick={fetchData} variant="outline" data-testid="refresh-btn">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Yenile
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleUpdateRankings} variant="outline" data-testid="update-rankings-btn">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Sıralamayı Güncelle
+            </Button>
+            <Button onClick={fetchData} variant="outline" data-testid="refresh-btn">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Yenile
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
             <Card className="glass-card border-white/10">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Toplam Makale
-                </CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">Makale</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-heading font-bold">{stats.total_articles}</div>
+                <div className="text-2xl font-heading font-bold">{stats.total_articles}</div>
               </CardContent>
             </Card>
             <Card className="glass-card border-white/10">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Bonus Siteleri
-                </CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">Aktif Site</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-heading font-bold">{stats.total_bonus_sites}</div>
+                <div className="text-2xl font-heading font-bold text-neon-green">{stats.total_bonus_sites}</div>
               </CardContent>
             </Card>
             <Card className="glass-card border-white/10">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Yayında
-                </CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">Arşivli</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-heading font-bold text-neon-green">{stats.published_articles}</div>
+                <div className="text-2xl font-heading font-bold text-muted-foreground">{stats.archived_sites}</div>
               </CardContent>
             </Card>
             <Card className="glass-card border-white/10">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Toplam Görüntülenme
-                </CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">Görüntülenme</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-heading font-bold">{stats.total_views}</div>
+                <div className="text-2xl font-heading font-bold">{stats.total_views}</div>
+              </CardContent>
+            </Card>
+            <Card className="glass-card border-white/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">İmpresyon</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-heading font-bold text-[#00F0FF]">{stats.total_impressions}</div>
+              </CardContent>
+            </Card>
+            <Card className="glass-card border-white/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">Tıklama</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-heading font-bold text-neon-green">{stats.total_clicks}</div>
+              </CardContent>
+            </Card>
+            <Card className="glass-card border-white/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium text-muted-foreground">CTR</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-heading font-bold">
+                  {stats.total_impressions > 0 
+                    ? ((stats.total_clicks / stats.total_impressions) * 100).toFixed(1) 
+                    : 0}%
+                </div>
               </CardContent>
             </Card>
           </div>
         )}
 
         {/* Main Tabs */}
-        <Tabs defaultValue="sites" className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full max-w-xl">
+        <Tabs defaultValue="performance" className="space-y-6">
+          <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+            <TabsTrigger value="performance" data-testid="tab-performance">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Performans
+            </TabsTrigger>
             <TabsTrigger value="sites" data-testid="tab-sites">
               <Gift className="w-4 h-4 mr-2" />
               Siteler
@@ -257,9 +359,68 @@ const AdminPage = () => {
             </TabsTrigger>
             <TabsTrigger value="seo" data-testid="tab-seo">
               <BarChart3 className="w-4 h-4 mr-2" />
-              SEO
+              SEO Analiz
             </TabsTrigger>
           </TabsList>
+
+          {/* Performance Tab */}
+          <TabsContent value="performance" className="space-y-6">
+            <Card className="glass-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-neon-green" />
+                  AI Performans Sıralaması
+                </CardTitle>
+                <CardDescription>
+                  Siteler performans verilerine göre otomatik sıralanmaktadır. 
+                  Yeterli veri yoksa heuristic skor (bonus miktarı, çevrim şartı, popülerlik) kullanılır.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {rankingReport && (
+                  <div className="space-y-4">
+                    {rankingReport.report.map((site, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center gap-4 p-4 bg-background/50 rounded-lg"
+                      >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                          site.rank <= 2 ? 'bg-neon-green/20 border-2 border-neon-green' : 'bg-muted'
+                        }`}>
+                          <span className={`font-heading font-bold ${site.rank <= 2 ? 'text-neon-green' : ''}`}>
+                            #{site.rank}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{site.name}</h4>
+                            {site.is_featured && (
+                              <Badge className="bg-yellow-500/20 text-yellow-500 text-xs">Öne Çıkan</Badge>
+                            )}
+                            <Badge variant="outline" className="text-xs">
+                              {site.data_source === 'performance' ? 'Gerçek Veri' : 'Heuristic'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>İmpresyon: {site.metrics.impressions}</span>
+                            <span>Tıklama: {site.metrics.cta_clicks}</span>
+                            <span>CTR: {site.metrics.ctr}%</span>
+                            <span>Ort. Süre: {site.metrics.avg_time}s</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-heading text-2xl font-bold text-neon-green">
+                            {site.performance_score}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Performans Skoru</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Bonus Sites Tab */}
           <TabsContent value="sites" className="space-y-6">
@@ -272,7 +433,7 @@ const AdminPage = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Site Adı</Label>
                     <Input
@@ -287,6 +448,14 @@ const AdminPage = () => {
                     <Input
                       value={newSite.logo_url}
                       onChange={(e) => setNewSite({ ...newSite, logo_url: e.target.value })}
+                      placeholder="https://..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Affiliate URL</Label>
+                    <Input
+                      value={newSite.affiliate_url}
+                      onChange={(e) => setNewSite({ ...newSite, affiliate_url: e.target.value })}
                       placeholder="https://..."
                     />
                   </div>
@@ -312,15 +481,15 @@ const AdminPage = () => {
                     <Input
                       value={newSite.bonus_amount}
                       onChange={(e) => setNewSite({ ...newSite, bonus_amount: e.target.value })}
-                      placeholder="500 TL"
+                      placeholder="500 TL veya %100"
                     />
                   </div>
                   <div>
-                    <Label>Affiliate URL</Label>
+                    <Label>Çevrim Şartı (x)</Label>
                     <Input
-                      value={newSite.affiliate_url}
-                      onChange={(e) => setNewSite({ ...newSite, affiliate_url: e.target.value })}
-                      placeholder="https://..."
+                      type="number"
+                      value={newSite.turnover_requirement}
+                      onChange={(e) => setNewSite({ ...newSite, turnover_requirement: parseFloat(e.target.value) })}
                     />
                   </div>
                   <div>
@@ -334,14 +503,13 @@ const AdminPage = () => {
                       onChange={(e) => setNewSite({ ...newSite, rating: parseFloat(e.target.value) })}
                     />
                   </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={newSite.is_featured}
-                      onCheckedChange={(v) => setNewSite({ ...newSite, is_featured: v })}
+                  <div className="md:col-span-2">
+                    <Label>Özellikler (virgülle ayırın)</Label>
+                    <Input
+                      value={newSite.features}
+                      onChange={(e) => setNewSite({ ...newSite, features: e.target.value })}
+                      placeholder="Hızlı Ödeme, 7/24 Destek, Mobil Uyumlu"
                     />
-                    <Label>Öne Çıkan</Label>
                   </div>
                 </div>
                 <Button onClick={handleCreateSite} className="bg-neon-green text-black hover:bg-neon-green/90" data-testid="create-site-btn">
@@ -364,27 +532,45 @@ const AdminPage = () => {
                       className="flex items-center justify-between p-4 bg-background/50 rounded-lg"
                     >
                       <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 rounded-full bg-neon-green/10 flex items-center justify-center">
+                          <span className="font-heading text-sm font-bold text-neon-green">#{site.order}</span>
+                        </div>
                         <img 
                           src={site.logo_url} 
                           alt={site.name}
                           className="w-12 h-12 rounded-lg object-cover"
                         />
                         <div>
-                          <h4 className="font-medium">{site.name}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{site.name}</h4>
+                            {site.is_featured && (
+                              <Badge className="bg-yellow-500/20 text-yellow-500 text-xs">Öne Çıkan</Badge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{site.bonus_type}</Badge>
                             <span className="text-sm text-neon-green">{site.bonus_amount}</span>
+                            <span className="text-xs text-muted-foreground">Çevrim: {site.turnover_requirement}x</span>
                           </div>
                         </div>
                       </div>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleDeleteSite(site.id)}
-                        data-testid={`delete-site-${site.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleArchiveSite(site.id)}
+                        >
+                          <Archive className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleDeleteSite(site.id)}
+                          data-testid={`delete-site-${site.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -394,7 +580,6 @@ const AdminPage = () => {
 
           {/* Articles Tab */}
           <TabsContent value="articles" className="space-y-6">
-            {/* Add New Article Form */}
             <Card className="glass-card border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -504,6 +689,11 @@ const AdminPage = () => {
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{article.category}</Badge>
                             <span className="text-xs text-muted-foreground">{article.view_count} görüntülenme</span>
+                            {article.content_updated_at && (
+                              <span className="text-xs text-neon-green">
+                                Güncellendi: {new Date(article.content_updated_at).toLocaleDateString('tr-TR')}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -511,15 +701,14 @@ const AdminPage = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => handleGetSeoSuggestions(article.id)}
+                          onClick={() => handleInternalLinkSuggestions(article.id)}
                         >
-                          <BarChart3 className="w-4 h-4" />
+                          <Link2 className="w-4 h-4" />
                         </Button>
                         <Button 
                           variant="destructive" 
                           size="sm"
                           onClick={() => handleDeleteArticle(article.id)}
-                          data-testid={`delete-article-${article.id}`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -539,7 +728,9 @@ const AdminPage = () => {
                   <Wand2 className="w-5 h-5 text-neon-green" />
                   AI İçerik Üretici
                 </CardTitle>
-                <CardDescription>GPT-5.2 ile SEO uyumlu içerik üretin</CardDescription>
+                <CardDescription>
+                  GPT-5.2 ile SEO uyumlu içerik üretin. İçeriklerin %80'i bilgilendirici, %20'si doğal affiliate yönlendirme içerir.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -565,6 +756,7 @@ const AdminPage = () => {
                         <SelectItem value="article">Makale</SelectItem>
                         <SelectItem value="match_summary">Maç Özeti</SelectItem>
                         <SelectItem value="seo_analysis">SEO Analizi</SelectItem>
+                        <SelectItem value="competitor_analysis">Rakip Analizi</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -626,10 +818,10 @@ const AdminPage = () => {
             {generatedContent && (
               <Card className="glass-card border-white/10">
                 <CardHeader>
-                  <CardTitle>Üretilen İçerik</CardTitle>
+                  <CardTitle>Üretilen İçerik / Analiz Sonucu</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-background/50 rounded-lg p-6 whitespace-pre-wrap text-sm">
+                  <div className="bg-background/50 rounded-lg p-6 whitespace-pre-wrap text-sm max-h-[500px] overflow-y-auto">
                     {generatedContent}
                   </div>
                   <Button 
@@ -646,20 +838,112 @@ const AdminPage = () => {
 
           {/* SEO Tab */}
           <TabsContent value="seo" className="space-y-6">
+            {/* Competitor Analysis */}
             <Card className="glass-card border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-[#00F0FF]" />
-                  SEO Analiz Araçları
+                  <Globe className="w-5 h-5 text-[#00F0FF]" />
+                  Rakip Domain Analizi
                 </CardTitle>
-                <CardDescription>Makaleleriniz için AI destekli SEO önerileri alın</CardDescription>
+                <CardDescription>
+                  Rakip siteleri analiz edin, yapısal öneriler ve fırsat alanları keşfedin.
+                  Kopyalama değil, özgün strateji önerileri alın.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-4">
+                  <Input
+                    value={competitorUrl}
+                    onChange={(e) => setCompetitorUrl(e.target.value)}
+                    placeholder="https://rakipsite.com"
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={handleCompetitorAnalysis}
+                    disabled={generating || !competitorUrl}
+                    className="bg-[#00F0FF] text-black hover:bg-[#00F0FF]/90"
+                  >
+                    {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4 mr-2" />}
+                    Analiz Et
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Keyword Gap Analysis */}
+            <Card className="glass-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-neon-green" />
+                  Anahtar Kelime Boşluğu Analizi
+                </CardTitle>
+                <CardDescription>
+                  Mevcut anahtar kelimelerinizi girin, kaçırılan fırsatları ve içerik önerilerini alın.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-4">
+                  <Input
+                    value={keywordGapInput}
+                    onChange={(e) => setKeywordGapInput(e.target.value)}
+                    placeholder="deneme bonusu, bahis siteleri, casino bonusu"
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={handleKeywordGapAnalysis}
+                    disabled={generating || !keywordGapInput}
+                  >
+                    {generating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4 mr-2" />}
+                    Analiz Et
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Weekly Report */}
+            <Card className="glass-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-yellow-500" />
+                  Haftalık SEO Raporu
+                </CardTitle>
+                <CardDescription>
+                  Performans özeti, içerik önerileri ve gelecek hafta için aksiyon planı.
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground mb-4">
-                  Mevcut makaleler listesinden bir makale seçin ve SEO analizi butonuna tıklayın.
-                  AI, içeriğiniz için başlık iyileştirmeleri, iç link önerileri ve anahtar kelime 
-                  tavsiyeleri sunacaktır.
-                </p>
+                <Button 
+                  onClick={handleWeeklyReport}
+                  disabled={generating}
+                  className="bg-yellow-500 text-black hover:bg-yellow-500/90"
+                >
+                  {generating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Rapor Oluşturuluyor...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-4 h-4 mr-2" />
+                      Haftalık Rapor Oluştur
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Internal Link Suggestions */}
+            <Card className="glass-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link2 className="w-5 h-5 text-purple-500" />
+                  İç Link Önerileri
+                </CardTitle>
+                <CardDescription>
+                  Makaleler listesinden bir makale seçin, AI doğal iç link stratejisi önerecek.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-3">
                   {articles.slice(0, 5).map((article) => (
                     <div 
@@ -668,15 +952,16 @@ const AdminPage = () => {
                     >
                       <div>
                         <h4 className="font-medium">{article.title}</h4>
-                        <span className="text-xs text-muted-foreground">{article.slug}</span>
+                        <span className="text-xs text-muted-foreground">{article.category}</span>
                       </div>
                       <Button 
                         variant="outline"
-                        onClick={() => handleGetSeoSuggestions(article.id)}
-                        data-testid={`seo-analyze-${article.id}`}
+                        size="sm"
+                        onClick={() => handleInternalLinkSuggestions(article.id)}
+                        disabled={generating}
                       >
-                        <BarChart3 className="w-4 h-4 mr-2" />
-                        Analiz Et
+                        <Link2 className="w-4 h-4 mr-2" />
+                        Link Öner
                       </Button>
                     </div>
                   ))}
