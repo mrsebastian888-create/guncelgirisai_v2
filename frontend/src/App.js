@@ -79,6 +79,10 @@ function AppLayout({ isLoading }) {
               }
             />
           )}
+          {/* Admin olmayan domainlerde /admin* anasayfaya yönlendir */}
+          {!adminDomain && (
+            <Route path="/admin*" element={<Navigate to="/" replace />} />
+          )}
         </Routes>
       </main>
       {!isAdminPath && <Footer />}
