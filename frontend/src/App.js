@@ -51,6 +51,7 @@ function App() {
   return (
     <div className="App min-h-screen bg-background text-foreground">
       <BrowserRouter>
+        {showPopup && <WelcomePopup onClose={() => setShowPopup(false)} />}
         <Navbar />
         <main className="pt-16">
           <Routes>
