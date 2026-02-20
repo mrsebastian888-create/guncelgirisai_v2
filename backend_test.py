@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 class TurkishSportsBonusAPITester:
-    def __init__(self, base_url="https://sports-bonus-hub.preview.emergentagent.com"):
+    def __init__(self, base_url="https://affiliate-sports-ai.preview.emergentagent.com"):
         self.base_url = f"{base_url}/api"
         self.tests_run = 0
         self.tests_passed = 0
