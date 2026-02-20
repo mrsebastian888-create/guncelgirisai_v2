@@ -7,7 +7,6 @@ import {
   ChevronLeft, ExternalLink, Sparkles, Clock, Trophy,
   Activity, Shield, AlertCircle, Loader2, Calendar
 } from "lucide-react";
-import { Helmet } from "react-helmet-async";
 
 const LEAGUE_LABELS = {
   soccer_turkey_super_league: { name: "Süper Lig", flag: "🇹🇷" },
