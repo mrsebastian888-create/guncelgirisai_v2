@@ -34,7 +34,6 @@ const HomePage = () => {
   const [bonusSites, setBonusSites] = useState([]);
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
   const sliderRef = useRef(null);
@@ -42,16 +41,14 @@ const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sitesRes, articlesRes, categoriesRes, matchesRes] = await Promise.all([
+        const [sitesRes, articlesRes, categoriesRes] = await Promise.all([
           axios.get(`${API}/bonus-sites?limit=20`),
           axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
           axios.get(`${API}/categories`).catch(() => ({ data: [] })),
-          axios.get(`${API}/sports/scores`).catch(() => ({ data: [] })),
         ]);
         setBonusSites(sitesRes.data);
         setArticles(articlesRes.data);
         setCategories(categoriesRes.data);
-        setMatches(matchesRes.data || []);
       } catch (error) {
         console.error("Error:", error);
       } finally {
