@@ -205,7 +205,10 @@ const AdminPage = () => {
     setGenerating(true);
     try {
       const keywords = keywordGapInput.split(",").map(k => k.trim()).filter(k => k);
-      const response = await axios.post(`${API}/ai/keyword-gap-analysis`, keywords);
+      const response = await axios.post(`${API}/ai/keyword-gap-analysis`, {
+        keywords: keywords,
+        competitor_keywords: []
+      });
       setGeneratedContent(response.data.analysis);
       toast.success("Anahtar kelime analizi tamamlandı");
     } catch (error) {
