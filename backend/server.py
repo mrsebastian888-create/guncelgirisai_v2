@@ -26,6 +26,8 @@ from pydantic import BaseModel, Field, ConfigDict
 from collections import defaultdict
 import httpx
 import re
+from passlib.context import CryptContext
+import jwt as pyjwt
 
 # ============== CONFIGURATION ==============
 
