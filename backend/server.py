@@ -510,10 +510,10 @@ class Article(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     domain_id: Optional[str] = None
     title: str
-    slug: str
-    excerpt: str
-    content: str
-    category: str
+    slug: str = ""
+    excerpt: str = ""
+    content: str = ""
+    category: str = "bonus"
     tags: List[str] = []
     image_url: str = ""
     author: str = "Admin"
