@@ -101,11 +101,11 @@ export default function MatchDetailPage() {
   return (
     <>
       <Helmet>
-        <title>{pageTitle}</title>
+        <title>{`${match.home_team} - ${match.away_team} Maç Analizi | Canlı Skor, İstatistik, Tahmin`}</title>
         <meta name="description" content={pageDesc} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDesc} />
-        <script type="application/ld+json">{JSON.stringify(schemaData)}</script>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }} />
       </Helmet>
 
       <div className="min-h-screen py-8 px-4 md:px-6" style={{ background: "var(--background)" }}>
