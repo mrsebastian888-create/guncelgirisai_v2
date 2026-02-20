@@ -219,6 +219,162 @@ class TurkishSportsBonusAPITester:
         
         return True
 
+    def test_ai_ranking_endpoints(self):
+        """Test AI performance ranking system endpoints"""
+        print("\n🎯 TESTING AI RANKING SYSTEM")
+        
+        # Test AI ranking report
+        success, data = self.run_test("Get AI Ranking Report", "GET", "ai/ranking-report", 200)
+        if success and isinstance(data, dict):
+            report = data.get('report', [])
+            print(f"   Found {len(report)} sites in ranking report")
+            if report:
+                # Check if real sites are present
+                site_names = [site.get('name', '') for site in report[:8]]
+                expected_sites = ['MAXWIN', 'HILTONBET', 'ELEXBET', 'FESTWIN', 'CASINO DIOR', 'BETCI', 'ALFABAHIS', 'TULIPBET']
+                found_sites = [name for name in expected_sites if name in site_names]
+                print(f"   Real sites found: {found_sites}")
+                print(f"   Top 3 sites: {[site.get('name') for site in report[:3]]}")
+                
+                # Check ranking data structure
+                for i, site in enumerate(report[:3]):
+                    rank = site.get('rank', 0)
+                    score = site.get('performance_score', 0)
+                    is_featured = site.get('is_featured', False)
+                    data_source = site.get('data_source', '')
+                    print(f"   #{rank}: {site.get('name')} - Score: {score}, Featured: {is_featured}, Source: {data_source}")
+        
+        # Test manual ranking update
+        success, data = self.run_test("Update AI Rankings", "POST", "ai/update-rankings", 200)
+        if success and isinstance(data, dict):
+            updated_count = data.get('sites_updated', 0)
+            print(f"   Updated {updated_count} site rankings")
+        
+        return True
+
+    def test_performance_tracking_endpoints(self):
+        """Test performance tracking endpoints"""
+        print("\n📊 TESTING PERFORMANCE TRACKING")
+        
+        # First get a site ID to test with
+        success, sites_data = self.run_test("Get Sites for Tracking", "GET", "bonus-sites?limit=1", 200)
+        if not success or not isinstance(sites_data, list) or len(sites_data) == 0:
+            print("   ⚠️ No sites available for tracking test")
+            return False
+        
+        site_id = sites_data[0].get('id')
+        print(f"   Testing tracking with site ID: {site_id}")
+        
+        # Test tracking events
+        tracking_events = [
+            {"event_type": "impression", "value": 1.0},
+            {"event_type": "cta_click", "value": 1.0},
+            {"event_type": "affiliate_click", "value": 1.0},
+            {"event_type": "scroll", "value": 75.0},  # 75% scroll depth
+            {"event_type": "time_on_page", "value": 45.0}  # 45 seconds
+        ]
+        
+        for event in tracking_events:
+            event_data = {
+                "site_id": site_id,
+                "event_type": event["event_type"],
+                "value": event["value"],
+                "user_session": "test_session_123",
+                "page_url": "https://test.com/"
+            }
+            
+            self.run_test(
+                f"Track {event['event_type']} Event",
+                "POST",
+                "track/event",
+                200,
+                event_data
+            )
+        
+        # Test batch tracking
+        batch_events = [
+            {
+                "site_id": site_id,
+                "event_type": "impression",
+                "value": 1.0,
+                "user_session": "test_batch_session",
+                "page_url": "https://test.com/"
+            },
+            {
+                "site_id": site_id,
+                "event_type": "cta_click", 
+                "value": 1.0,
+                "user_session": "test_batch_session",
+                "page_url": "https://test.com/"
+            }
+        ]
+        
+        self.run_test(
+            "Track Batch Events",
+            "POST",
+            "track/batch",
+            200,
+            batch_events
+        )
+        
+        return True
+
+    def test_seo_ai_endpoints(self):
+        """Test SEO and AI analysis endpoints"""
+        print("\n🔍 TESTING SEO AI ENDPOINTS")
+        
+        # Test competitor analysis
+        competitor_request = {
+            "competitor_url": "https://example-competitor.com",
+            "analysis_depth": "basic"
+        }
+        
+        success, data = self.run_test(
+            "AI Competitor Analysis",
+            "POST",
+            "ai/competitor-analysis",
+            200,
+            competitor_request,
+            timeout=60
+        )
+        
+        if success and isinstance(data, dict):
+            analysis = data.get('analysis', '')
+            print(f"   Competitor analysis length: {len(analysis)} characters")
+        
+        # Test keyword gap analysis
+        keywords = ["deneme bonusu", "bahis siteleri", "casino bonus"]
+        
+        success, data = self.run_test(
+            "AI Keyword Gap Analysis",
+            "POST",
+            "ai/keyword-gap-analysis",
+            200,
+            keywords,
+            timeout=45
+        )
+        
+        if success and isinstance(data, dict):
+            analysis = data.get('analysis', '')
+            print(f"   Keyword gap analysis length: {len(analysis)} characters")
+        
+        # Test weekly SEO report
+        success, data = self.run_test(
+            "Generate Weekly SEO Report",
+            "GET",
+            "ai/weekly-seo-report",
+            200,
+            timeout=60
+        )
+        
+        if success and isinstance(data, dict):
+            report = data.get('report', '')
+            stats = data.get('stats', {})
+            print(f"   Weekly report length: {len(report)} characters")
+            print(f"   Report stats: {stats}")
+        
+        return True
+
     def test_stats_endpoints(self):
         """Test statistics endpoints"""
         print("\n📈 TESTING STATS ENDPOINTS")
