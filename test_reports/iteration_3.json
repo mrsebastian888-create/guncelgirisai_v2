@@ -1,0 +1,85 @@
+{
+  "summary": "Full backend + frontend testing of Match Hub module. All 36 backend API tests passed. Frontend MatchHub renders correctly. CRITICAL BUG FIXED: Match Detail Page (/mac/:slug) was completely broken due to react-helmet-async v2.0.5 crashing with 'Invariant Violation: Helmet expects a string as a child of <title>'. Fixed by removing the Helmet component from MatchDetailPage (losing SEO meta tags temporarily). Also added HelmetProvider to App.js. After fix, Match Detail Page works fully: hero, AI analysis, partner CTA, disclaimer all render.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "MatchDetailPage (SEO)",
+        "issue": "react-helmet-async v2.0.5 throws 'Invariant Violation: Helmet expects a string as a child of <title>' even with HelmetProvider wrapper and dangerouslySetInnerHTML for script tag. Helmet was removed entirely as workaround - SEO meta tags and JSON-LD schema are now missing from match detail pages.",
+        "selector": "[data-testid='match-hero']",
+        "priority": "HIGH"
+      },
+      {
+        "component": "MatchDetailPage - AI Analysis",
+        "issue": "AI analysis text renders with raw markdown formatting (###, **bold**) as plain text. Needs react-markdown or similar renderer to properly display headings and bold text.",
+        "selector": "[data-testid='ai-analysis-section']",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "MatchDetailPage - Partner CTA",
+        "issue": "Partner CTA button ('Oranları Gör') in match detail page is missing data-testid='partner-cta-btn'",
+        "selector": "[data-testid='partner-cta-btn']",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "MatchHub Refresh",
+        "issue": "Refresh button triggers 429 rate-limit error in test environment due to consecutive API calls. Shows 'Veriler yüklenemedi. Lütfen tekrar deneyin.' error state. Rate limit is 60 req/60s which can be hit when multiple components make concurrent requests (BonusRow impression tracking + sports data fetch). Production with single user should be fine.",
+        "affected_selectors": ["[data-testid='match-hub-refresh']"]
+      },
+      {
+        "flow": "'Oranları Gör' in MatchHub cards",
+        "issue": "'Oranları Gör' button only appears in match cards when partnerSite is loaded from /api/bonus-sites?limit=1. If this API call is rate-limited or fails, the button disappears. First screenshot showed the button, but it disappeared in rate-limited test runs.",
+        "affected_selectors": ["[data-testid^='match-odds-btn-']"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "MatchDetailPage - AI Analysis section",
+        "issues": [
+          "AI analysis text shows raw markdown syntax (###, **, *) as plain text characters instead of rendered HTML. Should use react-markdown package to render properly."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_match_hub.py",
+    "/app/test_reports/pytest/match_hub_results.xml"
+  ],
+  "action_items": [
+    "CRITICAL: Fix react-helmet-async v2.0.5 compatibility issue in MatchDetailPage. Options: (1) Downgrade to react-helmet-async v1.x, (2) Use document.title + useEffect pattern instead, (3) Investigate the specific v2 API issue with the current React version. The Helmet was removed as emergency fix - SEO meta tags are currently non-functional.",
+    "MEDIUM: Add react-markdown (or similar) to render AI analysis text properly instead of showing raw markdown characters (###, **, *).",
+    "LOW: Add data-testid='partner-cta-btn' to the 'Oranları Gör' link in MatchDetailPage partner CTA section.",
+    "INVESTIGATE: Rate limiter (60 req/60s) is hit easily when BonusRow impression tracking fires for all visible bonus sites simultaneously. Consider raising the limit or excluding impression tracking events from the rate limit count."
+  ],
+  "critical_code_review_comments": [
+    "App.js calls seedData() on EVERY page load (every React mount). This resets bonus sites and articles on each visit. Should run seed only once or check if DB is empty first.",
+    "react-helmet-async v2.0.5 is incompatible with the current usage pattern in MatchDetailPage. The package changelog shows breaking changes in v2 that affect how Helmet validates children.",
+    "MatchHub URL construction for partner redirect uses window.location.origin.replace('3000', '8001') - this is a dev-only pattern that breaks in production (no port in URL). The current test environment uses /api prefix routing correctly but the replace() logic is fragile.",
+    "BonusRow component fires impression tracking on every mount, causing 429 rate limit errors when 10+ cards render simultaneously.",
+    "MatchDetailPage AI analysis text has markdown format but no renderer - needs react-markdown for proper display."
+  ],
+  "updated_files": [
+    "/app/frontend/src/App.js (added HelmetProvider import and wrapper)",
+    "/app/frontend/src/pages/MatchDetailPage.jsx (removed Helmet component to fix crash, removed unused import)"
+  ],
+  "success_rate": {
+    "backend": "100% (36/36 tests passed)",
+    "frontend": "85% (MatchHub, AI insight, match cards, navigation working; match detail SEO broken, markdown not rendered)"
+  },
+  "seed_data_creation": "No test data created - used existing seeded data",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Match Hub module is fully functional at backend level. MatchHub component renders correctly on homepage: 10 match cards with league badges, teams, status, scores, 'Detayları Gör' buttons, AI insight box, 'önbellek' cache badge, refresh button. Match Detail Page (/mac/:slug) now renders after removing broken Helmet component. Known issues: (1) SEO meta tags missing from match detail pages - Helmet was causing crash, (2) AI text shows raw markdown, (3) Rate limiting may cause refresh errors in test env. Admin panel is accessible only from admin.guncelgiris.ai subdomain. Admin APIs tested directly and all pass.",
+  "rca_of_issues": {
+    "react_helmet_crash": {
+      "root_cause": "react-helmet-async v2.0.5 introduced strict child validation for <title> tag. The Helmet component throws 'Invariant Violation' when processing JSX children through mapChildrenToProps(). This persisted even with: (1) HelmetProvider added, (2) inline template literal syntax, (3) dangerouslySetInnerHTML for script tag. Likely a v2 API incompatibility with the current React version or with a specific Helmet child configuration.",
+      "reproduction": "Navigate to any /mac/:slug URL directly or via homepage click",
+      "mitigation": "Removed Helmet component entirely. Permanent fix: downgrade to react-helmet-async v1.x OR use useEffect with document.title assignment."
+    }
+  }
+}
