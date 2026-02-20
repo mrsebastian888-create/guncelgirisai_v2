@@ -45,7 +45,7 @@ const HomePage = () => {
           axios.get(`${API}/bonus-sites?limit=20`),
           axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
           axios.get(`${API}/categories`).catch(() => ({ data: [] })),
-          axios.get(`${API}/sports/matches?league=PL`).catch(() => ({ data: { matches: [] } })),
+          axios.get(`${API}/sports/scores`).catch(() => ({ data: [] })),
         ]);
         setBonusSites(sitesRes.data);
         setArticles(articlesRes.data);
