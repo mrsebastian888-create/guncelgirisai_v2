@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import BonusRow from "@/components/BonusRow";
 import NewsCard from "@/components/NewsCard";
+import MatchHub from "@/components/MatchHub";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
