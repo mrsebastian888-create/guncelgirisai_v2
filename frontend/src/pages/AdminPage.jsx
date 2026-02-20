@@ -444,6 +444,12 @@ const AdminPage = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* MATCHES TAB */}
+          <TabsContent value="matches" className="space-y-6">
+            <MatchesAdminTab />
+          </TabsContent>
+
         </Tabs>
       </div>
     </motion.div>
