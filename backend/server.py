@@ -65,6 +65,7 @@ ADMIN_PASSWORD_HASH = get_optional_env("ADMIN_PASSWORD_HASH", "")
 JWT_SECRET = get_optional_env("JWT_SECRET", "changeme-set-in-env")
 JWT_EXPIRE_HOURS = int(get_optional_env("JWT_EXPIRE_HOURS", "24"))
 ODDS_API_KEY = get_optional_env("ODDS_API_KEY", "")
+PERIGON_API_KEY = get_optional_env("PERIGON_API_KEY", "")
 
 # ============== SPORTS CACHE ==============
 
