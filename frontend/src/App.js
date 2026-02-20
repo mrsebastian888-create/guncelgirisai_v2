@@ -10,11 +10,13 @@ import BonusGuidePage from "@/pages/BonusGuidePage";
 import SportsNewsPage from "@/pages/SportsNewsPage";
 import ArticlePage from "@/pages/ArticlePage";
 import AdminPage from "@/pages/AdminPage";
+import LoginPage from "@/pages/LoginPage";
 
 // Components
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import WelcomePopup from "@/components/WelcomePopup";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
