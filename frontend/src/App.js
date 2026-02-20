@@ -21,6 +21,16 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
+// Admin sadece bu hostname'den erişilebilir
+const ADMIN_HOST = process.env.REACT_APP_ADMIN_HOST || "";
+
+export function isAdminDomain() {
+  const hostname = window.location.hostname;
+  // localhost/preview ortamında da çalışsın diye ADMIN_HOST boşsa izin ver
+  if (!ADMIN_HOST) return true;
+  return hostname === ADMIN_HOST;
+}
+
 const ADMIN_PATHS = ["/admin", "/admin-login"];
 
 function AppLayout({ isLoading }) {
