@@ -867,6 +867,54 @@ async def get_dashboard_stats(domain_id: Optional[str] = None):
         "auto_generated_articles": await db.articles.count_documents({**query, "is_auto_generated": True} if domain_id else {"is_auto_generated": True})
     }
 
+# ============== AUTH ==============
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+def create_jwt_token(username: str) -> str:
+    payload = {
+        "sub": username,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS),
+        "iat": datetime.now(timezone.utc),
+    }
+    return pyjwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+def verify_jwt_token(token: str) -> Optional[str]:
+    try:
+        payload = pyjwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return payload.get("sub")
+    except pyjwt.ExpiredSignatureError:
+        return None
+    except pyjwt.InvalidTokenError:
+        return None
+
+@api_router.post("/auth/login")
+async def admin_login(req: LoginRequest):
+    """Admin login - returns JWT token"""
+    if req.username != ADMIN_USERNAME:
+        raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
+    if not ADMIN_PASSWORD_HASH or not pwd_context.verify(req.password, ADMIN_PASSWORD_HASH):
+        raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
+    token = create_jwt_token(req.username)
+    logger.info(f"Admin login successful: {req.username}")
+    return {"token": token, "username": req.username, "expires_in": JWT_EXPIRE_HOURS * 3600}
+
+@api_router.get("/auth/verify")
+async def verify_token(request: Request):
+    """Verify JWT token from Authorization header"""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Token eksik")
+    token = auth.removeprefix("Bearer ").strip()
+    username = verify_jwt_token(token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Token geçersiz veya süresi dolmuş")
+    return {"valid": True, "username": username}
+
 # Seed
 @api_router.post("/seed")
 async def seed_database():
