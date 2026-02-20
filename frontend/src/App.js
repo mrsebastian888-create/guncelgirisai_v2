@@ -26,8 +26,9 @@ const ADMIN_HOST = process.env.REACT_APP_ADMIN_HOST || "";
 
 export function isAdminDomain() {
   const hostname = window.location.hostname;
-  // localhost/preview ortamında da çalışsın diye ADMIN_HOST boşsa izin ver
   if (!ADMIN_HOST) return true;
+  // Yerel geliştirme ortamında her zaman izin ver
+  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
   return hostname === ADMIN_HOST;
 }
 
