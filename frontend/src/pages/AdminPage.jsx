@@ -587,27 +587,7 @@ const AdminPage = () => {
 
           {/* SEO TAB */}
           <TabsContent value="seo" className="space-y-6">
-            <Card className="glass-card border-white/10">
-              <CardHeader><CardTitle><Target className="w-5 h-5 inline mr-2 text-[#00F0FF]" />Rakip Analizi</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-4">
-                  <Input value={competitorUrl} onChange={(e) => setCompetitorUrl(e.target.value)} placeholder="https://rakipsite.com" className="flex-1" />
-                  <Button onClick={handleCompetitorAnalysis} disabled={generating} className="bg-[#00F0FF] text-black hover:bg-[#00F0FF]/90">
-                    {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Target className="w-4 h-4 mr-2" />Analiz</>}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass-card border-white/10">
-              <CardHeader><CardTitle><Calendar className="w-5 h-5 inline mr-2 text-yellow-500" />Haftalık SEO Raporu</CardTitle></CardHeader>
-              <CardContent>
-                <Button onClick={handleWeeklyReport} disabled={generating} className="bg-yellow-500 text-black hover:bg-yellow-500/90">
-                  {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <><FileText className="w-4 h-4 mr-2" /></>}
-                  Rapor Oluştur
-                </Button>
-              </CardContent>
-            </Card>
+            <SeoAssistant domainId={selectedDomain} />
           </TabsContent>
 
           {/* MATCHES TAB */}
