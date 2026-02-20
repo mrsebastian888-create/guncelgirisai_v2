@@ -20,6 +20,170 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
+// ── MATCHES ADMIN TAB ─────────────────────────────────────────
+function MatchesAdminTab() {
+  const [status, setStatus] = useState(null);
+  const [matches, setMatches] = useState([]);
+  const [aiEnabled, setAiEnabled] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchStatus = async () => {
+    try {
+      const [statusRes, scoresRes] = await Promise.all([
+        axios.get(`${API}/admin/api-status`),
+        axios.get(`${API}/sports/scores`),
+      ]);
+      setStatus(statusRes.data);
+      setMatches(scoresRes.data.matches || []);
+      setAiEnabled(statusRes.data.ai_insight_enabled);
+    } catch (e) {
+      toast.error("API durumu alınamadı");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchStatus(); }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await axios.post(`${API}/admin/refresh-scores`);
+      await fetchStatus();
+      toast.success("Maç verileri yenilendi");
+    } catch { toast.error("Yenileme başarısız"); }
+    finally { setRefreshing(false); }
+  };
+
+  const handleAiToggle = async (val) => {
+    try {
+      await axios.post(`${API}/admin/ai-toggle`, { enabled: val });
+      setAiEnabled(val);
+      toast.success(`AI analiz ${val ? "açıldı" : "kapatıldı"}`);
+    } catch { toast.error("Toggle başarısız"); }
+  };
+
+  const handleSetFeatured = async (matchId) => {
+    try {
+      await axios.post(`${API}/admin/featured-match`, { match_id: matchId });
+      toast.success("Öne çıkan maç güncellendi");
+      await fetchStatus();
+    } catch { toast.error("İşlem başarısız"); }
+  };
+
+  if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6">
+      {/* API Status Card */}
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="w-5 h-5" />API Durumu
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {status && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="rounded-lg border p-3" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                <p style={{ color: "var(--muted-foreground)" }}>Durum</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className={`w-2 h-2 rounded-full ${status.odds_api_configured ? "bg-green-500" : "bg-red-500"}`} />
+                  <span className="font-bold">{status.odds_api_configured ? "Aktif" : "Yapılandırılmamış"}</span>
+                </div>
+              </div>
+              <div className="rounded-lg border p-3" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                <p style={{ color: "var(--muted-foreground)" }}>Cache Yaşı</p>
+                <p className="font-bold mt-1">{status.cache_age_seconds}s
+                  {status.is_stale && <span className="ml-1 text-yellow-500">(Eski)</span>}
+                </p>
+              </div>
+              <div className="rounded-lg border p-3" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                <p style={{ color: "var(--muted-foreground)" }}>Maç Sayısı</p>
+                <p className="font-bold mt-1">{status.cached_match_count}</p>
+              </div>
+              <div className="rounded-lg border p-3" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                <p style={{ color: "var(--muted-foreground)" }}>Hata Sayısı</p>
+                <p className="font-bold mt-1" style={{ color: status.error_count > 0 ? "#EF4444" : "inherit" }}>
+                  {status.error_count}
+                </p>
+              </div>
+            </div>
+          )}
+          {status?.last_error && (
+            <div className="mt-3 p-3 rounded-lg text-xs" style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444" }}>
+              Son hata: {status.last_error}
+            </div>
+          )}
+          <div className="flex items-center gap-3 mt-4">
+            <Button onClick={handleRefresh} disabled={refreshing} size="sm" variant="outline">
+              {refreshing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Veriyi Yenile
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Toggle */}
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5" />AI Analiz Kontrolü</CardTitle>
+          <CardDescription>Featured maç için AI mini-analiz üretimini açıp kapatın.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <Switch checked={aiEnabled} onCheckedChange={handleAiToggle} data-testid="ai-toggle-switch" />
+            <span className="text-sm">{aiEnabled ? "AI Analiz Açık" : "AI Analiz Kapalı"}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Featured Match Selection */}
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Star className="w-5 h-5" />Öne Çıkan Maç</CardTitle>
+          <CardDescription>Ana sayfada AI analizi ile gösterilecek maçı seçin. Boş bırakırsanız otomatik seçilir.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            variant="outline" size="sm"
+            onClick={() => handleSetFeatured(null)}
+          >
+            Otomatik Seçim (Türkiye Öncelikli)
+          </Button>
+          <div className="space-y-2">
+            {matches.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center justify-between rounded-lg border p-3"
+                style={{
+                  borderColor: status?.featured_match_override === m.id ? "rgba(0,255,135,0.4)" : "rgba(255,255,255,0.08)",
+                  background: status?.featured_match_override === m.id ? "rgba(0,255,135,0.05)" : "transparent",
+                }}
+                data-testid={`featured-match-row-${m.id}`}
+              >
+                <div>
+                  <p className="text-sm font-semibold">{m.home_team} vs {m.away_team}</p>
+                  <p className="text-xs" style={{ color: "var(--muted-foreground)" }}>{m.sport_title}</p>
+                </div>
+                <Button
+                  size="sm" variant="outline"
+                  onClick={() => handleSetFeatured(m.id)}
+                  style={status?.featured_match_override === m.id ? { borderColor: "var(--neon-green)", color: "var(--neon-green)" } : {}}
+                >
+                  {status?.featured_match_override === m.id ? "Seçili" : "Seç"}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── ADMIN PAGE ─────────────────────────────────────────────────
 const AdminPage = () => {
   const navigate = useNavigate();
   const adminUser = localStorage.getItem("admin_user") || "admin";
