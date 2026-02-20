@@ -1,23 +1,13 @@
-# Dynamic Sports & Bonus Authority Network (DSBN)
+# Dynamic Sports & Bonus Authority Network (DSBN) - v2.0
 
 ## Original Problem Statement
-Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, yapay zeka destekli ve kendi kendini güncelleyebilen bir içerik ağı. Sistem 3 ana içerik katmanından oluşur:
-1. Ana Rehber Sayfalar (Money Pages) - Deneme Bonusu, 1000 TL Deneme Bonusu, Casino Bonusları
-2. Güncel Spor İçerikleri (Freshness Engine) - Maç sonuçları, lig analizleri, transfer haberleri
-3. İç Bağlantı Güç Aktarımı - Spor haberleri → Bonus rehberlerine link
+Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI destekli ve kendi kendini optimize eden içerik platformu.
 
-## User Personas
-- **Bonus Arayanlar**: Deneme ve hoşgeldin bonusu arayan yeni kullanıcılar
-- **Spor Takipçileri**: Güncel maç sonuçları ve analizleri takip edenler
-- **SEO Profesyonelleri**: İçerik optimizasyonu yapan site yöneticileri
-
-## Core Requirements (Static)
-- Türkçe dil desteği
-- Dark mode neon yeşil tasarım
-- Football-Data.org API entegrasyonu
-- OpenAI GPT-5.2 ile AI içerik üretimi
-- Admin paneli ile içerik yönetimi
-- SEO uyumlu yapı
+## User Choices/Requirements
+1. **AI Performansa Göre Otomatik Sıralama** - CTA tıklama, affiliate click, scroll depth, time on page metrikleri
+2. **Gerçek Site Listesi** - MAXWIN, HILTONBET, ELEXBET, FESTWIN, CASINO DIOR, BETCI, ALFABAHIS, TULIPBET
+3. **Freshness Engine** - Gerçek değişiklikte güncelleme, kampanya arşivleme
+4. **SEO Asistanı** - Rakip analizi, anahtar kelime boşluğu, haftalık rapor, iç link önerileri
 
 ## Tech Stack
 - **Frontend**: React 19, Tailwind CSS, Framer Motion, shadcn/ui
@@ -27,60 +17,85 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, yapay z
 
 ## What's Been Implemented (January 2026)
 
-### MVP - Completed ✅
-1. **Backend API** (server.py)
-   - Bonus Sites CRUD endpoints
-   - Articles CRUD endpoints
-   - Categories system
-   - AI Content Generation endpoint
-   - SEO Analysis endpoint
-   - Football Data API integration (demo mode)
-   - Dashboard stats endpoint
-   - Database seeding
+### v1.0 - Base MVP ✅
+- Homepage, Bonus Guide Pages, Sports News, Article Pages
+- Admin Panel with CRUD operations
+- AI Content Generation
 
-2. **Frontend Pages**
-   - Homepage with hero, bonus cards, live scores, FAQ
-   - Bonus Guide Pages (/deneme-bonusu, /hosgeldin-bonusu)
-   - Sports News Page with league selector
-   - Article Detail Page
-   - Admin Panel with tabs (Sites, Articles, AI Tools, SEO)
+### v2.0 - AI Performance & SEO Update ✅
+1. **AI Performance Ranking System**
+   - Performance tracking (impressions, clicks, scroll, time)
+   - Heuristic scoring when no data (bonus_value, turnover_req, rating)
+   - Auto-update featured status for top 2 sites
+   - Daily micro / weekly macro optimization ready
 
-3. **Components**
-   - Navbar with dropdown menu
-   - Footer with links
-   - BonusCard component
-   - NewsCard component
+2. **Real Site List Integration**
+   - 8 real affiliate sites with URLs
+   - Turnover requirements displayed
+   - Campaign start/end tracking
+   - Archive functionality for ended campaigns
 
-4. **Database Seed Data**
-   - 5 Bonus Sites (BetStar, WinMax, LuckBet, SportKing, CasinoPlus)
-   - 3 Articles (Deneme Bonusu Rehberi, Derbi Analizi, Premier Lig Özet)
-   - 7 Categories (4 bonus, 3 spor)
+3. **SEO Assistant Tools**
+   - Competitor domain analysis
+   - Keyword gap analysis
+   - Internal link suggestions
+   - Weekly SEO report generation
+
+4. **Content Freshness System**
+   - content_updated_at only changes on real content updates
+   - Content hash for change detection
+   - Campaign archive system
+
+## Database Schema
+```
+bonus_sites: {id, name, logo_url, bonus_type, bonus_amount, bonus_value, affiliate_url, 
+              rating, features, turnover_requirement, campaign_start/end,
+              cta_clicks, affiliate_clicks, impressions, avg_time_on_page, avg_scroll_depth,
+              performance_score, is_featured, order, is_active, is_archived}
+
+performance_events: {id, site_id, event_type, value, user_session, page_url, timestamp}
+
+articles: {id, title, slug, content, content_hash, content_updated_at, ...}
+
+seo_analysis: {id, analysis_type, target_url, keyword, results, suggestions}
+```
+
+## API Endpoints
+
+### Performance Tracking
+- POST /api/track/event - Track single event
+- POST /api/track/batch - Track multiple events
+- POST /api/ai/update-rankings - Trigger ranking update
+- GET /api/ai/ranking-report - Get detailed ranking report
+
+### SEO Tools
+- POST /api/ai/competitor-analysis - Analyze competitor site
+- POST /api/ai/keyword-gap-analysis - Find keyword opportunities
+- GET /api/ai/weekly-seo-report - Generate weekly report
+- POST /api/ai/internal-link-suggestions - Get link suggestions
 
 ## Prioritized Backlog
 
-### P0 (Critical)
-- [x] Core bonus listing functionality
-- [x] Sports news integration
-- [x] AI content generation
-- [x] Admin panel
+### P0 (Done) ✅
+- [x] AI performance ranking system
+- [x] Real site list integration
+- [x] SEO assistant tools
+- [x] Performance tracking infrastructure
 
-### P1 (Important)
-- [ ] User authentication system
-- [ ] Real Football-Data.org API key integration
-- [ ] Schema.org markup for SEO
-- [ ] Article scheduling system
+### P1 (Next Phase)
+- [ ] Real Football-Data.org API key for live data
+- [ ] Automated daily content generation from sports data
+- [ ] Email notification for ranking changes
+- [ ] A/B testing for CTA buttons
 
-### P2 (Nice to Have)
-- [ ] Multi-language support (English)
-- [ ] Email newsletter integration
-- [ ] Social media sharing buttons
-- [ ] Analytics dashboard
-- [ ] Competitor domain analysis
-- [ ] Automatic SEO reports
+### P2 (Future)
+- [ ] Multi-language support
+- [ ] User authentication for admin
+- [ ] Scheduled reports via email
+- [ ] Mobile app (PWA)
 
 ## Next Tasks
-1. Get real Football-Data.org API key for live match data
-2. Implement schema.org structured data
-3. Add user authentication for admin
-4. Build automatic content scheduling system
-5. Integrate competitor analysis feature
+1. Collect real performance data to improve rankings
+2. Set up scheduled ranking updates (cron job)
+3. Integrate real sports API for automated content
+4. Add Google Analytics integration for deeper insights
