@@ -654,6 +654,15 @@ async def delete_domain(domain_id: str):
     logger.info(f"Domain deleted: {domain_id}")
     return {"message": "Domain deleted"}
 
+@api_router.put("/domains/{domain_id}")
+async def update_domain(domain_id: str, data: Dict[str, Any]):
+    """Update a domain"""
+    data.pop("id", None)
+    data.pop("_id", None)
+    await db.domains.update_one({"id": domain_id}, {"$set": data})
+    updated = await db.domains.find_one({"id": domain_id}, {"_id": 0})
+    return updated
+
 # Domain Sites
 @api_router.get("/domains/{domain_id}/sites")
 async def get_domain_sites(domain_id: str):
