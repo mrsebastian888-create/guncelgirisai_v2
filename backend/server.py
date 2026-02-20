@@ -766,10 +766,60 @@ async def update_domain_rankings(domain_id: str):
 
 # Articles
 @api_router.get("/articles")
-async def get_articles(limit: int = 50):
-    """Get all articles"""
-    articles = await db.articles.find({"is_published": True}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+async def get_articles(limit: int = 50, search: Optional[str] = None, category: Optional[str] = None):
+    """Get all articles with optional search and filter"""
+    query: Dict[str, Any] = {}
+    if search:
+        query["$or"] = [
+            {"title": {"$regex": search, "$options": "i"}},
+            {"content": {"$regex": search, "$options": "i"}},
+        ]
+    if category:
+        query["category"] = category
+    articles = await db.articles.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     return articles
+
+@api_router.post("/articles")
+async def create_article(article: Dict[str, Any]):
+    """Create a new article"""
+    if not article.get("title"):
+        raise HTTPException(status_code=400, detail="Başlık gerekli")
+    if not article.get("slug"):
+        article["slug"] = slugify(article["title"])
+    article["content_hash"] = hashlib.md5(article.get("content", "").encode()).hexdigest()
+    article["content_updated_at"] = datetime.now(timezone.utc).isoformat()
+    article_obj = Article(**article)
+    await db.articles.insert_one(article_obj.model_dump())
+    logger.info(f"Article created: {article_obj.title}")
+    return article_obj.model_dump()
+
+@api_router.put("/articles/{article_id}")
+async def update_article(article_id: str, data: Dict[str, Any]):
+    """Update an article"""
+    data.pop("id", None)
+    data.pop("_id", None)
+    if "content" in data:
+        data["content_hash"] = hashlib.md5(data["content"].encode()).hexdigest()
+        data["content_updated_at"] = datetime.now(timezone.utc).isoformat()
+    if "title" in data and "slug" not in data:
+        data["slug"] = slugify(data["title"])
+    await db.articles.update_one({"id": article_id}, {"$set": data})
+    updated = await db.articles.find_one({"id": article_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/articles/{article_id}")
+async def delete_article(article_id: str):
+    """Delete an article"""
+    await db.articles.delete_one({"id": article_id})
+    return {"message": "Makale silindi"}
+
+@api_router.get("/articles/{article_id}")
+async def get_article(article_id: str):
+    """Get single article by ID"""
+    article = await db.articles.find_one({"id": article_id}, {"_id": 0})
+    if not article:
+        raise HTTPException(status_code=404, detail="Makale bulunamadı")
+    return article
 
 @api_router.get("/domains/{domain_id}/articles")
 async def get_domain_articles(domain_id: str, limit: int = 20):
