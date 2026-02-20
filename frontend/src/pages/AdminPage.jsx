@@ -8,8 +8,9 @@ import {
   Plus, Trash2, Wand2, BarChart3, FileText, Gift, RefreshCw,
   Globe, TrendingUp, Target, Link2, Calendar, Server, Check,
   AlertCircle, Loader2, Copy, ExternalLink, Settings, LogOut,
-  Activity, Sparkles, ToggleLeft, ToggleRight, Star
+  Activity, Sparkles, ToggleLeft, ToggleRight, Star, Search
 } from "lucide-react";
+import SeoAssistant from "@/components/SeoAssistant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
