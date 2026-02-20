@@ -225,6 +225,5 @@ export default function MatchDetailPage() {
 
         </div>
       </div>
-    </>
-  );
+    );
 }
