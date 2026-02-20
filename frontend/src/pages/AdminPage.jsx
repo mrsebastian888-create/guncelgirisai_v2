@@ -618,9 +618,6 @@ const AdminPage = () => {
       </div>
     </motion.div>
   );
-      </div>
-    </div>
-  );
 };
 
 export default AdminPage;
