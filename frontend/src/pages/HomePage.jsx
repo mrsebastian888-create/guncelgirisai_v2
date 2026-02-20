@@ -5,8 +5,7 @@ import axios from "axios";
 import { API } from "@/App";
 import {
   Trophy, Zap, TrendingUp, ChevronRight, Star,
-  Shield, Clock, Gift, Activity, ChevronLeft,
-  Flame, Target, Coins
+  Shield, Clock, Gift, Flame, Target, Coins
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import BonusRow from "@/components/BonusRow";
