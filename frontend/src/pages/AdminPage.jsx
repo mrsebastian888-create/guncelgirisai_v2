@@ -386,9 +386,9 @@ const AdminPage = () => {
           <TabsList className="grid grid-cols-6 w-full max-w-4xl">
             <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-2" />Domainler</TabsTrigger>
             <TabsTrigger value="sites"><Gift className="w-4 h-4 mr-2" />Siteler</TabsTrigger>
+            <TabsTrigger value="seo" data-testid="admin-seo-tab"><Search className="w-4 h-4 mr-2" />SEO Asistanı</TabsTrigger>
             <TabsTrigger value="auto-content"><Wand2 className="w-4 h-4 mr-2" />Oto İçerik</TabsTrigger>
             <TabsTrigger value="articles"><FileText className="w-4 h-4 mr-2" />Makaleler</TabsTrigger>
-            <TabsTrigger value="seo"><BarChart3 className="w-4 h-4 mr-2" />SEO</TabsTrigger>
             <TabsTrigger value="matches"><Activity className="w-4 h-4 mr-2" />Maçlar</TabsTrigger>
           </TabsList>
 
