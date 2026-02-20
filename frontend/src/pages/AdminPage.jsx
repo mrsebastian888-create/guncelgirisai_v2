@@ -168,6 +168,9 @@ const AdminPage = () => {
             <p className="text-muted-foreground mt-1">Çoklu domain yönetimi ve AI otomasyon</p>
           </div>
           <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground hidden md:block">
+              Hoş geldin, <strong>{adminUser}</strong>
+            </span>
             <Select value={selectedDomain || "all"} onValueChange={(v) => setSelectedDomain(v === "all" ? null : v)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Domain Seç" />
@@ -178,6 +181,15 @@ const AdminPage = () => {
               </SelectContent>
             </Select>
             <Button onClick={fetchData} variant="outline" size="icon"><RefreshCw className="w-4 h-4" /></Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="icon"
+              data-testid="admin-logout-btn"
+              title="Çıkış Yap"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
