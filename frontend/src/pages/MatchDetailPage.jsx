@@ -201,7 +201,7 @@ export default function MatchDetailPage() {
                   </p>
                 </div>
                 <a
-                  href={`${apiUrl}/api/go/${match.recommended_partner.id}/${match.id}`}
+                  href={`/api/go/${match.recommended_partner.id}/${match.id}`}
                   target="_blank"
                   rel="noopener noreferrer sponsored"
                   className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-xl font-heading font-bold uppercase text-sm transition-all active:scale-95"
