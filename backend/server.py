@@ -83,7 +83,7 @@ SPORT_KEYS = [
 ]
 
 # CORS configuration
-CORS_ORIGINS = get_optional_env("CORS_ORIGINS", "https://guncelgiris.ai,https://www.guncelgiris.ai")
+CORS_ORIGINS = get_optional_env("CORS_ORIGINS", "*")
 CORS_ALLOW_CREDENTIALS = get_optional_env("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
 
 # Rate limiting configuration
