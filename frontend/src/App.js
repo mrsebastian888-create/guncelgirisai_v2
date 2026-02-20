@@ -21,6 +21,7 @@ export const API = `${BACKEND_URL}/api`;
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [showPopup, setShowPopup] = useState(true);
 
   useEffect(() => {
     // Seed database on first load
