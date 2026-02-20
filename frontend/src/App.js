@@ -44,6 +44,9 @@ function AppLayout({ isLoading }) {
   const adminDomain = isAdminDomain();
   const isAdminPath = ADMIN_PATHS.some((p) => location.pathname.startsWith(p));
 
+  // Admin domainde ana sayfaya gelen kullanıcıyı admin-login'e yönlendir
+  const isAdminOnlyDomain = ADMIN_HOST && window.location.hostname === ADMIN_HOST;
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -57,40 +60,37 @@ function AppLayout({ isLoading }) {
 
   return (
     <div className="App min-h-screen bg-background text-foreground">
-      {!isAdminPath && showPopup && <WelcomePopup onClose={() => setShowPopup(false)} />}
-      {!isAdminPath && <Navbar />}
+      {!isAdminPath && !isAdminOnlyDomain && showPopup && <WelcomePopup onClose={() => setShowPopup(false)} />}
+      {!isAdminPath && !isAdminOnlyDomain && <Navbar />}
       <main className={isAdminPath ? "" : "pt-16"}>
         <Routes>
-          {/* Public routes — her subdomainde görünür */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/deneme-bonusu" element={<BonusGuidePage type="deneme" />} />
-          <Route path="/hosgeldin-bonusu" element={<BonusGuidePage type="hosgeldin" />} />
-          <Route path="/bonus/:type" element={<BonusGuidePage />} />
-          <Route path="/spor-haberleri" element={<SportsNewsPage />} />
-          <Route path="/makale/:slug" element={<ArticlePage />} />
-          <Route path="/mac/:slug" element={<MatchDetailPage />} />
+          {/* Admin-only domain: tüm public sayfaları admin-login'e yönlendir */}
+          {isAdminOnlyDomain ? (
+            <>
+              <Route path="/admin-login" element={<LoginPage />} />
+              <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+              <Route path="*" element={<Navigate to="/admin-login" replace />} />
+            </>
+          ) : (
+            <>
+              {/* Public routes */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/deneme-bonusu" element={<BonusGuidePage type="deneme" />} />
+              <Route path="/hosgeldin-bonusu" element={<BonusGuidePage type="hosgeldin" />} />
+              <Route path="/bonus/:type" element={<BonusGuidePage />} />
+              <Route path="/spor-haberleri" element={<SportsNewsPage />} />
+              <Route path="/makale/:slug" element={<ArticlePage />} />
+              <Route path="/mac/:slug" element={<MatchDetailPage />} />
 
-          {/* Admin routes — SADECE admin subdomainde kayıtlıdır */}
-          {adminDomain && (
-            <Route path="/admin-login" element={<LoginPage />} />
-          )}
-          {adminDomain && (
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminPage />
-                </ProtectedRoute>
-              }
-            />
-          )}
-          {/* Admin olmayan domainlerde /admin* anasayfaya yönlendir */}
-          {!adminDomain && (
-            <Route path="/admin*" element={<Navigate to="/" replace />} />
+              {/* Admin routes — SADECE admin subdomainde */}
+              {adminDomain && <Route path="/admin-login" element={<LoginPage />} />}
+              {adminDomain && <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />}
+              {!adminDomain && <Route path="/admin*" element={<Navigate to="/" replace />} />}
+            </>
           )}
         </Routes>
       </main>
-      {!isAdminPath && <Footer />}
+      {!isAdminPath && !isAdminOnlyDomain && <Footer />}
       <Toaster position="top-right" richColors />
     </div>
   );
