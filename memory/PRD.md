@@ -22,7 +22,16 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - Admin Panel with CRUD operations
 - AI Content Generation
 
-### v2.0 - AI Performance & SEO Update ✅
+### v3.0 - Production Hardening & CI/CD ✅
+1. **Bug Fixes (server.py)**
+   - Rate limiter çift sayım sorunu düzeltildi (`is_allowed()` tek seferlik çağrılıyor)
+   - `ping_mongo()` guard clause eklendi (`if not client: return False, 0`)
+2. **CI/CD Pipeline (GitHub Actions)**
+   - `.github/workflows/backend-test.yml` — Python lint + test
+   - `.github/workflows/frontend-build.yml` — Yarn build doğrulama
+3. **Health Endpoints** - `/health`, `/version`, `/db-check` tümü çalışıyor
+
+
 1. **AI Performance Ranking System**
    - Performance tracking (impressions, clicks, scroll, time)
    - Heuristic scoring when no data (bonus_value, turnover_req, rating)
