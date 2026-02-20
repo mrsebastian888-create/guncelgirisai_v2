@@ -2,8 +2,16 @@ import { Link } from "react-router-dom";
 import { Star, ExternalLink, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { usePerformanceTracking } from "@/utils/performanceTracking";
 
 const BonusCard = ({ site, index = 0 }) => {
+  const { handleCtaClick, handleAffiliateClick } = usePerformanceTracking(site.id);
+
+  const handleSiteClick = (e) => {
+    handleCtaClick();
+    handleAffiliateClick();
+  };
+
   return (
     <div 
       className="glass-card rounded-xl overflow-hidden group hover-lift"
@@ -15,6 +23,15 @@ const BonusCard = ({ site, index = 0 }) => {
           <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30">
             <Star className="w-3 h-3 mr-1 fill-yellow-500" /> Öne Çıkan
           </Badge>
+        </div>
+      )}
+
+      {/* Performance Rank Badge */}
+      {site.order && site.order <= 3 && (
+        <div className="absolute top-3 left-3 z-10">
+          <div className="w-8 h-8 rounded-full bg-neon-green/20 border border-neon-green/50 flex items-center justify-center">
+            <span className="font-heading text-sm font-bold text-neon-green">#{site.order}</span>
+          </div>
         </div>
       )}
 
@@ -48,11 +65,16 @@ const BonusCard = ({ site, index = 0 }) => {
           <div className="font-heading text-3xl font-black text-neon-green neon-glow-text">
             {site.bonus_amount}
           </div>
+          {site.turnover_requirement && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Çevrim: {site.turnover_requirement}x
+            </div>
+          )}
         </div>
 
         {/* Features */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {site.features.slice(0, 3).map((feature, i) => (
+          {site.features && site.features.slice(0, 3).map((feature, i) => (
             <Badge key={i} variant="outline" className="text-xs">
               <Shield className="w-3 h-3 mr-1" />
               {feature}
@@ -64,8 +86,14 @@ const BonusCard = ({ site, index = 0 }) => {
         <Button 
           className="w-full bg-neon-green text-black font-bold uppercase tracking-wide hover:bg-neon-green/90 neon-glow press"
           asChild
+          onClick={handleSiteClick}
         >
-          <a href={site.affiliate_url} target="_blank" rel="noopener noreferrer" data-testid={`bonus-cta-${site.id}`}>
+          <a 
+            href={site.affiliate_url} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            data-testid={`bonus-cta-${site.id}`}
+          >
             <ExternalLink className="w-4 h-4 mr-2" />
             Siteye Git
           </a>
