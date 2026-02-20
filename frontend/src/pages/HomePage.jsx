@@ -175,18 +175,25 @@ const HomePage = () => {
           <div className="container mx-auto max-w-7xl px-4 flex items-center gap-4 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
             <div className="shrink-0 flex items-center gap-2 font-heading font-bold text-xs uppercase tracking-widest" style={{ color: "var(--neon-green)" }}>
               <Activity className="w-4 h-4 animate-pulse" />
-              Canlı
+              Canlı Skorlar
             </div>
-            {matches.map((m, i) => (
-              <div key={i} className="shrink-0 flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm"
-                style={{ background: "var(--card)", borderColor: "rgba(255,255,255,0.07)" }}>
-                <span className="font-medium">{m.home_team}</span>
-                <span className="font-heading font-bold" style={{ color: "var(--neon-green)" }}>
-                  {m.home_score ?? "-"} - {m.away_score ?? "-"}
-                </span>
-                <span className="font-medium">{m.away_team}</span>
-              </div>
-            ))}
+            {matches.map((m, i) => {
+              const isLive = !m.completed && new Date(m.commence_time) < new Date();
+              const isCompleted = m.completed;
+              return (
+                <div key={i} className="shrink-0 flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm"
+                  style={{ background: "var(--card)", borderColor: isLive ? "rgba(0,255,135,0.25)" : "rgba(255,255,255,0.07)" }}>
+                  {isLive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                  )}
+                  <span className="font-medium truncate max-w-[100px]">{m.home_team}</span>
+                  <span className="font-heading font-bold" style={{ color: isCompleted ? "var(--muted-foreground)" : "var(--neon-green)" }}>
+                    {m.home_score ?? "-"} - {m.away_score ?? "-"}
+                  </span>
+                  <span className="font-medium truncate max-w-[100px]">{m.away_team}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
