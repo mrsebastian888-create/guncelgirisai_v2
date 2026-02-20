@@ -165,8 +165,8 @@ export default function MatchDetailPage() {
                   AI Maç Analizi
                 </h2>
               </div>
-              <div className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--muted-foreground)" }}>
-                {match.ai_analysis}
+              <div className="text-sm leading-relaxed prose prose-invert prose-sm max-w-none" style={{ color: "var(--muted-foreground)" }}>
+                <ReactMarkdown>{match.ai_analysis}</ReactMarkdown>
               </div>
               <div className="mt-4 pt-4 border-t text-xs" style={{ borderColor: "rgba(255,255,255,0.07)", color: "rgba(156,163,175,0.6)" }}>
                 Bu analiz yalnızca bilgi amaçlıdır. Herhangi bir kazanç garantisi içermez.
