@@ -1213,8 +1213,7 @@ async def verify_token(request: Request):
     return {"valid": True, "username": username}
 
 @api_router.get("/categories")
-async def get_categories():
-    """Get hardcoded bonus/sport categories"""
+async def get_categories():    """Get hardcoded bonus/sport categories"""
     return [
         {"id": "1", "name": "Deneme Bonusu", "slug": "deneme-bonusu", "type": "bonus",
          "image": "https://images.unsplash.com/photo-1566563255308-753861417000?w=600&q=80",
