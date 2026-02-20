@@ -20,6 +20,15 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
 const AdminPage = () => {
+  const navigate = useNavigate();
+  const adminUser = localStorage.getItem("admin_user") || "admin";
+
+  const handleLogout = () => {
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_user");
+    toast.success("Çıkış yapıldı");
+    navigate("/admin-login");
+  };
   const [stats, setStats] = useState(null);
   const [domains, setDomains] = useState([]);
   const [bonusSites, setBonusSites] = useState([]);
