@@ -535,8 +535,17 @@ def main():
         tester.test_sports_endpoints()
         tester.test_stats_endpoints()
         
+        # Test AI ranking system (core feature)
+        tester.test_ai_ranking_endpoints()
+        
+        # Test performance tracking
+        tester.test_performance_tracking_endpoints()
+        
         # Test AI endpoints (might be slower)
         tester.test_ai_endpoints()
+        
+        # Test SEO AI endpoints
+        tester.test_seo_ai_endpoints()
         
         # Test CRUD operations
         tester.test_crud_operations()
