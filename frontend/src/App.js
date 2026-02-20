@@ -31,6 +31,8 @@ export function isAdminDomain() {
   if (!ADMIN_HOST) return true;
   // Yerel geliştirme ortamında her zaman izin ver
   if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+  // Preview ortamında izin ver
+  if (hostname.endsWith(".preview.emergentagent.com")) return true;
   return hostname === ADMIN_HOST;
 }
 
