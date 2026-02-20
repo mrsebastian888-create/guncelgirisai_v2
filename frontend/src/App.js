@@ -111,9 +111,11 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <AppLayout isLoading={isLoading} />
-    </BrowserRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <AppLayout isLoading={isLoading} />
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }
 
