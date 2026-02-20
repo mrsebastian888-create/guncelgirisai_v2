@@ -22,7 +22,17 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - Admin Panel with CRUD operations
 - AI Content Generation
 
-### v4.0 - Homepage Redesign (v2) ✅
+### v5.0 - Match Hub Module ✅
+1. **Robust Scores API** — cache (120s TTL) + retry + fallback (upcoming fixtures)
+2. **MatchHub component** — structured cards, league badge, status (Live/Upcoming/Finished), score, 2 CTAs
+3. **AI Mini-Insight** — featured match'e Gemini-flash ile tarafsız Türkçe analiz
+4. **Match Detail Page** `/mac/:slug` — SEO schema (SportsEvent JSON-LD), AI analiz (ReactMarkdown), partner CTA + disclaimer
+5. **Partner Tracking** `/api/go/{partner_id}/{match_id}` — MongoDB click log + redirect
+6. **Admin Controls** — API status, AI toggle, featured match selection, cache refresh
+7. **Rate limiter** — sports/tracking endpoint'leri limit dışı tutuldu
+8. **Seed** — sessionStorage ile tek seferlik çalıştırma
+
+
 1. **BonusRow.jsx** — Ranked horizontal list card (screenshot tasarımına uygun)
 2. **HomePage.jsx** — Tam yeniden tasarım:
    - Compact hero + stadyum arka plan + neon grid
