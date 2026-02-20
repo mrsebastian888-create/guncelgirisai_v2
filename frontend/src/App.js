@@ -3,6 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
+import { HelmetProvider } from "react-helmet-async";
 
 // Pages
 import HomePage from "@/pages/HomePage";
