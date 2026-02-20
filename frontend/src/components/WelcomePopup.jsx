@@ -27,7 +27,7 @@ const WelcomePopup = ({ onClose }) => {
   };
 
   const handleClose = () => {
-    sessionStorage.setItem("popup_shown", "true");
+    localStorage.setItem("age_verified", "true");
     setIsVisible(false);
     onClose?.();
   };
