@@ -150,13 +150,6 @@ const Navbar = () => {
               >
                 Spor Haberleri
               </Link>
-              <Link 
-                to="/admin" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="font-heading text-2xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
-              >
-                Admin
-              </Link>
               <Button 
                 className="bg-neon-green text-black font-bold uppercase tracking-wide hover:bg-neon-green/90 neon-glow mt-4"
                 asChild
