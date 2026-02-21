@@ -225,10 +225,25 @@ async def lifespan(app: FastAPI):
         }
     })
     
+    # Ensure "En İyi Firmalar" category exists
+    existing_cat = await db.categories.find_one({"slug": "en-iyi-firmalar"})
+    if not existing_cat:
+        await db.categories.insert_one({
+            "id": str(uuid.uuid4()),
+            "name": "En İyi Firmalar",
+            "slug": "en-iyi-firmalar",
+            "type": "bonus",
+            "description": "Uzman editörler tarafından incelenen en iyi bahis ve bonus siteleri",
+            "order": 0,
+            "is_active": True,
+        })
+        logger.info("Created 'En İyi Firmalar' category")
+    
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
+    await content_scheduler.stop()
     await disconnect_from_mongo()
     logger.info("Application shutdown complete")
 
