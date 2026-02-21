@@ -7,6 +7,7 @@ import { Activity, TrendingUp, Trophy, Calendar, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import NewsCard from "@/components/NewsCard";
+import SEOHead from "@/components/SEOHead";
 import {
   Select,
   SelectContent,
