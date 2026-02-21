@@ -146,11 +146,12 @@ function SitesTab({ bonusSites, onRefresh }) {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const handleCreate = async () => {
     if (!newSite.name || !newSite.affiliate_url) return toast.error("Site adı ve URL gerekli");
     try {
-      await axios.post(`${API}/bonus-sites`, { ...newSite, features: newSite.features.split(",").map(f => f.trim()).filter(Boolean) });
+      await axios.post(`${API}/bonus-sites`, { ...newSite, features: newSite.features.split(",").map(f => f.trim()).filter(Boolean), sort_order: bonusSites.length + 1 });
       toast.success("Site eklendi");
       setNewSite({ name: "", logo_url: "", bonus_type: "deneme", bonus_amount: "", affiliate_url: "", rating: 4.5, features: "", turnover_requirement: 10 });
       onRefresh();
@@ -188,6 +189,30 @@ function SitesTab({ bonusSites, onRefresh }) {
       onRefresh();
     } catch { toast.error("Güncellenemedi"); }
     finally { setSaving(false); }
+  };
+
+  const handleMoveUp = async (index) => {
+    if (index === 0) return;
+    setReordering(true);
+    const newOrder = [...bonusSites];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    try {
+      await axios.post(`${API}/bonus-sites/reorder`, { order: newOrder.map(s => s.id) });
+      onRefresh();
+    } catch { toast.error("Sıralama başarısız"); }
+    finally { setReordering(false); }
+  };
+
+  const handleMoveDown = async (index) => {
+    if (index === bonusSites.length - 1) return;
+    setReordering(true);
+    const newOrder = [...bonusSites];
+    [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    try {
+      await axios.post(`${API}/bonus-sites/reorder`, { order: newOrder.map(s => s.id) });
+      onRefresh();
+    } catch { toast.error("Sıralama başarısız"); }
+    finally { setReordering(false); }
   };
 
   return (
