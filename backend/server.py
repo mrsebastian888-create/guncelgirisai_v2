@@ -974,6 +974,122 @@ async def get_domain_sites(domain_id: str):
     
     return result
 
+# ============== GODADDY API INTEGRATION ==============
+
+@api_router.get("/godaddy/domains")
+async def list_godaddy_domains():
+    """Fetch all domains from GoDaddy account"""
+    if not GODADDY_API_KEY or not GODADDY_API_SECRET:
+        raise HTTPException(status_code=500, detail="GoDaddy API credentials not configured")
+    
+    headers = {
+        "Authorization": f"sso-key {GODADDY_API_KEY}:{GODADDY_API_SECRET}",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+    
+    all_domains = []
+    marker = None
+    
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            while True:
+                params = {"statuses": "ACTIVE", "limit": 500}
+                if marker:
+                    params["marker"] = marker
+                
+                response = await client.get(
+                    "https://api.godaddy.com/v1/domains",
+                    headers=headers,
+                    params=params
+                )
+                
+                if response.status_code == 401:
+                    raise HTTPException(status_code=401, detail="GoDaddy API kimlik doğrulama hatası")
+                if response.status_code == 403:
+                    raise HTTPException(status_code=403, detail="GoDaddy API erişim reddedildi. Hesabınızda yeterli domain olmalı.")
+                
+                response.raise_for_status()
+                batch = response.json()
+                
+                if not batch:
+                    break
+                
+                all_domains.extend(batch)
+                
+                if len(batch) < 500:
+                    break
+                marker = batch[-1].get("domain")
+        
+        # Check which domains are already in our platform
+        existing_domains = await db.domains.find({}, {"_id": 0, "domain_name": 1}).to_list(500)
+        existing_names = {d["domain_name"] for d in existing_domains}
+        
+        result = []
+        for d in all_domains:
+            result.append({
+                "domain": d.get("domain", ""),
+                "status": d.get("status", "UNKNOWN"),
+                "expires": d.get("expires", ""),
+                "renewable": d.get("renewable", False),
+                "renew_auto": d.get("renewAuto", False),
+                "locked": d.get("locked", False),
+                "privacy": d.get("privacy", False),
+                "nameServers": d.get("nameServers", []),
+                "created_at": d.get("createdAt", ""),
+                "already_added": d.get("domain", "") in existing_names
+            })
+        
+        return {"total": len(result), "domains": result}
+    
+    except HTTPException:
+        raise
+    except httpx.HTTPStatusError as e:
+        logger.error(f"GoDaddy API error: {e.response.status_code} - {e.response.text}")
+        raise HTTPException(status_code=502, detail=f"GoDaddy API hatası: {e.response.status_code}")
+    except Exception as e:
+        logger.error(f"GoDaddy request error: {e}")
+        raise HTTPException(status_code=500, detail="GoDaddy API'ye bağlanılamadı")
+
+
+@api_router.post("/godaddy/import")
+async def import_godaddy_domain(data: Dict[str, Any], background_tasks: BackgroundTasks):
+    """Import a domain from GoDaddy into the platform"""
+    domain_name = data.get("domain_name", "").strip()
+    if not domain_name:
+        raise HTTPException(status_code=400, detail="Domain adı gerekli")
+    
+    existing = await db.domains.find_one({"domain_name": domain_name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu domain zaten platformda mevcut")
+    
+    display_name = data.get("display_name", domain_name.split(".")[0].capitalize())
+    focus = data.get("focus", "bonus")
+    
+    domain_create = DomainCreate(
+        domain_name=domain_name,
+        display_name=display_name,
+        focus=focus,
+        meta_title=f"{display_name} - En Güncel Rehber"
+    )
+    
+    domain_obj = Domain(**domain_create.model_dump())
+    await db.domains.insert_one(domain_obj.model_dump())
+    
+    # Copy global sites to domain
+    global_sites = await db.bonus_sites.find({"is_global": True, "is_active": True}, {"_id": 0}).to_list(100)
+    for site in global_sites:
+        domain_site = DomainSite(domain_id=domain_obj.id, site_id=site["id"])
+        await db.domain_sites.insert_one(domain_site.model_dump())
+        perf = DomainPerformance(domain_id=domain_obj.id, site_id=site["id"], performance_score=calculate_heuristic_score(site))
+        await db.domain_performance.insert_one(perf.model_dump())
+    
+    background_tasks.add_task(auto_generate_domain_content, domain_obj.id, domain_obj.domain_name, domain_obj.focus)
+    
+    logger.info(f"GoDaddy domain imported: {domain_name}")
+    return {"message": f"{domain_name} başarıyla eklendi!", "domain": domain_obj.model_dump()}
+
+
 # Bonus Sites
 @api_router.get("/bonus-sites")
 async def get_all_bonus_sites(limit: int = 50):
