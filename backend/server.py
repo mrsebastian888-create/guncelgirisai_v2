@@ -793,8 +793,8 @@ async def get_domain_sites(domain_id: str):
 # Bonus Sites
 @api_router.get("/bonus-sites")
 async def get_all_bonus_sites(limit: int = 50):
-    """Get all global bonus sites"""
-    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).to_list(limit)
+    """Get all global bonus sites sorted by sort_order"""
+    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).sort("sort_order", 1).limit(limit).to_list(limit)
     return sites
 
 @api_router.post("/bonus-sites")
