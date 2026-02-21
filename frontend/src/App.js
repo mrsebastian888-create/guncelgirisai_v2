@@ -97,18 +97,7 @@ function AppLayout({ isLoading }) {
 }
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // İlk yükleme kontrolü - API'nin çalıştığından emin ol
-    const checkApi = async () => {
-      try {
-        await axios.get(`${API}/`);
-      } catch {}
-      finally { setIsLoading(false); }
-    };
-    checkApi();
-  }, []);
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <HelmetProvider>
