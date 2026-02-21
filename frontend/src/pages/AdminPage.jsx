@@ -280,6 +280,15 @@ function SitesTab({ bonusSites, onRefresh }) {
                   /* View Mode */
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-0.5 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleMoveUp(bonusSites.indexOf(site))} disabled={reordering || bonusSites.indexOf(site) === 0} data-testid={`move-up-${site.id}`}>
+                          <ArrowUp className="w-3 h-3" />
+                        </Button>
+                        <span className="text-xs text-center text-muted-foreground">{bonusSites.indexOf(site) + 1}</span>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleMoveDown(bonusSites.indexOf(site))} disabled={reordering || bonusSites.indexOf(site) === bonusSites.length - 1} data-testid={`move-down-${site.id}`}>
+                          <ArrowDown className="w-3 h-3" />
+                        </Button>
+                      </div>
                       {site.logo_url && <img src={site.logo_url} alt={site.name} className="w-10 h-10 rounded-lg object-cover" onError={(e) => { e.target.style.display = "none"; }} />}
                       <div>
                         <h4 className="font-medium">{site.name}</h4>
