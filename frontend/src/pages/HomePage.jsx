@@ -68,12 +68,15 @@ const MAIN_CATEGORIES = [
 
 const HomePage = () => {
   const [bonusSites, setBonusSites] = useState([]);
+  const [allFirms, setAllFirms] = useState([]);
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [latestArticles, setLatestArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
   const [heroSlide, setHeroSlide] = useState(0);
+  const [firmSearch, setFirmSearch] = useState("");
+  const [showAllFirms, setShowAllFirms] = useState(false);
   const sliderRef = useRef(null);
 
   // Hero auto-rotate
