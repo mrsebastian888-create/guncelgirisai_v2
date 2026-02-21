@@ -1,98 +1,67 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v5.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v6.0
 
 ## Original Problem Statement
 Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI destekli ve kendi kendini optimize eden içerik platformu.
 
-## Tech Stack
-- **Frontend**: React 19, Tailwind CSS, Framer Motion, shadcn/ui
-- **Backend**: FastAPI, Python, `motor` (MongoDB async driver)
-- **Database**: MongoDB
-- **AI**: OpenAI GPT-5.2 & Gemini-3-Flash via Emergent Integrations
-- **APIs**: The Odds API (live scores), Perigon API (news)
-
 ## What's Been Implemented
 
-### v1-v3: Base MVP + Match Hub + Production Hardening
-- Homepage, Bonus Guide Pages, Sports News, Article Pages
-- Admin Panel with JWT Authentication
-- AI Content Generation, Match Hub with live scores
-- Health checks, rate limiting, CI/CD, domain-based admin access
-
-### v4: Homepage Overhaul
-- Hero section, filterable bonus list, category slider, FAQ, CTA banner
+### v1-v4: Base MVP + Match Hub + Production Hardening + Homepage
+- Full-stack monorepo (React + FastAPI + MongoDB)
+- JWT admin auth, domain-based access control, rate limiting, CI/CD
 
 ### v5.0: Gelişmiş AI SEO Asistanı (Feb 2026)
-- 10 new /api/seo/* endpoints (dashboard, keyword-research, site-audit, competitor-deep, meta-generator, content-optimizer, content-score, internal-links, reports CRUD)
-- SeoAssistant.jsx component with 6 sub-tabs + reports history
+- 10 new /api/seo/* endpoints + SeoAssistant.jsx component
 
-### v5.1: Admin Panel Tamamlama (Feb 2026) - CURRENT
-**Siteler Tab:**
-- Inline edit mode (name, bonus_type, amount, URL, features, rating)
-- Delete with confirmation
-- PUT /api/bonus-sites/{id} endpoint
+### v5.1: Admin Panel Full CRUD (Feb 2026)
+- Sites/Articles/Domains: create, edit, delete, search
 
-**Makaleler Tab:**
-- New article creation form (title, category, SEO title, description, tags, content)
-- Inline edit with publish/draft toggle
-- Delete with confirmation  
-- Search by title/content + category filter
-- Content preview (expand/collapse)
-- POST /api/articles, PUT /api/articles/{id}, DELETE /api/articles/{id}, GET /api/articles/{id}
+### v6.0: Auto-Site Generation + Critical Fixes (Feb 2026)
+**Auto-Site Generation:**
+- Domain oluşturulduğunda AI ile 5 SEO makale arka planda otomatik üretiliyor
+- Bonus siteleri otomatik bağlanıyor
+- GET /api/site/{domain_name} - domain bazlı tam site verisi
+- Frontend hostname algılayarak domain-spesifik içerik sunuyor
+- Admin panelinde domain durumu (makale sayısı, bonus site, "Siteyi Gör" linki)
 
-**Domainler Tab:**
-- Inline edit (display_name, focus, meta_title)
-- PUT /api/domains/{id} endpoint
+**Critical Fixes:**
+- Seed endpoint artık DB'yi silmiyor (sadece boş DB'de çalışır)
+- Frontend'den /api/seed çağrısı kaldırıldı (her oturumda DB sıfırlanma bugı)
+- 32 duplicate bonus site temizlendi → 8 benzersiz site
+- Loading state düzeltildi (API bağımlılığı kaldırıldı)
+- Admin-only domain routing (adminguncelgiris.company → sadece admin paneli)
+- Vercel deployment config (CI=false, monorepo setup)
 
 **Admin Domain:** adminguncelgiris.company
+**Vercel Config:** /app/vercel.json (buildCommand: cd frontend && CI=false yarn build)
 
 ## API Endpoints
-### Auth
-- POST /api/auth/login
-
-### Domains CRUD
-- GET /api/domains, POST /api/domains, PUT /api/domains/{id}, DELETE /api/domains/{id}
-
-### Bonus Sites CRUD  
-- GET /api/bonus-sites, POST /api/bonus-sites, PUT /api/bonus-sites/{id}, DELETE /api/bonus-sites/{id}
-
-### Articles CRUD
-- GET /api/articles, POST /api/articles, PUT /api/articles/{id}, DELETE /api/articles/{id}, GET /api/articles/{id}
-- GET /api/articles?search=term&category=bonus
-
-### SEO Assistant
-- GET /api/seo/dashboard, POST /api/seo/keyword-research, POST /api/seo/site-audit
-- POST /api/seo/competitor-deep, POST /api/seo/meta-generator, POST /api/seo/content-optimizer
-- POST /api/seo/content-score, POST /api/seo/internal-links
-- GET /api/seo/reports, DELETE /api/seo/reports/{id}
-
-### Sports & Auto Content
-- GET /api/sports/scores, GET /api/sports/match/{id}
-- POST /api/auto-content/generate-article, POST /api/auto-content/bulk-generate
-- GET /api/news
-
-## Database Schema
-- bonus_sites, articles, domains, seo_reports, domain_sites, domain_performance, users
+- POST /api/domains → Domain oluştur + AI auto-content
+- GET /api/site/{domain_name} → Domain bazlı tam site verisi
+- GET/POST/PUT/DELETE /api/bonus-sites, /api/articles, /api/domains
+- GET/POST /api/seo/* (10 endpoint)
+- GET /api/sports/scores, /api/news
 
 ## Prioritized Backlog
-### P0 (Done)
-- [x] Admin panel full CRUD (sites, articles, domains)
+### P0 (Done) ✅
+- [x] Admin panel full CRUD
 - [x] AI SEO Assistant
-- [x] Match Hub with live scores
-- [x] Admin JWT authentication + domain isolation
+- [x] Auto-site generation on domain create
+- [x] Seed bug fix (DB silme sorunu)
+- [x] Vercel deployment config
 
 ### P1 (Next)
-- [ ] Complete Perigon News API integration (/spor-haberleri)
-- [ ] Deployment to production (Vercel + Railway + Atlas)
-- [ ] GoDaddy API Integration (DNS automation)
-- [ ] AMP Implementation
+- [ ] Perigon News API integration (/spor-haberleri)
+- [ ] Backend production deployment (Railway)
+- [ ] MongoDB Atlas migration
+- [ ] GoDaddy API Integration
 
 ### P2 (Future)
+- [ ] AMP Implementation
 - [ ] Multi-language support
 - [ ] Scheduled SEO reports
-- [ ] A/B testing for CTAs
 - [ ] server.py modular refactoring
 
 ## Testing
-- iteration_4.json: SEO Assistant - 20/20 backend, all frontend passed
-- iteration_5.json: Admin CRUD - 19/19 backend, all frontend passed
-- Test file: /app/backend/tests/test_admin_crud.py
+- iteration_4.json: SEO Assistant - 20/20 passed
+- iteration_5.json: Admin CRUD - 19/19 passed
+- Manual: Auto-site generation verified (domain created, 5 articles generated, 8 sites linked)
