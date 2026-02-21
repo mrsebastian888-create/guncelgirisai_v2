@@ -30,6 +30,42 @@ const FAQ_ITEMS = [
   { question: "Hangi siteler güvenilir?", answer: "Sitemizde sadece lisanslı ve güvenilir bahis sitelerini listeliyoruz. Tüm siteler ödeme güvenliği ve müşteri memnuniyeti açısından test edilmiştir." },
 ];
 
+const HERO_SLIDES = [
+  {
+    badge: "2026 Guncel Bonus Listesi",
+    title: ["EN YUKSEK", "DENEME BONUSU", "VEREN SITELER"],
+    desc: "Turkiye'nin en guvenilir bahis siteleri — guncel bonuslar, hizli odeme, 7/24 destek.",
+    image: "https://images.pexels.com/photos/12201296/pexels-photo-12201296.jpeg?w=1920&q=80",
+    cta: { label: "Bonus Al", href: "#bonus-list" },
+    accent: "var(--neon-green)",
+  },
+  {
+    badge: "Hosgeldin Bonusu",
+    title: ["2000 TL'YE KADAR", "HOSGELDIN", "BONUSU"],
+    desc: "Ilk uyeliginize ozel en yuksek hosgeldin bonuslari. Hemen uye olun, firsati kacirmayin!",
+    image: "https://images.pexels.com/photos/10741372/pexels-photo-10741372.jpeg?w=1920&q=80",
+    cta: { label: "Firsatlari Gor", href: "/hosgeldin-bonusu" },
+    accent: "#FFD700",
+  },
+  {
+    badge: "Canli Spor",
+    title: ["CANLI MAC", "SONUCLARI VE", "ANALIZLER"],
+    desc: "Yapay zeka destekli mac analizleri, canli skorlar ve uzman tahminleri.",
+    image: "https://images.pexels.com/photos/18420917/pexels-photo-18420917.jpeg?w=1920&q=80",
+    cta: { label: "Analizlere Git", href: "/spor-haberleri" },
+    accent: "#00F0FF",
+  },
+];
+
+const MAIN_CATEGORIES = [
+  { name: "Bonuslar", slug: "bonuslar", icon: Gift, color: "#00FF87", image: "https://images.pexels.com/photos/29825624/pexels-photo-29825624.jpeg?auto=compress&cs=tinysrgb&w=400" },
+  { name: "Guncel Giris", slug: "guncel-giris-adresleri", icon: Globe, color: "#00F0FF", image: "https://images.unsplash.com/photo-1530900198670-847f22a849fe?w=400&q=80" },
+  { name: "Deneme Bonusu", slug: "deneme-bonusu", icon: Coins, color: "#FBBF24", image: "https://images.pexels.com/photos/10741372/pexels-photo-10741372.jpeg?auto=compress&cs=tinysrgb&w=400" },
+  { name: "Hosgeldin Bonusu", slug: "hosgeldin-bonusu", icon: Gift, color: "#FFD700", image: "https://images.pexels.com/photos/6102155/pexels-photo-6102155.jpeg?auto=compress&cs=tinysrgb&w=400" },
+  { name: "Spor Haberleri", slug: "spor-haberleri", icon: Activity, color: "#FF6B6B", image: "https://images.pexels.com/photos/12201296/pexels-photo-12201296.jpeg?auto=compress&cs=tinysrgb&w=400" },
+  { name: "AI Analiz", slug: "ai-analiz", icon: Target, color: "#A78BFA", image: "https://images.unsplash.com/photo-1580617971627-cffa74e39d1d?w=400&q=80" },
+];
+
 const HomePage = () => {
   const [bonusSites, setBonusSites] = useState([]);
   const [articles, setArticles] = useState([]);
@@ -37,7 +73,16 @@ const HomePage = () => {
   const [latestArticles, setLatestArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [heroSlide, setHeroSlide] = useState(0);
   const sliderRef = useRef(null);
+
+  // Hero auto-rotate
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroSlide(prev => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
