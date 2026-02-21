@@ -757,30 +757,36 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
         logger.info(f"Batch complete: {success} success, {failed} failed")
 
     async def bulk_generate(self, count: int = 20):
-        """One-shot bulk generation of articles."""
+        """Start bulk generation in background."""
         if self.is_bulk_running:
             return {"error": "Bulk generation already running"}
         self.is_bulk_running = True
+        asyncio.create_task(self._bulk_generate_task(count))
+        return {"status": "started", "target_count": count, "message": f"{count} makale arka planda uretiliyor"}
+
+    async def _bulk_generate_task(self, count: int):
+        """Background task for bulk article generation."""
         try:
             bonus_sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "name": 1, "bonus_amount": 1, "bonus_type": 1, "affiliate_url": 1, "rating": 1, "features": 1}).to_list(20)
             sites_info = "\n".join([f"- {s['name']}: {s.get('bonus_amount','')} bonus, {s.get('rating',4.5)} puan, Özellikler: {', '.join(s.get('features',[]))}" for s in bonus_sites])
             
             items = await db.content_queue.find({"status": "pending"}, {"_id": 0}).limit(count).to_list(count)
             if not items:
-                return {"generated": 0, "message": "Kuyruk boş"}
+                logger.info("Bulk generate: queue empty")
+                return
             
-            # Process in batches of 5
-            total_success = 0
-            total_failed = 0
-            for i in range(0, len(items), 5):
-                batch = items[i:i+5]
+            logger.info(f"Bulk generate started: {len(items)} articles")
+            for i in range(0, len(items), 3):
+                batch = items[i:i+3]
                 tasks = [self._generate_single_article(item, sites_info) for item in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                total_success += sum(1 for r in results if r is True)
-                total_failed += sum(1 for r in results if r is not True)
-                logger.info(f"Bulk batch {i//5 + 1}: {sum(1 for r in results if r is True)} success")
+                success = sum(1 for r in results if r is True)
+                logger.info(f"Bulk batch {i//3 + 1}/{(len(items)+2)//3}: {success}/{len(batch)} success")
+                await asyncio.sleep(2)
             
-            return {"generated": total_success, "failed": total_failed, "total_processed": len(items)}
+            logger.info(f"Bulk generate complete. Total generated this session: {self.total_generated}")
+        except Exception as e:
+            logger.error(f"Bulk generate error: {e}")
         finally:
             self.is_bulk_running = False
 
