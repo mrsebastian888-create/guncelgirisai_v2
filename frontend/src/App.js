@@ -82,6 +82,7 @@ function AppLayout({ isLoading }) {
               <Route path="/spor-haberleri" element={<SportsNewsPage />} />
               <Route path="/makale/:slug" element={<ArticlePage />} />
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
+              <Route path="/:slug" element={<FirmPage />} />
 
               {/* Admin routes — SADECE admin subdomainde */}
               {adminDomain && <Route path="/admin-login" element={<LoginPage />} />}
