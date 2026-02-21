@@ -832,9 +832,22 @@ function DomainsTab({ domains, onRefresh }) {
     finally { setSaving(false); }
   };
 
-  const filteredGodaddyDomains = godaddyDomains.filter(d =>
-    d.domain.toLowerCase().includes(godaddySearch.toLowerCase())
-  );
+  const filteredGodaddyDomains = godaddyDomains.filter(d => {
+    const matchesSearch = d.domain.toLowerCase().includes(godaddySearch.toLowerCase());
+    if (!matchesSearch) return false;
+    if (godaddyFilter === "all") return true;
+    if (godaddyFilter === "parked") return d.hosting_status === "parked";
+    if (godaddyFilter === "hosted") return d.hosting_status === "hosted";
+    if (godaddyFilter === "platform") return d.hosting_status === "platform";
+    return true;
+  });
+
+  const filterButtons = [
+    { key: "all", label: "Tümü", count: godaddyStats.total, color: "text-white" },
+    { key: "parked", label: "Boşta", count: godaddyStats.parked, color: "text-yellow-400" },
+    { key: "hosted", label: "Farklı Sunucuda", count: godaddyStats.hosted, color: "text-blue-400" },
+    { key: "platform", label: "Platformda", count: godaddyStats.platform, color: "text-neon-green" },
+  ];
 
   return (
     <div className="space-y-6" data-testid="domains-tab">
@@ -854,10 +867,25 @@ function DomainsTab({ domains, onRefresh }) {
             </Button>
           ) : (
             <div className="space-y-4">
+              {/* Stats Bar */}
+              <div className="grid grid-cols-4 gap-3" data-testid="godaddy-stats">
+                {filterButtons.map(fb => (
+                  <button
+                    key={fb.key}
+                    onClick={() => setGodaddyFilter(fb.key)}
+                    data-testid={`godaddy-filter-${fb.key}`}
+                    className={`rounded-lg border p-3 text-left transition-all ${godaddyFilter === fb.key ? "border-[#00F0FF] bg-[#00F0FF]/10" : "border-white/10 hover:border-white/20"}`}
+                  >
+                    <div className={`text-xl font-bold ${fb.color}`}>{fb.count}</div>
+                    <div className="text-xs text-muted-foreground">{fb.label}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Search & Refresh */}
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-neon-green" />
-                  <span>{godaddyDomains.length} domain bulundu</span>
+                  <span>{filteredGodaddyDomains.length} domain gösteriliyor</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
