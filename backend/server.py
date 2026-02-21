@@ -5,7 +5,7 @@ Version: 3.0.0
 """
 
 from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, status, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
