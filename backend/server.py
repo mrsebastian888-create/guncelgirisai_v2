@@ -989,7 +989,19 @@ async def auto_generate_article(domain_id: Optional[str] = None, topic: str = "d
         return {"status": "skipped", "reason": "Similar article exists", "article_id": existing.get("id")}
     
     prompt = f"""Konu: {topic}
-SEO uyumlu, özgün bir makale yaz. 800-1000 kelime. HTML formatında."""
+
+Profesyonel, SEO uyumlu ve özgün bir makale yaz.
+
+KURALLAR:
+- 1000-1500 kelime arası
+- HTML formatında (h2, h3, p, ul, li, strong etiketleri)
+- En az 3 adet h2 başlık
+- Doğal, bilgilendirici ve otoriter ton
+- Anahtar kelimeyi ilk paragrafta ve en az 1 h2'de kullan
+- En az 1 liste ekle
+- Sonuçta CTA paragrafı olsun
+- 2026 yılına uygun güncel bilgiler
+- Keyword stuffing yapma"""
     
     content = await generate_ai_content(prompt)
     
