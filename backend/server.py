@@ -4,7 +4,7 @@ Production-Ready Backend with Hardening
 Version: 3.0.0
 """
 
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, status, BackgroundTasks
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
