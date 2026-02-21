@@ -1971,27 +1971,71 @@ async def get_news(size: int = 20, topic: Optional[str] = None, refresh: bool = 
 
 @api_router.get("/categories")
 async def get_categories():
-    """Get hardcoded bonus/sport categories"""
-    return [
-        {"id": "1", "name": "Deneme Bonusu", "slug": "deneme-bonusu", "type": "bonus",
-         "image": "https://images.unsplash.com/photo-1566563255308-753861417000?w=600&q=80",
-         "description": "Yatırımsız ücretsiz bonus"},
-        {"id": "2", "name": "Hoşgeldin Bonusu", "slug": "hosgeldin-bonusu", "type": "bonus",
-         "image": "https://images.pexels.com/photos/7594382/pexels-photo-7594382.jpeg?w=600&q=80",
-         "description": "Yeni üye bonusları"},
-        {"id": "3", "name": "Kayıp Bonusu", "slug": "kayip-bonusu", "type": "bonus",
-         "image": "https://images.pexels.com/photos/7594162/pexels-photo-7594162.jpeg?w=600&q=80",
-         "description": "Kayıplarını geri kazan"},
-        {"id": "4", "name": "Spor Bahisleri", "slug": "spor-bahisleri", "type": "spor",
-         "image": "https://images.pexels.com/photos/12201296/pexels-photo-12201296.jpeg?w=600&q=80",
-         "description": "Canlı bahis fırsatları"},
-        {"id": "5", "name": "Canlı Casino", "slug": "canli-casino", "type": "bonus",
-         "image": "https://images.pexels.com/photos/7594615/pexels-photo-7594615.jpeg?w=600&q=80",
-         "description": "Gerçek krupiyerler"},
-        {"id": "6", "name": "Free Spin", "slug": "free-spin", "type": "bonus",
-         "image": "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=80",
-         "description": "Ücretsiz döndürme hakkı"},
-    ]
+    """Get categories from DB, fallback to defaults"""
+    cats = await db.categories.find({}, {"_id": 0}).sort("order", 1).to_list(50)
+    if not cats:
+        # Seed default categories
+        defaults = [
+            {"id": str(uuid.uuid4()), "name": "Deneme Bonusu", "slug": "deneme-bonusu", "type": "bonus", "image": "https://images.unsplash.com/photo-1566563255308-753861417000?w=600&q=80", "description": "Yatırımsız ücretsiz bonus", "order": 1, "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Hoşgeldin Bonusu", "slug": "hosgeldin-bonusu", "type": "bonus", "image": "https://images.pexels.com/photos/7594382/pexels-photo-7594382.jpeg?w=600&q=80", "description": "Yeni üye bonusları", "order": 2, "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Kayıp Bonusu", "slug": "kayip-bonusu", "type": "bonus", "image": "https://images.pexels.com/photos/7594162/pexels-photo-7594162.jpeg?w=600&q=80", "description": "Kayıplarını geri kazan", "order": 3, "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Spor Bahisleri", "slug": "spor-bahisleri", "type": "spor", "image": "https://images.pexels.com/photos/12201296/pexels-photo-12201296.jpeg?w=600&q=80", "description": "Canlı bahis fırsatları", "order": 4, "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Canlı Casino", "slug": "canli-casino", "type": "bonus", "image": "https://images.pexels.com/photos/7594615/pexels-photo-7594615.jpeg?w=600&q=80", "description": "Gerçek krupiyerler", "order": 5, "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Free Spin", "slug": "free-spin", "type": "bonus", "image": "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=600&q=80", "description": "Ücretsiz döndürme hakkı", "order": 6, "is_active": True},
+        ]
+        await db.categories.insert_many(defaults)
+        cats = defaults
+    return [c for c in cats if c.get("is_active", True)]
+
+@api_router.post("/categories")
+async def create_category(data: Dict[str, Any]):
+    """Create a new category"""
+    cat_count = await db.categories.count_documents({})
+    cat = {
+        "id": str(uuid.uuid4()),
+        "name": data.get("name", ""),
+        "slug": slugify(data.get("name", "")),
+        "type": data.get("type", "bonus"),
+        "image": data.get("image", ""),
+        "description": data.get("description", ""),
+        "order": data.get("order", cat_count + 1),
+        "is_active": True,
+    }
+    await db.categories.insert_one(cat)
+    cat.pop("_id", None)
+    return cat
+
+@api_router.put("/categories/{cat_id}")
+async def update_category(cat_id: str, data: Dict[str, Any]):
+    """Update a category"""
+    data.pop("id", None)
+    data.pop("_id", None)
+    await db.categories.update_one({"id": cat_id}, {"$set": data})
+    updated = await db.categories.find_one({"id": cat_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/categories/{cat_id}")
+async def delete_category(cat_id: str):
+    """Delete a category"""
+    await db.categories.delete_one({"id": cat_id})
+    return {"message": "Kategori silindi"}
+
+@api_router.post("/categories/reorder")
+async def reorder_categories(data: Dict[str, Any]):
+    """Reorder categories"""
+    order_list = data.get("order", [])
+    for i, cat_id in enumerate(order_list):
+        await db.categories.update_one({"id": cat_id}, {"$set": {"order": i + 1}})
+    return {"message": "Sıralama güncellendi"}
+
+# Bonus Sites Reorder
+@api_router.post("/bonus-sites/reorder")
+async def reorder_bonus_sites(data: Dict[str, Any]):
+    """Reorder bonus sites"""
+    order_list = data.get("order", [])
+    for i, site_id in enumerate(order_list):
+        await db.bonus_sites.update_one({"id": site_id}, {"$set": {"sort_order": i + 1}})
+    return {"message": "Site sıralaması güncellendi"}
 
 # Seed
 @api_router.post("/seed")
