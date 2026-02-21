@@ -62,6 +62,25 @@ const BonusGuidePage = ({ type: propType }) => {
 
   return (
     <div className="min-h-screen" data-testid="bonus-guide-page">
+      <SEOHead
+        title={`${pageInfo.title} 2026`}
+        description={pageInfo.description}
+        canonical={`${window.location.origin}/${bonusType === "deneme" ? "deneme-bonusu" : bonusType === "hosgeldin" ? "hosgeldin-bonusu" : `bonus/${bonusType}`}`}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": pageInfo.title,
+          "description": pageInfo.description,
+          "url": window.location.href,
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Ana Sayfa", "item": window.location.origin },
+              { "@type": "ListItem", "position": 2, "name": pageInfo.title },
+            ],
+          },
+        }}
+      />
       {/* Hero Section */}
       <section className="relative py-20 md:py-28 overflow-hidden">
         <div className="absolute inset-0 hero-pattern" />
