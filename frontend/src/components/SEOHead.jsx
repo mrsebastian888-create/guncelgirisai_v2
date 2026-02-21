@@ -61,6 +61,7 @@ export default function SEOHead({
 
   return (
     <Helmet
+      defer={false}
       title={fullTitle}
       meta={metaTags}
       link={url ? [{ rel: "canonical", href: url }] : []}
