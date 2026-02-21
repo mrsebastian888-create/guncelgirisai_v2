@@ -99,23 +99,21 @@ const ArticlePage = () => {
   return (
     <div className="min-h-screen" data-testid="article-page">
       {article && (
-        <>
-          <SEOHead
-            title={article.seo_title || article.title}
-            description={article.seo_description || article.excerpt}
-            type="article"
-            image={article.image_url}
-            canonical={`${window.location.origin}/makale/${article.slug}`}
-            article={{
-              publishedTime: article.created_at,
-              modifiedTime: article.updated_at,
-              author: article.author,
-              category: article.category,
-              tags: article.tags,
-            }}
-            jsonLd={[articleJsonLd, breadcrumbJsonLd]}
-          />
-        </>
+        <SEOHead
+          title={article.seo_title || article.title}
+          description={article.seo_description || article.excerpt}
+          type="article"
+          image={article.image_url}
+          canonical={`${window.location.origin}/makale/${article.slug}`}
+          article={{
+            publishedTime: article.created_at,
+            modifiedTime: article.updated_at,
+            author: article.author,
+            category: article.category,
+            tags: article.tags,
+          }}
+          jsonLd={[articleJsonLd, breadcrumbJsonLd]}
+        />
       )}
       {/* Hero Section */}
       <section className="relative py-16 md:py-24 overflow-hidden">
