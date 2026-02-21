@@ -1145,6 +1145,50 @@ async def get_all_bonus_sites(limit: int = 500, category: str = None):
     sites = await db.bonus_sites.find(query, {"_id": 0}).sort("sort_order", 1).limit(limit).to_list(limit)
     return sites
 
+
+@api_router.get("/firma/{slug}")
+async def get_firma_detail(slug: str):
+    """Get firm detail page data by slug"""
+    name_query = slug.lower().replace("-", " ").replace(".", "")
+    
+    # Try exact name match first, then slug-based
+    site = await db.bonus_sites.find_one(
+        {"$or": [
+            {"name": {"$regex": f"^{slug}$", "$options": "i"}},
+            {"name": {"$regex": f"^{slug.replace('-', ' ')}$", "$options": "i"}},
+            {"name": {"$regex": f"^{slug.replace('-', '')}$", "$options": "i"}},
+        ]},
+        {"_id": 0}
+    )
+    
+    if not site:
+        # Try partial match
+        site = await db.bonus_sites.find_one(
+            {"name": {"$regex": slug.replace("-", ".*"), "$options": "i"}},
+            {"_id": 0}
+        )
+    
+    if not site:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    
+    # Get related articles
+    site_name = site["name"]
+    articles = await db.articles.find(
+        {"$or": [
+            {"title": {"$regex": site_name, "$options": "i"}},
+            {"content": {"$regex": site_name, "$options": "i"}},
+        ], "is_published": True},
+        {"_id": 0, "content": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    # Get similar sites (same category)
+    similar = await db.bonus_sites.find(
+        {"category": site.get("category", "Turkiye"), "name": {"$ne": site_name}, "is_active": True},
+        {"_id": 0}
+    ).sort("rating", -1).limit(6).to_list(6)
+    
+    return {"site": site, "articles": articles, "similar_sites": similar}
+
 @api_router.post("/bonus-sites")
 async def create_bonus_site(site: Dict[str, Any]):
     """Create a new bonus site"""
