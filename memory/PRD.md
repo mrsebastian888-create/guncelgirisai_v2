@@ -1,4 +1,4 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v8.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v9.0
 
 ## Original Problem Statement
 Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI destekli, multi-tenant içerik platformu.
@@ -7,47 +7,23 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 
 ### v1-v6: Base MVP, Match Hub, Production Hardening, Admin CRUD, Auto-Site Generation, Categories
 ### v7.0: SEO Infrastructure (Sitemap, Robots.txt, JSON-LD, Canonical, OG Tags, Twitter Cards)
+### v8.0: Otomatik İçerik Zamanlayıcı Sistemi (Feb 2026)
+### v9.0: GoDaddy API Entegrasyonu (Feb 2026) - CURRENT
 
-### v8.0: Otomatik İçerik Zamanlayıcı Sistemi (Feb 2026) - CURRENT
+**Backend - GoDaddy API Endpoints:**
+- GET /api/godaddy/domains - GoDaddy hesabındaki tüm domainleri listeler (2311+ domain, pagination destekli)
+- POST /api/godaddy/import - GoDaddy domain'ini platforma tek tıkla ekler (bonus site kopyalama + AI içerik üretimi)
+- Credentials: Production API Key/Secret (.env'de)
+- already_added flag: Platformda mevcut domainleri işaretler
 
-**Backend - Content Queue & Scheduler:**
-- ContentQueueItem model (company, topic, status, article_id)
-- ContentScheduler class with start/stop/interval controls
-- POST /api/content-queue/bulk-add - Toplu konu ekleme (FIRMA|Konu formatı)
-- GET /api/content-queue - Kuyruk durumu ve istatistikler
-- DELETE /api/content-queue/{id} - Tekil konu silme
-- DELETE /api/content-queue?status=completed - Toplu temizleme
-- POST /api/scheduler/start - Zamanlayıcı başlatma
-- POST /api/scheduler/stop - Zamanlayıcı durdurma
-- GET /api/scheduler/status - Zamanlayıcı durumu
-- PUT /api/scheduler/interval - Süre ayarlama (1-60 dk)
-- POST /api/scheduler/run-now - Anlık üretim (arka planda)
-- GET /api/articles/latest - Son makaleler (route fix: {article_id}'den önce)
-
-**AI İçerik Üretimi İyileştirmeleri:**
-- 2000+ kelime makale üretimi
-- Firma önerileri ve karşılaştırma tabloları dahil
-- SEO kuralları: E-E-A-T uyumlu, keyword yoğunluğu %1-2
-- Görsel placeholder'ları ([GORSEL_1], [GORSEL_2], [GORSEL_3])
-- Site içi bonus firmaları doğal entegrasyon
-- "Uzman Editör" yazar adı
-- "en-iyi-firmalar" kategorisi otomatik atama
-
-**Admin Panel - Oto İçerik Sekmesi:**
-- Başlat/Durdur toggle butonu
-- Süre seçici (1dk, 5dk, 10dk, 30dk, 1 saat)
-- "Şimdi Üret" butonu
-- Canlı durum göstergesi (Çalışıyor/Durdu)
-- Kuyruk istatistikleri (Bekleyen/İşleniyor/Tamamlanan/Başarısız)
-- Toplu konu ekleme (textarea - her satır bir konu, FIRMA|Konu formatı)
-- Varsayılan firma alanı
-- Bekleyen konular listesi (silme butonlu)
-- Tamamlanan makaleler listesi (temizle butonlu)
-
-**Anasayfa - Son Makaleler:**
-- "En İyi Firmalar" badge'li uzman değerlendirmeleri bölümü (sol)
-- "Son Makaleler" sidebar'ı (sağ) - 8 makale
-- Tıklanabilir makale linkleri
+**Frontend - Admin Panel Domainler Sekmesi Güncellemesi:**
+- GoDaddy Domainleri bölümü (cyan border accent)
+- "GoDaddy Domainlerini Getir" butonu
+- Domain kartları: ad, durum badge, son kullanma tarihi, oto-yenileme, gizlilik
+- Arama/filtreleme input'u
+- "Platforma Ekle" butonu (import)
+- "Platformda Mevcut" durumu (zaten eklenmiş domainler)
+- Manuel Domain Ekle bölümü (mevcut fonksiyonalite korundu)
 - Tarih ve yazar bilgileri
 
 **"En İyi Firmalar" Kategorisi:**
