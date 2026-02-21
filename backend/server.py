@@ -978,7 +978,7 @@ async def get_domain_sites(domain_id: str):
 
 @api_router.get("/godaddy/domains")
 async def list_godaddy_domains():
-    """Fetch all domains from GoDaddy account"""
+    """Fetch all domains from GoDaddy account with hosting status"""
     if not GODADDY_API_KEY or not GODADDY_API_SECRET:
         raise HTTPException(status_code=500, detail="GoDaddy API credentials not configured")
     
@@ -992,9 +992,9 @@ async def list_godaddy_domains():
     marker = None
     
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=60) as client:
             while True:
-                params = {"statuses": "ACTIVE", "limit": 500}
+                params = {"statuses": "ACTIVE", "limit": 500, "includes": "nameServers"}
                 if marker:
                     params["marker"] = marker
                 
@@ -1025,22 +1025,44 @@ async def list_godaddy_domains():
         existing_domains = await db.domains.find({}, {"_id": 0, "domain_name": 1}).to_list(500)
         existing_names = {d["domain_name"] for d in existing_domains}
         
+        PARKED_NS_PATTERNS = ["domaincontrol.com", "parking", "godaddy", "sedoparking", "bodis"]
+        
+        def classify_hosting(nameservers):
+            if not nameservers:
+                return "parked"
+            ns_str = " ".join(nameservers).lower()
+            for pattern in PARKED_NS_PATTERNS:
+                if pattern in ns_str:
+                    return "parked"
+            return "hosted"
+        
         result = []
+        stats = {"total": 0, "parked": 0, "hosted": 0, "platform": 0}
+        
         for d in all_domains:
+            ns = d.get("nameServers") or []
+            domain_name = d.get("domain", "")
+            already_added = domain_name in existing_names
+            hosting_status = "platform" if already_added else classify_hosting(ns)
+            
+            stats["total"] += 1
+            stats[hosting_status] += 1
+            
             result.append({
-                "domain": d.get("domain", ""),
+                "domain": domain_name,
                 "status": d.get("status", "UNKNOWN"),
                 "expires": d.get("expires", ""),
                 "renewable": d.get("renewable", False),
                 "renew_auto": d.get("renewAuto", False),
                 "locked": d.get("locked", False),
                 "privacy": d.get("privacy", False),
-                "nameServers": d.get("nameServers", []),
+                "nameServers": ns,
                 "created_at": d.get("createdAt", ""),
-                "already_added": d.get("domain", "") in existing_names
+                "already_added": already_added,
+                "hosting_status": hosting_status
             })
         
-        return {"total": len(result), "domains": result}
+        return {"total": len(result), "stats": stats, "domains": result}
     
     except HTTPException:
         raise
