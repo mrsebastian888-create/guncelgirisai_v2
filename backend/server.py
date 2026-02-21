@@ -1137,9 +1137,12 @@ async def import_godaddy_domain(data: Dict[str, Any], background_tasks: Backgrou
 
 # Bonus Sites
 @api_router.get("/bonus-sites")
-async def get_all_bonus_sites(limit: int = 50):
+async def get_all_bonus_sites(limit: int = 500, category: str = None):
     """Get all global bonus sites sorted by sort_order"""
-    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).sort("sort_order", 1).limit(limit).to_list(limit)
+    query = {"is_active": True}
+    if category:
+        query["category"] = category
+    sites = await db.bonus_sites.find(query, {"_id": 0}).sort("sort_order", 1).limit(limit).to_list(limit)
     return sites
 
 @api_router.post("/bonus-sites")
