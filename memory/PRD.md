@@ -1,67 +1,44 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v6.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v6.1
 
 ## Original Problem Statement
-Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI destekli ve kendi kendini optimize eden içerik platformu.
+Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI destekli, multi-tenant içerik platformu.
 
 ## What's Been Implemented
 
 ### v1-v4: Base MVP + Match Hub + Production Hardening + Homepage
-- Full-stack monorepo (React + FastAPI + MongoDB)
-- JWT admin auth, domain-based access control, rate limiting, CI/CD
+### v5.0: Gelişmiş AI SEO Asistanı
+### v5.1: Admin Panel Full CRUD
+### v6.0: Auto-Site Generation + Critical Fixes (seed bug, loading, admin-only domain)
 
-### v5.0: Gelişmiş AI SEO Asistanı (Feb 2026)
-- 10 new /api/seo/* endpoints + SeoAssistant.jsx component
+### v6.1: Kategoriler + Bonus Sıralama (Feb 2026) - CURRENT
+**Kategoriler Yönetimi:**
+- GET/POST/PUT/DELETE /api/categories - Full CRUD
+- POST /api/categories/reorder - Sıralama
+- Admin panelde "Kategoriler" sekmesi (7. sekme)
+- Kategori ekleme formu (ad, tip, görsel, açıklama)
+- Sıralama okları (↑↓), düzenleme, silme
+- Kategoriler DB'ye taşındı (hardcoded → dynamic)
 
-### v5.1: Admin Panel Full CRUD (Feb 2026)
-- Sites/Articles/Domains: create, edit, delete, search
+**Bonus Site Sıralama:**
+- POST /api/bonus-sites/reorder - Sıralama endpoint'i
+- sort_order alanı ile sıralama
+- Admin panelde sıralama okları (↑↓) + sıra numarası
+- GET /api/bonus-sites artık sort_order'a göre sıralıyor
 
-### v6.0: Auto-Site Generation + Critical Fixes (Feb 2026)
-**Auto-Site Generation:**
-- Domain oluşturulduğunda AI ile 5 SEO makale arka planda otomatik üretiliyor
-- Bonus siteleri otomatik bağlanıyor
-- GET /api/site/{domain_name} - domain bazlı tam site verisi
-- Frontend hostname algılayarak domain-spesifik içerik sunuyor
-- Admin panelinde domain durumu (makale sayısı, bonus site, "Siteyi Gör" linki)
-
-**Critical Fixes:**
-- Seed endpoint artık DB'yi silmiyor (sadece boş DB'de çalışır)
-- Frontend'den /api/seed çağrısı kaldırıldı (her oturumda DB sıfırlanma bugı)
-- 32 duplicate bonus site temizlendi → 8 benzersiz site
-- Loading state düzeltildi (API bağımlılığı kaldırıldı)
-- Admin-only domain routing (adminguncelgiris.company → sadece admin paneli)
-- Vercel deployment config (CI=false, monorepo setup)
-
-**Admin Domain:** adminguncelgiris.company
-**Vercel Config:** /app/vercel.json (buildCommand: cd frontend && CI=false yarn build)
-
-## API Endpoints
-- POST /api/domains → Domain oluştur + AI auto-content
-- GET /api/site/{domain_name} → Domain bazlı tam site verisi
-- GET/POST/PUT/DELETE /api/bonus-sites, /api/articles, /api/domains
-- GET/POST /api/seo/* (10 endpoint)
-- GET /api/sports/scores, /api/news
-
-## Prioritized Backlog
-### P0 (Done) ✅
-- [x] Admin panel full CRUD
-- [x] AI SEO Assistant
-- [x] Auto-site generation on domain create
-- [x] Seed bug fix (DB silme sorunu)
-- [x] Vercel deployment config
-
-### P1 (Next)
-- [ ] Perigon News API integration (/spor-haberleri)
-- [ ] Backend production deployment (Railway)
-- [ ] MongoDB Atlas migration
-- [ ] GoDaddy API Integration
-
-### P2 (Future)
-- [ ] AMP Implementation
-- [ ] Multi-language support
-- [ ] Scheduled SEO reports
-- [ ] server.py modular refactoring
+**Admin Panel 7 Sekme:**
+Domainler | Siteler | Kategoriler | SEO | Oto İçerik | Makaleler | Maçlar
 
 ## Testing
-- iteration_4.json: SEO Assistant - 20/20 passed
-- iteration_5.json: Admin CRUD - 19/19 passed
-- Manual: Auto-site generation verified (domain created, 5 articles generated, 8 sites linked)
+- iteration_4: SEO Assistant 20/20
+- iteration_5: Admin CRUD 19/19
+- iteration_6: Categories + Reorder 15/15 ✅
+
+## Prioritized Backlog
+### P1 (Next)
+- [ ] Perigon News API (/spor-haberleri)
+- [ ] Backend production deployment
+- [ ] MongoDB Atlas migration
+
+### P2 (Future)
+- [ ] GoDaddy API, AMP, multi-language, scheduled reports
+- [ ] server.py modular refactoring
