@@ -658,8 +658,22 @@ async def auto_generate_domain_content(domain_id: str, domain_name: str, focus: 
             if existing:
                 continue
             
-            prompt = f"""'{domain_name}' sitesi için '{topic}' konusunda SEO uyumlu, özgün bir makale yaz.
-800-1200 kelime, HTML formatında. Başlıklar h2/h3 ile. Doğal ve bilgilendirici ton kullan."""
+            prompt = f"""'{domain_name}' sitesi için '{topic}' konusunda profesyonel, SEO uyumlu ve özgün bir makale yaz.
+
+KURALLAR:
+- 1000-1500 kelime arası olmalı
+- HTML formatında yaz (h2, h3, p, ul, li, strong etiketleri kullan)
+- En az 3 adet h2 başlık kullan
+- Her h2 altında en az 2 paragraf olsun
+- Doğal, bilgilendirici ve otoriter bir ton kullan
+- Anahtar kelimeyi ({topic}) ilk paragrafta, en az 1 h2 başlıkta ve son paragrafta doğal şekilde kullan
+- Anahtar kelime yoğunluğu %1-2 arasında olsun
+- En az 1 adet sıralı veya sırasız liste ekle
+- İç bağlantı için uygun anchor text önerileri bırak
+- Sonuç paragrafında kullanıcıya yönlendirme yap (CTA)
+- Gerçekçi ve güncel bilgiler kullan (2026 yılı)
+- Paragraflar kısa ve okunabilir olsun (3-4 cümle)
+- Keyword stuffing yapma, doğal yaz"""
             
             content = await generate_ai_content(prompt)
             
