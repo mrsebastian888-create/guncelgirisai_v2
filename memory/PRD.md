@@ -10,7 +10,16 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v8.0: Otomatik İçerik Zamanlayıcı Sistemi (Feb 2026)
 ### v9.0: GoDaddy API Entegrasyonu (Feb 2026)
 ### v10.0: Otomatik İçerik Hızlandırma (Feb 2026)
-### v11.0: Firma Rehberi + Affiliate URL Güncellemesi (Feb 2026) - CURRENT
+### v11.0: Firma Rehberi + Affiliate URL Güncellemesi (Feb 2026)
+### v12.0: Ana Sayfa Kapsamlı Güncelleme (Feb 2026) - CURRENT
+
+**Değişiklikler:**
+- "BONUS SİTELERİ" → "YILIN EN İYİ SİTELERİ" (5 firma, altın tema)
+- "EN GÜVENİLİR SİTELER" yeni bölüm (5 firma, yeşil tema)
+- Firma Rehberi üste taşındı (Hero altı)
+- Buton renkleri düzeltildi (okunaklı)
+- BONUS AL navbar butonu random popüler firmaya yönlendiriyor
+- Sayfa sırası: Hero → Firma Rehberi → Yılın En İyi → En Güvenilir → Kategoriler → MatchHub → Makaleler → FAQ → CTA
 
 **Affiliate URL Güncellemesi:**
 - 256 firma xlinks.art/firma-adi formatında özel URL aldı
