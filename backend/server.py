@@ -90,7 +90,7 @@ CORS_ORIGINS = get_optional_env("CORS_ORIGINS", "*")
 CORS_ALLOW_CREDENTIALS = get_optional_env("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
 
 # Rate limiting configuration
-RATE_LIMIT_REQUESTS = int(get_optional_env("RATE_LIMIT_REQUESTS", "60"))
+RATE_LIMIT_REQUESTS = int(get_optional_env("RATE_LIMIT_REQUESTS", "200"))
 RATE_LIMIT_WINDOW = int(get_optional_env("RATE_LIMIT_WINDOW", "60"))
 
 # Build info
