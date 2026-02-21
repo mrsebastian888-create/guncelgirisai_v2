@@ -1108,6 +1108,15 @@ async def delete_article(article_id: str):
     await db.articles.delete_one({"id": article_id})
     return {"message": "Makale silindi"}
 
+@api_router.get("/articles/latest")
+async def get_latest_articles(limit: int = 10, category: Optional[str] = None):
+    """Get latest published articles"""
+    query: Dict[str, Any] = {"is_published": True}
+    if category:
+        query["category"] = category
+    articles = await db.articles.find(query, {"_id": 0, "content": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return articles
+
 @api_router.get("/articles/slug/{slug}")
 async def get_article_by_slug(slug: str):
     """Get article by slug and increment view count"""
