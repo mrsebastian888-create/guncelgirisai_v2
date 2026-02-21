@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Gift, Activity, ChevronDown } from "lucide-react";
+import { Menu, X, Gift, Activity, ChevronDown, Globe, Sparkles, Award, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,14 +20,25 @@ const Navbar = () => {
       icon: Gift,
       children: [
         { label: "Deneme Bonusu", href: "/deneme-bonusu" },
-        { label: "Hoşgeldin Bonusu", href: "/hosgeldin-bonusu" },
-        { label: "Tüm Bonuslar", href: "/bonus/deneme" }
+        { label: "Hosgeldin Bonusu", href: "/hosgeldin-bonusu" },
+        { label: "Tum Bonuslar", href: "/bonus/deneme" }
       ]
     },
+    { label: "Guncel Giris", href: "/bonus/guncel-giris-adresleri", icon: Globe },
     { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
+    { label: "AI Analiz", href: "/ai-analiz", icon: Brain },
   ];
 
   const isActive = (href) => location.pathname === href;
+
+  const mobileLinks = [
+    { label: "Bonuslar", href: "/bonus/deneme" },
+    { label: "Deneme Bonusu", href: "/deneme-bonusu" },
+    { label: "Hosgeldin Bonusu", href: "/hosgeldin-bonusu" },
+    { label: "Guncel Giris Adresleri", href: "/bonus/guncel-giris-adresleri" },
+    { label: "Spor Haberleri", href: "/spor-haberleri" },
+    { label: "AI Analiz Araci", href: "/ai-analiz" },
+  ];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 h-16" data-testid="navbar">
@@ -55,9 +66,9 @@ const Navbar = () => {
                     className="font-heading uppercase tracking-wide text-sm hover:text-neon-green"
                     data-testid={`nav-dropdown-${link.label.toLowerCase()}`}
                   >
-                    <link.icon className="w-4 h-4 mr-2" />
+                    <link.icon className="w-4 h-4 mr-1.5" />
                     {link.label}
-                    <ChevronDown className="w-4 h-4 ml-1" />
+                    <ChevronDown className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -84,7 +95,7 @@ const Navbar = () => {
                 }`}
               >
                 <Link to={link.href} data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                  <link.icon className="w-4 h-4 mr-2" />
+                  <link.icon className="w-4 h-4 mr-1.5" />
                   {link.label}
                 </Link>
               </Button>
@@ -128,28 +139,17 @@ const Navbar = () => {
             className="fixed inset-x-0 top-16 bottom-0 bg-background/95 backdrop-blur-lg md:hidden z-40"
             data-testid="mobile-menu"
           >
-            <div className="flex flex-col items-center justify-center h-full gap-8">
-              <Link 
-                to="/deneme-bonusu" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="font-heading text-2xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
-              >
-                Deneme Bonusu
-              </Link>
-              <Link 
-                to="/hosgeldin-bonusu" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="font-heading text-2xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
-              >
-                Hoşgeldin Bonusu
-              </Link>
-              <Link 
-                to="/spor-haberleri" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="font-heading text-2xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
-              >
-                Spor Haberleri
-              </Link>
+            <div className="flex flex-col items-center justify-center h-full gap-6">
+              {mobileLinks.map((link, i) => (
+                <Link
+                  key={i}
+                  to={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-heading text-xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
               <Button 
                 className="bg-neon-green text-black font-bold uppercase tracking-wide hover:bg-neon-green/90 neon-glow mt-4"
                 asChild
