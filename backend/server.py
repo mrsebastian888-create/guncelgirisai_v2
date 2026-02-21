@@ -1223,7 +1223,7 @@ async def update_domain_rankings(domain_id: str):
 
 # Articles
 @api_router.get("/articles")
-async def get_articles(limit: int = 50, search: Optional[str] = None, category: Optional[str] = None):
+async def get_articles(limit: int = 500, search: Optional[str] = None, category: Optional[str] = None):
     """Get all articles with optional search and filter"""
     query: Dict[str, Any] = {}
     if search:
