@@ -33,6 +33,7 @@ export default function LoginPage() {
       style={{ background: "var(--background)" }}
       data-testid="login-page"
     >
+      <SEOHead title="Admin Girişi" noindex={true} />
       <div
         className="w-full max-w-sm rounded-2xl border p-6 shadow-2xl"
         style={{
