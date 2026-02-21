@@ -28,12 +28,12 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center"
+      className="min-h-screen flex items-center justify-center px-4 py-8"
       style={{ background: "var(--background)" }}
       data-testid="login-page"
     >
       <div
-        className="w-full max-w-sm rounded-2xl border p-8 shadow-2xl"
+        className="w-full max-w-sm rounded-2xl border p-6 shadow-2xl"
         style={{
           background: "var(--card)",
           borderColor: "var(--border)",
