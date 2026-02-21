@@ -88,8 +88,37 @@ const HomePage = () => {
     }
   };
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": FAQ_ITEMS.map((item) => ({
+      "@type": "Question",
+      "name": item.question,
+      "acceptedAnswer": { "@type": "Answer", "text": item.answer },
+    })),
+  };
+
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Bonus Rehberi",
+    "url": window.location.origin,
+    "description": "En güvenilir bonus siteleri, deneme bonusları ve spor bahis rehberleri.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": `${window.location.origin}/makale/{search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
+
   return (
     <div className="min-h-screen" data-testid="homepage">
+      <SEOHead
+        title="Deneme Bonusu Veren Siteler 2026 - En Güncel Bonus Rehberi"
+        description="En güvenilir deneme bonusu veren siteler 2026 listesi. Yatırımsız bonus fırsatları, hoşgeldin bonusları ve güncel bahis rehberleri."
+        canonical={window.location.origin}
+        jsonLd={[faqJsonLd, orgJsonLd]}
+      />
 
       {/* ── HERO ─────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ minHeight: "60vh" }}>
