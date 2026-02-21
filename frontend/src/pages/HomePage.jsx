@@ -168,81 +168,108 @@ const HomePage = () => {
         jsonLd={[faqJsonLd, orgJsonLd]}
       />
 
-      {/* ── HERO ─────────────────────────────────── */}
+      {/* ── HERO SLIDER ─────────────────────────── */}
       <section className="relative overflow-hidden" style={{ minHeight: "60vh" }}>
-        <img
-          src="https://images.pexels.com/photos/12201296/pexels-photo-12201296.jpeg?w=1920&q=80"
-          alt="Stadyum"
-          className="absolute inset-0 w-full h-full object-cover opacity-25"
-        />
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={`hero-img-${heroSlide}`}
+            src={HERO_SLIDES[heroSlide].image}
+            alt="Hero"
+            className="absolute inset-0 w-full h-full object-cover opacity-25"
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 0.25, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+          />
+        </AnimatePresence>
         <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(5,5,5,0.7) 0%, rgba(5,5,5,0.95) 100%)" }} />
 
         {/* Neon grid overlay */}
         <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: "linear-gradient(rgba(0,255,135,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,135,0.3) 1px, transparent 1px)",
+          backgroundImage: `linear-gradient(${HERO_SLIDES[heroSlide].accent}4D 1px, transparent 1px), linear-gradient(90deg, ${HERO_SLIDES[heroSlide].accent}4D 1px, transparent 1px)`,
           backgroundSize: "60px 60px"
         }} />
 
         <div className="relative z-10 container mx-auto max-w-7xl px-4 md:px-6 flex flex-col justify-center" style={{ minHeight: "60vh" }}>
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55 }}
-            className="max-w-3xl"
-          >
-            <div
-              className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 mb-5 text-xs font-semibold uppercase tracking-widest"
-              style={{ borderColor: "rgba(0,255,135,0.3)", color: "var(--neon-green)", background: "rgba(0,255,135,0.07)" }}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`hero-content-${heroSlide}`}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -24 }}
+              transition={{ duration: 0.5 }}
+              className="max-w-3xl"
             >
-              <Zap className="w-3.5 h-3.5" />
-              2026 Güncel Bonus Listesi
-            </div>
-
-            <h1
-              className="font-heading font-black uppercase leading-none mb-4"
-              style={{ fontSize: "clamp(2.8rem, 7vw, 5.5rem)", letterSpacing: "-0.02em" }}
-            >
-              <span style={{ color: "var(--foreground)" }}>EN YÜKSEK</span>
-              <br />
-              <span style={{ color: "var(--neon-green)", textShadow: "0 0 40px rgba(0,255,135,0.4)" }}>
-                DENEME BONUSU
-              </span>
-              <br />
-              <span style={{ color: "var(--foreground)" }}>VEREN SİTELER</span>
-            </h1>
-
-            <p className="text-base md:text-lg mb-8 max-w-xl" style={{ color: "var(--muted-foreground)" }}>
-              Türkiye'nin en güvenilir bahis siteleri — güncel bonuslar, hızlı ödeme, 7/24 destek.
-            </p>
-
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="#bonus-list"
-                data-testid="hero-bonus-btn"
-                className="inline-flex items-center gap-2 rounded-lg px-6 py-3 font-heading font-bold uppercase tracking-wide text-sm transition-all active:scale-95"
-                style={{ background: "var(--neon-green)", color: "#000", boxShadow: "0 0 24px rgba(0,255,135,0.35)" }}
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 mb-5 text-xs font-semibold uppercase tracking-widest"
+                style={{ borderColor: `${HERO_SLIDES[heroSlide].accent}4D`, color: HERO_SLIDES[heroSlide].accent, background: `${HERO_SLIDES[heroSlide].accent}12` }}
               >
-                <Gift className="w-4 h-4" />
-                Bonus Al
-              </a>
-              <Link
-                to="/spor-haberleri"
-                data-testid="hero-sports-btn"
-                className="inline-flex items-center gap-2 rounded-lg border px-6 py-3 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5"
-                style={{ borderColor: "rgba(255,255,255,0.2)", color: "var(--foreground)" }}
+                <Zap className="w-3.5 h-3.5" />
+                {HERO_SLIDES[heroSlide].badge}
+              </div>
+
+              <h1
+                className="font-heading font-black uppercase leading-none mb-4"
+                style={{ fontSize: "clamp(2.8rem, 7vw, 5.5rem)", letterSpacing: "-0.02em" }}
               >
-                <Activity className="w-4 h-4" />
-                Spor Haberleri
-              </Link>
-            </div>
-          </motion.div>
+                <span style={{ color: "var(--foreground)" }}>{HERO_SLIDES[heroSlide].title[0]}</span>
+                <br />
+                <span style={{ color: HERO_SLIDES[heroSlide].accent, textShadow: `0 0 40px ${HERO_SLIDES[heroSlide].accent}66` }}>
+                  {HERO_SLIDES[heroSlide].title[1]}
+                </span>
+                <br />
+                <span style={{ color: "var(--foreground)" }}>{HERO_SLIDES[heroSlide].title[2]}</span>
+              </h1>
+
+              <p className="text-base md:text-lg mb-8 max-w-xl" style={{ color: "var(--muted-foreground)" }}>
+                {HERO_SLIDES[heroSlide].desc}
+              </p>
+
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href={HERO_SLIDES[heroSlide].cta.href}
+                  data-testid="hero-cta-btn"
+                  className="inline-flex items-center gap-2 rounded-lg px-7 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all active:scale-95 hover:scale-105"
+                  style={{ background: HERO_SLIDES[heroSlide].accent, color: "#000", boxShadow: `0 0 24px ${HERO_SLIDES[heroSlide].accent}59` }}
+                >
+                  <Gift className="w-4 h-4" />
+                  {HERO_SLIDES[heroSlide].cta.label}
+                </a>
+                <Link
+                  to="/spor-haberleri"
+                  data-testid="hero-sports-btn"
+                  className="inline-flex items-center gap-2 rounded-lg border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5 hover:scale-105"
+                  style={{ borderColor: "rgba(255,255,255,0.2)", color: "var(--foreground)" }}
+                >
+                  <Activity className="w-4 h-4" />
+                  Spor Haberleri
+                </Link>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Slide indicators */}
+          <div className="flex gap-2 mt-8">
+            {HERO_SLIDES.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setHeroSlide(i)}
+                data-testid={`hero-slide-${i}`}
+                className="h-1.5 rounded-full transition-all duration-300"
+                style={{
+                  width: heroSlide === i ? "32px" : "12px",
+                  background: heroSlide === i ? HERO_SLIDES[heroSlide].accent : "rgba(255,255,255,0.2)",
+                }}
+              />
+            ))}
+          </div>
 
           {/* Stats row */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="flex flex-wrap gap-6 mt-10"
+            className="flex flex-wrap gap-6 mt-8"
           >
             {[
               { icon: Trophy, value: "8+", label: "Güvenilir Site" },
