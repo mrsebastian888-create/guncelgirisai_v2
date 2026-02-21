@@ -909,14 +909,14 @@ function DomainsTab({ domains, onRefresh }) {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-1">
                   {filteredGodaddyDomains.map((gd) => (
-                    <div key={gd.domain} className="rounded-lg border p-3 flex flex-col gap-2" style={{ borderColor: gd.already_added ? "rgba(0,255,100,0.3)" : "rgba(255,255,255,0.08)" }} data-testid={`godaddy-domain-${gd.domain}`}>
+                    <div key={gd.domain} className={`rounded-lg border p-3 flex flex-col gap-2 ${gd.hosting_status === "platform" ? "border-neon-green/30" : gd.hosting_status === "hosted" ? "border-blue-500/30" : "border-yellow-500/20"}`} data-testid={`godaddy-domain-${gd.domain}`}>
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-sm truncate">{gd.domain}</span>
-                        <Badge variant={gd.status === "ACTIVE" ? "default" : "secondary"} className={gd.status === "ACTIVE" ? "bg-neon-green/20 text-neon-green border-neon-green/30 text-[10px]" : "text-[10px]"}>
-                          {gd.status}
+                        <Badge variant="outline" className={`text-[10px] ${gd.hosting_status === "parked" ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30" : gd.hosting_status === "hosted" ? "bg-blue-500/15 text-blue-400 border-blue-500/30" : "bg-neon-green/15 text-neon-green border-neon-green/30"}`} data-testid={`godaddy-status-${gd.domain}`}>
+                          {gd.hosting_status === "parked" ? "Boşta" : gd.hosting_status === "hosted" ? "Farklı Sunucu" : "Platformda"}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
                         {gd.expires && (
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -925,6 +925,11 @@ function DomainsTab({ domains, onRefresh }) {
                         )}
                         {gd.renew_auto && <span className="text-neon-green">Oto-Yenileme</span>}
                         {gd.privacy && <span>Gizlilik</span>}
+                        {gd.hosting_status === "hosted" && gd.nameServers?.length > 0 && (
+                          <span className="text-blue-400 truncate max-w-[150px]" title={gd.nameServers.join(", ")}>
+                            NS: {gd.nameServers[0]}
+                          </span>
+                        )}
                       </div>
                       {gd.already_added ? (
                         <Button size="sm" variant="outline" disabled className="w-full text-neon-green border-neon-green/30" data-testid={`godaddy-added-${gd.domain}`}>
