@@ -45,19 +45,20 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ```
 
 ## Testing
-- iteration_7: SEO Infrastructure 21/23 ✅
-- iteration_8: Content Scheduler 16/18 backend + 100% frontend ✅
+- iteration_7: SEO Infrastructure 21/23
+- iteration_8: Content Scheduler 16/18 backend + 100% frontend
+- iteration_9: GoDaddy API Integration 100% backend + 100% frontend
 
 ## Prioritized Backlog
 ### P0 (Resolved)
 - [x] Admin login fix
 - [x] SEO altyapı (sitemap, robots, JSON-LD, canonical, OG tags)
 - [x] Otomatik içerik zamanlayıcı sistemi
+- [x] GoDaddy API entegrasyonu (domain listeleme + platforma ekleme)
 
 ### P1 (Next)
 - [ ] Backend modüler refactoring (server.py bölünmesi)
 - [ ] Full deployment rehberi (MongoDB Atlas, Railway, Vercel)
-- [ ] GoDaddy API entegrasyonu (DNS otomasyonu)
 - [ ] AMP uyumlu sayfalar
 
 ### P2 (Future)
