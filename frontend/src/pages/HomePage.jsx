@@ -350,7 +350,45 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ── FİRMA REHBERİ (ÜSTE TAŞINDI) ──────── */}
+      {/* ── YILIN EN İYİ SİTELERİ (Slider sonrası ilk alan) ── */}
+      {topFive.length > 0 && (
+        <section id="bonus-list" className="py-14 md:py-20 px-4 md:px-6" data-testid="top-sites-section">
+          <div className="container mx-auto max-w-5xl">
+            <div className="flex items-end justify-between mb-8 gap-4">
+              <div>
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
+                  style={{ borderColor: "rgba(255,215,0,0.3)", color: "#FFD700", background: "rgba(255,215,0,0.07)" }}
+                >
+                  <Crown className="w-3 h-3" /> 2026
+                </div>
+                <h2
+                  className="font-heading font-black uppercase leading-none"
+                  style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
+                >
+                  YILIN EN IYI SITELERI
+                </h2>
+              </div>
+              <Link
+                to="/deneme-bonusu"
+                data-testid="view-all-bonuses-btn"
+                className="hidden sm:flex items-center gap-1 text-sm font-semibold transition-opacity hover:opacity-70"
+                style={{ color: "#FFD700" }}
+              >
+                Tumunu Gor <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {topFive.map((site, i) => (
+                <SiteCard key={site.id || i} site={site} rank={i + 1} accentColor="#FFD700" />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── FİRMA REHBERİ ──────── */}
       {allFirms.length > 0 && (
         <section id="firma-rehberi" className="py-14 md:py-20 px-4 md:px-6" data-testid="firma-rehberi-section"
           style={{ background: "linear-gradient(to bottom, rgba(0,255,135,0.02), transparent)" }}>
