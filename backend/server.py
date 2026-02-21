@@ -2092,8 +2092,6 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     else:
         base_url = str(request.base_url).rstrip("/")
     
-    # Collect all domains
-    domains = await db.domains.find({}, {"_id": 0, "domain_name": 1}).to_list(100)
     # Collect all published articles
     articles = await db.articles.find(
         {"is_published": True},
