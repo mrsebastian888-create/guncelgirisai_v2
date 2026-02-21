@@ -743,8 +743,13 @@ function DomainsTab({ domains, onRefresh }) {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const [siteStatus, setSiteStatus] = useState({});
+  const [godaddyDomains, setGodaddyDomains] = useState([]);
+  const [godaddyLoading, setGodaddyLoading] = useState(false);
+  const [godaddyError, setGodaddyError] = useState("");
+  const [godaddyFetched, setGodaddyFetched] = useState(false);
+  const [importingDomain, setImportingDomain] = useState(null);
+  const [godaddySearch, setGodaddySearch] = useState("");
 
-  // Domain site durumlarını kontrol et
   useEffect(() => {
     domains.forEach(async (d) => {
       try {
@@ -755,6 +760,37 @@ function DomainsTab({ domains, onRefresh }) {
       }
     });
   }, [domains]);
+
+  const fetchGodaddyDomains = async () => {
+    setGodaddyLoading(true);
+    setGodaddyError("");
+    try {
+      const res = await axios.get(`${API}/godaddy/domains`);
+      setGodaddyDomains(res.data.domains || []);
+      setGodaddyFetched(true);
+    } catch (e) {
+      setGodaddyError(e.response?.data?.detail || "GoDaddy domainleri alınamadı");
+    } finally {
+      setGodaddyLoading(false);
+    }
+  };
+
+  const handleImportDomain = async (gdDomain) => {
+    setImportingDomain(gdDomain.domain);
+    try {
+      await axios.post(`${API}/godaddy/import`, {
+        domain_name: gdDomain.domain,
+        focus: "bonus"
+      });
+      toast.success(`${gdDomain.domain} platforma eklendi! AI içerik üretimi başladı.`);
+      setGodaddyDomains(prev => prev.map(d => d.domain === gdDomain.domain ? { ...d, already_added: true } : d));
+      onRefresh();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Domain eklenemedi");
+    } finally {
+      setImportingDomain(null);
+    }
+  };
 
   const handleCreate = async () => {
     if (!newDomain.domain_name) return toast.error("Domain adı gerekli");
@@ -793,11 +829,100 @@ function DomainsTab({ domains, onRefresh }) {
     finally { setSaving(false); }
   };
 
+  const filteredGodaddyDomains = godaddyDomains.filter(d =>
+    d.domain.toLowerCase().includes(godaddySearch.toLowerCase())
+  );
+
   return (
     <div className="space-y-6" data-testid="domains-tab">
+      {/* GoDaddy Import Section */}
+      <Card className="glass-card border-white/10 border-l-4 border-l-[#00F0FF]">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2" data-testid="godaddy-section-title">
+            <Globe className="w-5 h-5 text-[#00F0FF]" />GoDaddy Domainleri
+          </CardTitle>
+          <CardDescription>GoDaddy hesabınızdaki domainleri görüntüleyin ve tek tıkla platforma ekleyin.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!godaddyFetched ? (
+            <Button onClick={fetchGodaddyDomains} disabled={godaddyLoading} className="bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80" data-testid="fetch-godaddy-btn">
+              {godaddyLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              GoDaddy Domainlerini Getir
+            </Button>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-neon-green" />
+                  <span>{godaddyDomains.length} domain bulundu</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={godaddySearch}
+                      onChange={(e) => setGodaddySearch(e.target.value)}
+                      placeholder="Domain ara..."
+                      className="pl-9 w-[220px]"
+                      data-testid="godaddy-search-input"
+                    />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={fetchGodaddyDomains} disabled={godaddyLoading} data-testid="refresh-godaddy-btn">
+                    <RefreshCw className={`w-4 h-4 ${godaddyLoading ? "animate-spin" : ""}`} />
+                  </Button>
+                </div>
+              </div>
+
+              {filteredGodaddyDomains.length === 0 ? (
+                <p className="text-muted-foreground text-center py-6">Eşleşen domain bulunamadı</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-1">
+                  {filteredGodaddyDomains.map((gd) => (
+                    <div key={gd.domain} className="rounded-lg border p-3 flex flex-col gap-2" style={{ borderColor: gd.already_added ? "rgba(0,255,100,0.3)" : "rgba(255,255,255,0.08)" }} data-testid={`godaddy-domain-${gd.domain}`}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm truncate">{gd.domain}</span>
+                        <Badge variant={gd.status === "ACTIVE" ? "default" : "secondary"} className={gd.status === "ACTIVE" ? "bg-neon-green/20 text-neon-green border-neon-green/30 text-[10px]" : "text-[10px]"}>
+                          {gd.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        {gd.expires && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(gd.expires).toLocaleDateString("tr-TR")}
+                          </span>
+                        )}
+                        {gd.renew_auto && <span className="text-neon-green">Oto-Yenileme</span>}
+                        {gd.privacy && <span>Gizlilik</span>}
+                      </div>
+                      {gd.already_added ? (
+                        <Button size="sm" variant="outline" disabled className="w-full text-neon-green border-neon-green/30" data-testid={`godaddy-added-${gd.domain}`}>
+                          <Check className="w-4 h-4 mr-1" />Platformda Mevcut
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => handleImportDomain(gd)} disabled={importingDomain === gd.domain} className="w-full bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80" data-testid={`godaddy-import-${gd.domain}`}>
+                          {importingDomain === gd.domain ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+                          Platforma Ekle
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {godaddyError && (
+            <div className="mt-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2" data-testid="godaddy-error">
+              <AlertCircle className="w-4 h-4" />{godaddyError}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Manual Domain Add */}
       <Card className="glass-card border-white/10">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" />Yeni Domain Ekle</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" />Manuel Domain Ekle</CardTitle>
           <CardDescription>Domain eklendiğinde bonus siteleri otomatik bağlanır ve AI ile 5 SEO makale üretilir.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
