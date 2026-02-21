@@ -20,14 +20,15 @@ const ArticlePage = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [articleRes, relatedRes, bonusRes] = await Promise.all([
+        const [articleRes, bonusRes] = await Promise.all([
           axios.get(`${API}/articles/slug/${slug}`),
-          axios.get(`${API}/articles?limit=3`),
           axios.get(`${API}/bonus-sites?is_featured=true&limit=3`)
         ]);
         setArticle(articleRes.data);
-        setRelatedArticles(relatedRes.data.filter(a => a.slug !== slug));
         setBonusSites(bonusRes.data);
+        // Fetch related articles by same category
+        const relatedRes = await axios.get(`${API}/articles?limit=5&category=${articleRes.data.category || ""}`);
+        setRelatedArticles(relatedRes.data.filter(a => a.slug !== slug).slice(0, 3));
       } catch (error) {
         console.error("Error fetching article:", error);
       } finally {
