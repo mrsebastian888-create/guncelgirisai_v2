@@ -227,6 +227,29 @@ async def lifespan(app: FastAPI):
         }
     })
     
+    # Create MongoDB indexes for performance
+    try:
+        await db.domains.create_index("domain_name", unique=True)
+        await db.domains.create_index("id", unique=True)
+        await db.articles.create_index("domain_id")
+        await db.articles.create_index("slug")
+        await db.articles.create_index("is_published")
+        await db.articles.create_index([("domain_id", 1), ("is_published", 1)])
+        await db.articles.create_index([("category", 1), ("is_published", 1)])
+        await db.articles.create_index("created_at")
+        await db.bonus_sites.create_index("id", unique=True)
+        await db.bonus_sites.create_index("is_active")
+        await db.domain_sites.create_index("domain_id")
+        await db.domain_sites.create_index([("domain_id", 1), ("is_active", 1)])
+        await db.domain_performance.create_index("domain_id")
+        await db.domain_performance.create_index([("domain_id", 1), ("site_id", 1)])
+        await db.categories.create_index("slug", unique=True)
+        await db.content_queue.create_index("status")
+        await db.seo_reports.create_index("domain_id")
+        logger.info("MongoDB indexes created/verified")
+    except Exception as e:
+        logger.warning(f"Index creation warning: {e}")
+    
     # Ensure "En İyi Firmalar" category exists
     existing_cat = await db.categories.find_one({"slug": "en-iyi-firmalar"})
     if not existing_cat:
