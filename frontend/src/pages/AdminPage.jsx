@@ -842,6 +842,7 @@ const AdminPage = () => {
 
           <TabsContent value="domains"><DomainsTab domains={domains} onRefresh={fetchData} /></TabsContent>
           <TabsContent value="sites"><SitesTab bonusSites={bonusSites} onRefresh={fetchData} /></TabsContent>
+          <TabsContent value="categories"><CategoriesTab onRefresh={fetchData} /></TabsContent>
           <TabsContent value="seo" className="space-y-6"><SeoAssistant domainId={selectedDomain} /></TabsContent>
 
           {/* AUTO CONTENT TAB */}
