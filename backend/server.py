@@ -1996,12 +1996,10 @@ async def get_categories():
 # Seed
 @api_router.post("/seed")
 async def seed_database():
-    """Seed database with initial data"""
-    await db.bonus_sites.delete_many({})
-    await db.domains.delete_many({})
-    await db.domain_sites.delete_many({})
-    await db.domain_performance.delete_many({})
-    await db.articles.delete_many({})
+    """Seed database with initial data - SADECE boş DB'de çalışır"""
+    existing_count = await db.bonus_sites.count_documents({})
+    if existing_count > 0:
+        return {"message": "Database already seeded", "sites": existing_count}
     
     sites = [
         {"name": "MAXWIN", "logo_url": "https://images.unsplash.com/photo-1709873582570-4f17d43921d4?w=100&h=100&fit=crop", "bonus_type": "deneme", "bonus_amount": "750 TL", "affiliate_url": "https://cutt.ly/glockmaxwn", "rating": 4.9, "features": ["Hızlı Ödeme", "7/24 Destek"], "turnover_requirement": 8.0},
