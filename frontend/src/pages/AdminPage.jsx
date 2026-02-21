@@ -897,6 +897,292 @@ function DomainsTab({ domains, onRefresh }) {
   );
 }
 
+/* ── AUTO CONTENT SCHEDULER ────────────────────────── */
+function AutoContentScheduler({ onRefresh }) {
+  const [queue, setQueue] = useState([]);
+  const [queueStats, setQueueStats] = useState({});
+  const [scheduler, setScheduler] = useState({});
+  const [bulkInput, setBulkInput] = useState("");
+  const [defaultCompany, setDefaultCompany] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [interval, setInterval_] = useState("5");
+
+  const fetchQueue = async () => {
+    try {
+      const [qRes, sRes] = await Promise.all([
+        axios.get(`${API}/content-queue?limit=50`),
+        axios.get(`${API}/scheduler/status`),
+      ]);
+      setQueue(qRes.data.items || []);
+      setQueueStats(qRes.data.stats || {});
+      setScheduler(sRes.data);
+      setInterval_(String(sRes.data.interval_minutes || 5));
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
+    fetchQueue();
+    const pollId = window.setInterval(fetchQueue, 15000);
+    return () => window.clearInterval(pollId);
+  }, []);
+
+  const handleBulkAdd = async () => {
+    if (!bulkInput.trim()) return toast.error("Konu listesi boş");
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API}/content-queue/bulk-add`, {
+        items: bulkInput,
+        company: defaultCompany,
+      });
+      toast.success(`${res.data.added} konu eklendi`);
+      setBulkInput("");
+      fetchQueue();
+    } catch { toast.error("Eklenemedi"); }
+    finally { setLoading(false); }
+  };
+
+  const handleToggleScheduler = async () => {
+    try {
+      if (scheduler.is_running) {
+        await axios.post(`${API}/scheduler/stop`);
+        toast.success("Zamanlayıcı durduruldu");
+      } else {
+        await axios.post(`${API}/scheduler/start`);
+        toast.success("Zamanlayıcı başlatıldı");
+      }
+      fetchQueue();
+    } catch { toast.error("İşlem başarısız"); }
+  };
+
+  const handleIntervalChange = async (val) => {
+    setInterval_(val);
+    try {
+      await axios.put(`${API}/scheduler/interval`, { minutes: parseInt(val) });
+      toast.success(`Süre ${val} dakika olarak ayarlandı`);
+      fetchQueue();
+    } catch { toast.error("Ayarlanamadı"); }
+  };
+
+  const handleRunNow = async () => {
+    setLoading(true);
+    try {
+      await axios.post(`${API}/scheduler/run-now`);
+      toast.success("Makale üretimi başlatıldı");
+      setTimeout(() => { fetchQueue(); onRefresh(); }, 3000);
+    } catch { toast.error("Üretilemedi"); }
+    finally { setLoading(false); }
+  };
+
+  const handleDeleteItem = async (id) => {
+    try {
+      await axios.delete(`${API}/content-queue/${id}`);
+      fetchQueue();
+    } catch { toast.error("Silinemedi"); }
+  };
+
+  const handleClearCompleted = async () => {
+    try {
+      await axios.delete(`${API}/content-queue?status=completed`);
+      toast.success("Tamamlananlar temizlendi");
+      fetchQueue();
+    } catch { toast.error("Temizlenemedi"); }
+  };
+
+  const pendingItems = queue.filter(i => i.status === "pending");
+  const completedItems = queue.filter(i => i.status === "completed");
+  const failedItems = queue.filter(i => i.status === "failed");
+
+  return (
+    <div className="space-y-6" data-testid="auto-content-scheduler">
+      {/* Scheduler Control */}
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-neon-green" />Otomatik İçerik Zamanlayıcı
+          </CardTitle>
+          <CardDescription>
+            Firma ve konuları listeye ekleyin, zamanlayıcı otomatik olarak makale üretsin. Her makale en az 2000 kelime, firma önerileri ve SEO uyumlu.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-4">
+            <Button
+              onClick={handleToggleScheduler}
+              className={scheduler.is_running ? "bg-red-500 hover:bg-red-600" : "bg-neon-green text-black hover:bg-neon-green/90"}
+              data-testid="scheduler-toggle-btn"
+            >
+              {scheduler.is_running ? <><Pause className="w-4 h-4 mr-2" />Durdur</> : <><Play className="w-4 h-4 mr-2" />Başlat</>}
+            </Button>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <Select value={interval} onValueChange={handleIntervalChange}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1 dakika</SelectItem>
+                  <SelectItem value="5">5 dakika</SelectItem>
+                  <SelectItem value="10">10 dakika</SelectItem>
+                  <SelectItem value="30">30 dakika</SelectItem>
+                  <SelectItem value="60">1 saat</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={handleRunNow} disabled={loading} data-testid="run-now-btn">
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
+              Şimdi Üret
+            </Button>
+            <div className="ml-auto flex items-center gap-3 text-sm">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-2.5 h-2.5 rounded-full ${scheduler.is_running ? "bg-neon-green animate-pulse" : "bg-red-400"}`} />
+                <span className="text-muted-foreground">{scheduler.is_running ? "Çalışıyor" : "Durdu"}</span>
+              </div>
+              <span className="text-muted-foreground">Üretilen: <strong className="text-foreground">{scheduler.total_generated || 0}</strong></span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Queue Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: "Bekleyen", value: queueStats.pending || 0, color: "text-yellow-400" },
+          { label: "İşleniyor", value: queueStats.processing || 0, color: "text-blue-400" },
+          { label: "Tamamlanan", value: queueStats.completed || 0, color: "text-neon-green" },
+          { label: "Başarısız", value: queueStats.failed || 0, color: "text-red-400" },
+        ].map((s, i) => (
+          <Card key={i} className="glass-card border-white/10">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">{s.label}</p>
+              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Bulk Add */}
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><ListChecks className="w-5 h-5" />Toplu Konu Ekle</CardTitle>
+          <CardDescription>
+            Her satıra bir konu yazın. Firma belirtmek için "FIRMA|Konu" formatını kullanın. 
+            Örn: MAXWIN|Maxwin Deneme Bonusu 2026 Detaylı İnceleme
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Varsayılan Firma (opsiyonel)</Label>
+            <Input
+              value={defaultCompany}
+              onChange={(e) => setDefaultCompany(e.target.value)}
+              placeholder="Firma adı (MAXWIN, HILTONBET vb.)"
+              data-testid="default-company-input"
+            />
+          </div>
+          <div>
+            <Label>Konu Listesi (her satır bir konu)</Label>
+            <Textarea
+              value={bulkInput}
+              onChange={(e) => setBulkInput(e.target.value)}
+              placeholder={`MAXWIN|Maxwin Deneme Bonusu 2026 Detaylı İnceleme\nHILTONBET|Hiltonbet Güvenilir Mi Uzman Analizi\nEn İyi Bahis Siteleri 2026 Karşılaştırma\nDeneme Bonusu Nasıl Çevrilir Rehber`}
+              rows={8}
+              className="font-mono text-sm"
+              data-testid="bulk-topics-input"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleBulkAdd} disabled={loading} className="bg-neon-green text-black hover:bg-neon-green/90" data-testid="bulk-add-btn">
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+              Listeye Ekle
+            </Button>
+            <span className="text-sm text-muted-foreground self-center">
+              {bulkInput.split("\n").filter(l => l.trim()).length} konu
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pending Queue */}
+      {pendingItems.length > 0 && (
+        <Card className="glass-card border-white/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-yellow-400" />Bekleyen Konular ({pendingItems.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {pendingItems.map((item, i) => (
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-mono text-muted-foreground w-6">{i + 1}</span>
+                    {item.company && <Badge variant="outline" className="text-xs">{item.company}</Badge>}
+                    <span className="text-sm">{item.topic}</span>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteItem(item.id)}>
+                    <Trash2 className="w-4 h-4 text-red-400" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Completed */}
+      {completedItems.length > 0 && (
+        <Card className="glass-card border-white/10">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-neon-green">
+                <Sparkles className="w-5 h-5" />Tamamlanan ({completedItems.length})
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={handleClearCompleted}>Temizle</Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {completedItems.slice(0, 10).map((item) => (
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "rgba(0,255,135,0.03)" }}>
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-4 h-4 text-neon-green" />
+                    {item.company && <Badge variant="outline" className="text-xs">{item.company}</Badge>}
+                    <span className="text-sm">{item.topic}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{item.completed_at ? new Date(item.completed_at).toLocaleString("tr-TR") : ""}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Failed */}
+      {failedItems.length > 0 && (
+        <Card className="glass-card border-white/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-400">
+              <AlertCircle className="w-5 h-5" />Başarısız ({failedItems.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {failedItems.map((item) => (
+                <div key={item.id} className="p-3 rounded-lg" style={{ background: "rgba(255,0,0,0.03)" }}>
+                  <div className="flex items-center gap-3">
+                    <AlertCircle className="w-4 h-4 text-red-400" />
+                    {item.company && <Badge variant="outline" className="text-xs">{item.company}</Badge>}
+                    <span className="text-sm">{item.topic}</span>
+                  </div>
+                  {item.error && <p className="text-xs text-red-400 mt-1 ml-7">{item.error}</p>}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 /* ── MAIN ADMIN PAGE ─────────────────────────────── */
 const AdminPage = () => {
   const navigate = useNavigate();
