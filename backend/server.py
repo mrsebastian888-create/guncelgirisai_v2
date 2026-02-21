@@ -560,6 +560,155 @@ class KeywordGapRequest(BaseModel):
     keywords: List[str]
     competitor_keywords: List[str] = []
 
+class ContentQueueItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company: str = ""
+    topic: str = ""
+    status: str = "pending"  # pending, processing, completed, failed
+    article_id: Optional[str] = None
+    error: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    completed_at: Optional[str] = None
+
+# ============== CONTENT SCHEDULER ==============
+
+class ContentScheduler:
+    def __init__(self):
+        self.is_running = False
+        self.interval_minutes = 5
+        self.task = None
+        self.last_run = None
+        self.total_generated = 0
+    
+    async def start(self):
+        if self.is_running:
+            return
+        self.is_running = True
+        self.task = asyncio.create_task(self._run_loop())
+        logger.info(f"Content scheduler started (interval: {self.interval_minutes}min)")
+    
+    async def stop(self):
+        self.is_running = False
+        if self.task:
+            self.task.cancel()
+            self.task = None
+        logger.info("Content scheduler stopped")
+    
+    async def _run_loop(self):
+        while self.is_running:
+            try:
+                await self._process_next()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Scheduler error: {e}")
+            await asyncio.sleep(self.interval_minutes * 60)
+    
+    async def _process_next(self):
+        # Get next pending item from queue
+        item = await db.content_queue.find_one({"status": "pending"}, {"_id": 0})
+        if not item:
+            logger.info("Content queue empty, scheduler waiting...")
+            return
+        
+        item_id = item["id"]
+        company = item.get("company", "")
+        topic = item.get("topic", "")
+        
+        # Mark as processing
+        await db.content_queue.update_one({"id": item_id}, {"$set": {"status": "processing"}})
+        
+        try:
+            # Get bonus sites for internal recommendations
+            bonus_sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "name": 1, "bonus_amount": 1, "bonus_type": 1, "affiliate_url": 1, "rating": 1, "features": 1}).to_list(20)
+            sites_info = "\n".join([f"- {s['name']}: {s.get('bonus_amount','')} bonus, {s.get('rating',4.5)} puan, Özellikler: {', '.join(s.get('features',[]))}" for s in bonus_sites])
+            
+            # Build rich prompt
+            subject = f"{company} {topic}".strip() if company and topic else (company or topic)
+            
+            prompt = f"""'{subject}' konusunda profesyonel, SEO uyumlu, benzersiz ve kapsamlı bir makale yaz.
+
+ZORUNLU KURALLAR:
+- EN AZ 2000 kelime olmalı (uzun form içerik)
+- HTML formatında yaz (h2, h3, p, ul, ol, li, strong, em, blockquote, table etiketleri kullan)
+- En az 5 adet h2 başlık kullan
+- Her h2 altında en az 3 paragraf olsun
+- En az 2 adet tablo (karşılaştırma tablosu) ekle (<table>, <thead>, <tbody>, <tr>, <th>, <td>)
+- En az 3 adet sıralı veya sırasız liste ekle
+- Doğal, bilgilendirici, uzman ve otoriter ton kullan
+- Anahtar kelimeyi ({subject}) ilk paragrafta, en az 2 h2 başlıkta ve son paragrafta doğal kullan
+- Anahtar kelime yoğunluğu %1-2 arasında olsun
+- Paragraflar kısa ve okunabilir olsun (3-4 cümle)
+- Keyword stuffing yapma, doğal ve akıcı yaz
+- 2026 yılına uygun güncel bilgiler kullan
+- Sonuç paragrafında kullanıcıya güçlü bir yönlendirme (CTA) yap
+
+SİTE İÇİ FİRMA ÖNERİLERİ:
+Makale içinde aşağıdaki firmaları doğal bir şekilde öner ve karşılaştır:
+{sites_info}
+
+Firmaları şu formatta öner: <strong>FIRMA_ADI</strong> ile bonus bilgisi ve özelliklerini yaz.
+Firmaları en az 2 farklı yerde doğal olarak makale içine entegre et.
+
+GÖRSEL YERLEŞTİRİCİLER:
+Makale içinde uygun yerlere şu placeholder'ları ekle:
+- [GORSEL_1] - İlk h2'den sonra
+- [GORSEL_2] - Ortada bir yere
+- [GORSEL_3] - Sonlara doğru
+
+ÖZGÜNLÜK:
+- Bu makale %100 özgün olmalı
+- Başka hiçbir makaleye benzememeli
+- Google'ın E-E-A-T (Deneyim, Uzmanlık, Otorite, Güvenilirlik) standartlarına uygun olmalı
+- Kopyala-yapıştır içerik üretme, her cümle yeni ve özgün olmalı"""
+            
+            content = await generate_ai_content(prompt, "Sen Türkiye'nin en iyi bonus ve bahis uzmanısın. 10 yıllık deneyiminle sektörü yakından takip ediyorsun. Makalelerini gerçek deneyimler ve güncel bilgilerle yazıyorsun. Sadece HTML formatında yanıt ver, markdown kullanma.")
+            
+            # Generate SEO metadata
+            title_clean = subject.title()
+            seo_title = f"{title_clean} - Detaylı Rehber 2026"[:60]
+            seo_desc = f"{title_clean} hakkında kapsamlı ve güncel uzman rehberi. En iyi fırsatlar, karşılaştırmalar ve stratejiler."[:160]
+            
+            article = Article(
+                title=title_clean,
+                slug=slugify(subject),
+                excerpt=f"{title_clean} hakkında uzman görüşleri, karşılaştırmalar ve güncel rehber.",
+                content=content,
+                category="en-iyi-firmalar",
+                tags=[slugify(t) for t in subject.split()[:5]],
+                seo_title=seo_title,
+                seo_description=seo_desc,
+                is_ai_generated=True,
+                is_auto_generated=True,
+                is_published=True,
+                author="Uzman Editör",
+                content_hash=hashlib.md5(content.encode()).hexdigest(),
+                content_updated_at=datetime.now(timezone.utc).isoformat(),
+            )
+            
+            await db.articles.insert_one(article.model_dump())
+            
+            # Update queue item
+            await db.content_queue.update_one({"id": item_id}, {"$set": {
+                "status": "completed",
+                "article_id": article.id,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }})
+            
+            self.total_generated += 1
+            self.last_run = datetime.now(timezone.utc).isoformat()
+            logger.info(f"Scheduler generated article: {article.title} (#{self.total_generated})")
+            
+        except Exception as e:
+            logger.error(f"Scheduler article generation failed: {e}")
+            await db.content_queue.update_one({"id": item_id}, {"$set": {
+                "status": "failed",
+                "error": str(e),
+            }})
+
+content_scheduler = ContentScheduler()
+
 # ============== HELPER FUNCTIONS ==============
 
 def calculate_heuristic_score(site: dict) -> float:
