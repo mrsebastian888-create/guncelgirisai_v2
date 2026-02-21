@@ -1536,7 +1536,7 @@ async def clear_content_queue(status: str = "completed"):
 async def start_scheduler():
     """Start the content scheduler"""
     await content_scheduler.start()
-    return {"status": "started", "interval_minutes": content_scheduler.interval_minutes}
+    return {"status": "started", "interval_minutes": content_scheduler.interval_minutes, "batch_size": content_scheduler.batch_size}
 
 @api_router.post("/scheduler/stop")
 async def stop_scheduler():
@@ -1548,13 +1548,28 @@ async def stop_scheduler():
 async def get_scheduler_status():
     """Get scheduler status"""
     pending = await db.content_queue.count_documents({"status": "pending"})
+    completed = await db.content_queue.count_documents({"status": "completed"})
+    failed = await db.content_queue.count_documents({"status": "failed"})
     return {
         "is_running": content_scheduler.is_running,
+        "is_bulk_running": content_scheduler.is_bulk_running,
         "interval_minutes": content_scheduler.interval_minutes,
+        "batch_size": content_scheduler.batch_size,
         "last_run": content_scheduler.last_run,
         "total_generated": content_scheduler.total_generated,
         "pending_items": pending,
+        "completed_items": completed,
+        "failed_items": failed,
     }
+
+@api_router.post("/scheduler/bulk-generate")
+async def bulk_generate_articles(data: Dict[str, Any] = {}):
+    """Bulk generate articles from queue. count=20 default."""
+    count = data.get("count", 20)
+    if count > 50:
+        count = 50
+    result = await content_scheduler.bulk_generate(count)
+    return result
 
 @api_router.put("/scheduler/interval")
 async def set_scheduler_interval(data: Dict[str, Any]):
