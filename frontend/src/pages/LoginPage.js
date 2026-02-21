@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import { API } from "@/App";
+import SEOHead from "@/components/SEOHead";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
