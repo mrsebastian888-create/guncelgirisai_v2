@@ -1314,10 +1314,12 @@ async def set_scheduler_interval(data: Dict[str, Any]):
     return {"interval_minutes": minutes}
 
 @api_router.post("/scheduler/run-now")
-async def run_scheduler_now():
-    """Run scheduler immediately once"""
-    await content_scheduler._process_next()
-    return {"status": "executed", "total_generated": content_scheduler.total_generated}
+async def run_scheduler_now(background_tasks: BackgroundTasks):
+    """Run scheduler immediately once (async in background)"""
+    async def _run():
+        await content_scheduler._process_next()
+    asyncio.create_task(_run())
+    return {"status": "started", "message": "Makale üretimi arka planda başlatıldı"}
 
 @api_router.get("/articles/latest")
 async def get_latest_articles(limit: int = 10, category: Optional[str] = None):
