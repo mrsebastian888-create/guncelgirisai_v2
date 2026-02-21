@@ -9,7 +9,19 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v7.0: SEO Infrastructure (Sitemap, Robots.txt, JSON-LD, Canonical, OG Tags, Twitter Cards)
 ### v8.0: Otomatik İçerik Zamanlayıcı Sistemi (Feb 2026)
 ### v9.0: GoDaddy API Entegrasyonu (Feb 2026)
-### v10.0: Otomatik İçerik Hızlandırma (Feb 2026) - CURRENT
+### v10.0: Otomatik İçerik Hızlandırma (Feb 2026)
+### v11.0: Firma Rehberi + Affiliate URL Güncellemesi (Feb 2026) - CURRENT
+
+**Affiliate URL Güncellemesi:**
+- 256 firma xlinks.art/firma-adi formatında özel URL aldı
+- Hiçbir firma generic URL'de kalmadı
+
+**Firma Rehberi (Ana Sayfa):**
+- 3'lü grid layout tüm 264 firma
+- Arama çubuğu (firma filtreleme)
+- İlk 30 firma gösterimi + "Tümünü Gör" butonu
+- Her kart: logo, isim, bonus, bonus tipi, "Giriş Yap" CTA
+- Firma adına tıklayınca detay sayfasına yönlendirme
 
 **Scheduler Güncellemesi:**
 - Batch boyutu: 5 makale paralel (eski: 1)
