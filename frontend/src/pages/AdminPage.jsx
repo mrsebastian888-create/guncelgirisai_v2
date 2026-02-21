@@ -540,13 +540,26 @@ function DomainsTab({ domains, onRefresh }) {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
+  const [siteStatus, setSiteStatus] = useState({});
+
+  // Domain site durumlarını kontrol et
+  useEffect(() => {
+    domains.forEach(async (d) => {
+      try {
+        const res = await axios.get(`${API}/site/${d.domain_name}`);
+        setSiteStatus(prev => ({ ...prev, [d.id]: res.data }));
+      } catch {
+        setSiteStatus(prev => ({ ...prev, [d.id]: { is_ready: false, stats: { total_articles: 0 } } }));
+      }
+    });
+  }, [domains]);
 
   const handleCreate = async () => {
     if (!newDomain.domain_name) return toast.error("Domain adı gerekli");
     setCreating(true);
     try {
       const res = await axios.post(`${API}/domains`, newDomain);
-      toast.success(`${res.data.domain_name} oluşturuldu!`);
+      toast.success(`${res.data.domain_name} oluşturuldu! AI içerik üretimi arka planda başladı.`);
       setNewDomain({ domain_name: "", display_name: "", focus: "bonus", meta_title: "" });
       onRefresh();
     } catch (e) { toast.error(e.response?.data?.detail || "Domain oluşturulamadı"); }
