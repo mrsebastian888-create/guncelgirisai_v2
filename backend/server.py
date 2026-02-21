@@ -1325,14 +1325,6 @@ async def run_scheduler_now():
     loop.create_task(content_scheduler._process_next())
     return {"status": "started", "message": "Makale üretimi arka planda başlatıldı", "pending": pending}
 
-@api_router.get("/articles/latest")
-async def get_latest_articles(limit: int = 10, category: Optional[str] = None):
-    """Get latest published articles"""
-    query: Dict[str, Any] = {"is_published": True}
-    if category:
-        query["category"] = category
-    articles = await db.articles.find(query, {"_id": 0, "content": 0}).sort("created_at", -1).limit(limit).to_list(limit)
-    return articles
 
 # AI Tools
 @api_router.post("/ai/generate-content")
