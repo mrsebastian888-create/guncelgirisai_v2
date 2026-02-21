@@ -18,14 +18,18 @@ export default function SEOHead({
   const metaImage = image || DEFAULT_IMAGE;
   const url = canonical || (typeof window !== "undefined" ? window.location.href : "");
 
+  // Build JSON-LD script strings
+  const jsonLdScripts = jsonLd
+    ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]).filter(Boolean)
+    : [];
+
   return (
     <Helmet>
       <title>{fullTitle}</title>
       <meta name="description" content={metaDesc} />
       <link rel="canonical" href={url} />
-      {noindex && <meta name="robots" content="noindex, nofollow" />}
+      {noindex ? <meta name="robots" content="noindex, nofollow" /> : null}
 
-      {/* Open Graph */}
       <meta property="og:type" content={type} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={metaDesc} />
@@ -34,28 +38,18 @@ export default function SEOHead({
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="tr_TR" />
 
-      {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={metaDesc} />
       <meta name="twitter:image" content={metaImage} />
 
-      {/* Article specific */}
-      {article && (
-        <>
-          <meta property="article:published_time" content={article.publishedTime} />
-          {article.modifiedTime && <meta property="article:modified_time" content={article.modifiedTime} />}
-          <meta property="article:author" content={article.author || "Admin"} />
-          <meta property="article:section" content={article.category || "Genel"} />
-          {article.tags?.map((tag, i) => (
-            <meta key={i} property="article:tag" content={tag} />
-          ))}
-        </>
-      )}
+      {article ? <meta property="article:published_time" content={article.publishedTime || ""} /> : null}
+      {article?.modifiedTime ? <meta property="article:modified_time" content={article.modifiedTime} /> : null}
+      {article ? <meta property="article:author" content={article.author || "Admin"} /> : null}
+      {article ? <meta property="article:section" content={article.category || "Genel"} /> : null}
 
-      {/* JSON-LD Structured Data */}
-      {jsonLd && (Array.isArray(jsonLd) ? jsonLd : [jsonLd]).filter(Boolean).map((ld, i) => (
-        <script key={i} type="application/ld+json">
+      {jsonLdScripts.map((ld, i) => (
+        <script key={`ld-${i}`} type="application/ld+json">
           {JSON.stringify(ld)}
         </script>
       ))}
