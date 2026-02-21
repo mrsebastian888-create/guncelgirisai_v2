@@ -7,6 +7,7 @@ import { Gift, Star, Shield, Check, ExternalLink, TrendingUp } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BonusCard from "@/components/BonusCard";
+import SEOHead from "@/components/SEOHead";
 
 const bonusTypeLabels = {
   deneme: { title: "Deneme Bonusu Veren Siteler", description: "2026 yılının en güncel deneme bonusu veren güvenilir bahis siteleri listesi." },
