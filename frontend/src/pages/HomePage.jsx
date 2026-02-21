@@ -352,7 +352,7 @@ const HomePage = () => {
 
       {/* ── FİRMA REHBERİ (ÜSTE TAŞINDI) ──────── */}
       {allFirms.length > 0 && (
-        <section className="py-14 md:py-20 px-4 md:px-6" data-testid="firma-rehberi-section"
+        <section id="firma-rehberi" className="py-14 md:py-20 px-4 md:px-6" data-testid="firma-rehberi-section"
           style={{ background: "linear-gradient(to bottom, rgba(0,255,135,0.02), transparent)" }}>
           <div className="container mx-auto max-w-7xl">
             <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
