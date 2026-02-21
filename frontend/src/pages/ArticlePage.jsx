@@ -7,6 +7,7 @@ import { Calendar, User, Tag, ArrowLeft, Share2, Eye, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BonusCard from "@/components/BonusCard";
+import SEOHead from "@/components/SEOHead";
 
 const ArticlePage = () => {
   const { slug } = useParams();
