@@ -1195,6 +1195,124 @@ async def bulk_generate_content(domain_id: Optional[str] = None, count: int = 5)
     
     return {"generated": len([r for r in results if r.get("status") == "created"]), "results": results}
 
+# ============== CONTENT QUEUE & SCHEDULER ==============
+
+@api_router.post("/content-queue/bulk-add")
+async def add_to_content_queue(data: Dict[str, Any]):
+    """Add items to content queue - supports bulk paste"""
+    items_text = data.get("items", "")
+    company = data.get("company", "")
+    
+    if not items_text and not company:
+        raise HTTPException(status_code=400, detail="Konu veya firma adı gerekli")
+    
+    # Parse bulk input - each line is a topic
+    lines = [line.strip() for line in items_text.strip().split("\n") if line.strip()]
+    
+    added = []
+    for line in lines:
+        # Check if line has company|topic format
+        if "|" in line:
+            parts = line.split("|", 1)
+            comp = parts[0].strip()
+            topic = parts[1].strip()
+        else:
+            comp = company
+            topic = line
+        
+        # Check for duplicates
+        existing = await db.content_queue.find_one({
+            "company": comp, "topic": topic, "status": {"$in": ["pending", "processing"]}
+        })
+        if existing:
+            continue
+        
+        item = ContentQueueItem(company=comp, topic=topic)
+        await db.content_queue.insert_one(item.model_dump())
+        added.append({"id": item.id, "company": comp, "topic": topic})
+    
+    return {"added": len(added), "items": added}
+
+@api_router.get("/content-queue")
+async def get_content_queue(status: Optional[str] = None, limit: int = 100):
+    """Get content queue items"""
+    query: Dict[str, Any] = {}
+    if status:
+        query["status"] = status
+    items = await db.content_queue.find(query, {"_id": 0}).sort("created_at", 1).limit(limit).to_list(limit)
+    
+    stats = {
+        "pending": await db.content_queue.count_documents({"status": "pending"}),
+        "processing": await db.content_queue.count_documents({"status": "processing"}),
+        "completed": await db.content_queue.count_documents({"status": "completed"}),
+        "failed": await db.content_queue.count_documents({"status": "failed"}),
+    }
+    return {"items": items, "stats": stats}
+
+@api_router.delete("/content-queue/{item_id}")
+async def delete_queue_item(item_id: str):
+    """Delete item from content queue"""
+    await db.content_queue.delete_one({"id": item_id})
+    return {"message": "Silindi"}
+
+@api_router.delete("/content-queue")
+async def clear_content_queue(status: str = "completed"):
+    """Clear content queue by status"""
+    result = await db.content_queue.delete_many({"status": status})
+    return {"deleted": result.deleted_count}
+
+@api_router.post("/scheduler/start")
+async def start_scheduler():
+    """Start the content scheduler"""
+    await content_scheduler.start()
+    return {"status": "started", "interval_minutes": content_scheduler.interval_minutes}
+
+@api_router.post("/scheduler/stop")
+async def stop_scheduler():
+    """Stop the content scheduler"""
+    await content_scheduler.stop()
+    return {"status": "stopped"}
+
+@api_router.get("/scheduler/status")
+async def get_scheduler_status():
+    """Get scheduler status"""
+    pending = await db.content_queue.count_documents({"status": "pending"})
+    return {
+        "is_running": content_scheduler.is_running,
+        "interval_minutes": content_scheduler.interval_minutes,
+        "last_run": content_scheduler.last_run,
+        "total_generated": content_scheduler.total_generated,
+        "pending_items": pending,
+    }
+
+@api_router.put("/scheduler/interval")
+async def set_scheduler_interval(data: Dict[str, Any]):
+    """Set scheduler interval in minutes"""
+    minutes = data.get("minutes", 5)
+    if minutes < 1:
+        raise HTTPException(status_code=400, detail="Minimum 1 dakika")
+    content_scheduler.interval_minutes = minutes
+    # Restart if running
+    if content_scheduler.is_running:
+        await content_scheduler.stop()
+        await content_scheduler.start()
+    return {"interval_minutes": minutes}
+
+@api_router.post("/scheduler/run-now")
+async def run_scheduler_now():
+    """Run scheduler immediately once"""
+    await content_scheduler._process_next()
+    return {"status": "executed", "total_generated": content_scheduler.total_generated}
+
+@api_router.get("/articles/latest")
+async def get_latest_articles(limit: int = 10, category: Optional[str] = None):
+    """Get latest published articles"""
+    query: Dict[str, Any] = {"is_published": True}
+    if category:
+        query["category"] = category
+    articles = await db.articles.find(query, {"_id": 0, "content": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return articles
+
 # AI Tools
 @api_router.post("/ai/generate-content")
 async def generate_content(request: Dict[str, Any]):
