@@ -70,6 +70,18 @@ const SportsNewsPage = () => {
 
   return (
     <div className="min-h-screen" data-testid="sports-news-page">
+      <SEOHead
+        title="Spor Haberleri ve Canlı Bahis Rehberi 2026"
+        description="Güncel spor haberleri, canlı maç skorları ve bahis analizleri. Futbol, basketbol ve daha fazlası."
+        canonical={`${window.location.origin}/spor-haberleri`}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": "Spor Haberleri",
+          "description": "Güncel spor haberleri ve canlı bahis rehberi",
+          "url": `${window.location.origin}/spor-haberleri`,
+        }}
+      />
       {/* Hero Section */}
       <section className="relative py-20 md:py-24 overflow-hidden">
         <div className="absolute inset-0">
