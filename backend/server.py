@@ -812,14 +812,24 @@ def calculate_performance_score(perf: dict) -> float:
     return score
 
 async def generate_ai_content(prompt: str, system_message: str = "Sen profesyonel bir Türkçe içerik yazarısın.") -> str:
-    """Generate AI content using Emergent integrations"""
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=str(uuid.uuid4()), system_message=system_message).with_model("openai", "gpt-5.2")
-        return await chat.send_message(UserMessage(text=prompt))
-    except Exception as e:
-        logger.error(f"AI content generation failed: {str(e)}")
-        return f"AI içerik üretimi başarısız: {str(e)}"
+    """Generate AI content using Emergent integrations with retry"""
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    
+    models = [("openai", "gpt-4o"), ("openai", "gpt-4o-mini")]
+    max_retries = 3
+    
+    for provider, model in models:
+        for attempt in range(max_retries):
+            try:
+                chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=str(uuid.uuid4()), system_message=system_message).with_model(provider, model)
+                result = await chat.send_message(UserMessage(text=prompt))
+                return result
+            except Exception as e:
+                logger.warning(f"AI attempt {attempt+1}/{max_retries} ({model}): {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(5 * (attempt + 1))
+    
+    raise Exception("All AI models failed after retries")
 
 # ============== API ROUTES ==============
 
