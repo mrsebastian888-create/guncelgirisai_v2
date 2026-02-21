@@ -6,9 +6,8 @@ import { API } from "@/App";
 import {
   Trophy, Zap, TrendingUp, ChevronRight, ChevronLeft, Star,
   Shield, Clock, Gift, Activity, Flame, Target, Coins, Globe,
-  ExternalLink, Search, Users
+  ExternalLink, Search, Users, Award, Crown, CheckCircle
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import BonusRow from "@/components/BonusRow";
 import NewsCard from "@/components/NewsCard";
 import MatchHub from "@/components/MatchHub";
@@ -16,13 +15,6 @@ import SEOHead from "@/components/SEOHead";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-
-const FILTER_TABS = [
-  { key: "all", label: "Tüm Siteler" },
-  { key: "deneme", label: "Deneme Bonusu" },
-  { key: "hosgeldin", label: "Hoşgeldin Bonusu" },
-  { key: "kayip", label: "Kayıp Bonusu" },
-];
 
 const FAQ_ITEMS = [
   { question: "Deneme bonusu nedir?", answer: "Deneme bonusu, bahis sitelerinin yeni üyelerine sunduğu yatırımsız bonus fırsatıdır. Hiç para yatırmadan bahis yapabilir ve kazanç elde edebilirsiniz." },
@@ -74,13 +66,11 @@ const HomePage = () => {
   const [categories, setCategories] = useState([]);
   const [latestArticles, setLatestArticles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState("all");
   const [heroSlide, setHeroSlide] = useState(0);
   const [firmSearch, setFirmSearch] = useState("");
   const [showAllFirms, setShowAllFirms] = useState(false);
   const sliderRef = useRef(null);
 
-  // Hero auto-rotate
   useEffect(() => {
     const timer = setInterval(() => {
       setHeroSlide(prev => (prev + 1) % HERO_SLIDES.length);
@@ -91,13 +81,11 @@ const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Hostname'e göre domain-spesifik veri çek
         const hostname = window.location.hostname;
         const isPreview = hostname.endsWith(".preview.emergentagent.com") || hostname === "localhost" || hostname === "127.0.0.1";
         
         let siteData = null;
         if (!isPreview && hostname !== "adminguncelgiris.company") {
-          // Canlı domain - domain-spesifik veri çek
           try {
             const siteRes = await axios.get(`${API}/site/${hostname}`);
             siteData = siteRes.data;
@@ -105,11 +93,9 @@ const HomePage = () => {
         }
 
         if (siteData && siteData.is_ready) {
-          // Domain-spesifik veri var
           setBonusSites(siteData.bonus_sites || []);
           setArticles(siteData.articles || []);
         } else {
-          // Varsayılan (preview veya global)
           const [sitesRes, articlesRes, categoriesRes, latestRes, allFirmsRes] = await Promise.all([
             axios.get(`${API}/bonus-sites?limit=20`),
             axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
@@ -132,20 +118,21 @@ const HomePage = () => {
     fetchData();
   }, []);
 
-  const filteredSites = activeFilter === "all"
-    ? bonusSites
-    : bonusSites.filter((s) => s.bonus_type === activeFilter);
-
   const filteredFirms = firmSearch
     ? allFirms.filter(f => f.name.toLowerCase().includes(firmSearch.toLowerCase()))
     : allFirms;
   const displayedFirms = showAllFirms ? filteredFirms : filteredFirms.slice(0, 30);
 
-  const scrollSlider = (dir) => {
-    if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: dir * 300, behavior: "smooth" });
-    }
-  };
+  // Top 5 for "Yılın En İyi" (highest bonus)
+  const topFive = [...bonusSites].sort((a, b) => {
+    const parseBonus = (s) => parseInt(String(s.bonus_amount || '0').replace(/\D/g, '')) || 0;
+    return parseBonus(b) - parseBonus(a);
+  }).slice(0, 5);
+
+  // Top 5 for "En Güvenilir" (highest rating)
+  const trustedFive = [...bonusSites].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
+
+  const getFirmSlug = (name) => name.toLowerCase().replace(/\s+/g, '-').replace(/[!&.]/g, '');
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -169,6 +156,75 @@ const HomePage = () => {
       "query-input": "required name=search_term_string",
     },
   };
+
+  /* ── Reusable: Top-5 Site Card ── */
+  const SiteCard = ({ site, rank, accentColor }) => (
+    <div
+      className="group flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 hover:scale-[1.01]"
+      style={{
+        background: rank === 1 ? `${accentColor}08` : "rgba(255,255,255,0.02)",
+        borderColor: rank === 1 ? `${accentColor}30` : "rgba(255,255,255,0.06)",
+      }}
+      data-testid={`top-site-${rank}`}
+    >
+      <div
+        className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-heading font-black text-lg"
+        style={{
+          background: rank <= 3 ? `${accentColor}18` : "rgba(255,255,255,0.05)",
+          color: rank <= 3 ? accentColor : "var(--muted-foreground)",
+          border: rank === 1 ? `1px solid ${accentColor}40` : "none",
+        }}
+      >
+        {rank}
+      </div>
+      <Link to={`/${getFirmSlug(site.name)}`} className="shrink-0 w-11 h-11 rounded-lg overflow-hidden border border-white/10">
+        <img
+          src={site.logo_url}
+          alt={site.name}
+          className="w-full h-full object-cover"
+          onError={(e) => { e.target.src = `https://placehold.co/80x80/1a1a1a/${accentColor.replace('#', '')}?text=${site.name?.charAt(0)}`; }}
+        />
+      </Link>
+      <div className="flex-1 min-w-0">
+        <Link to={`/${getFirmSlug(site.name)}`} className="hover:opacity-80 transition-opacity">
+          <h3 className="font-heading font-bold text-sm uppercase tracking-tight truncate" style={{ color: "var(--foreground)" }}>
+            {site.name}
+          </h3>
+        </Link>
+        <div className="flex items-center gap-2 mt-0.5">
+          <Star className="w-3 h-3 fill-current" style={{ color: "#FBBF24" }} />
+          <span className="text-xs font-medium" style={{ color: "#FBBF24" }}>{site.rating || "4.5"}</span>
+          {site.features && site.features.slice(0, 2).map((f, fi) => (
+            <span key={fi} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "var(--muted-foreground)" }}>
+              {f}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="shrink-0 text-right mr-2">
+        <div className="font-heading font-black text-base" style={{ color: accentColor }}>
+          {site.bonus_amount}
+        </div>
+        <div className="text-[10px] uppercase" style={{ color: "var(--muted-foreground)" }}>
+          {site.bonus_type === "deneme" ? "Deneme" : site.bonus_type === "hosgeldin" ? "Hosgeldin" : site.bonus_type === "casino" ? "Casino" : site.bonus_type === "spor" ? "Spor" : site.bonus_type}
+        </div>
+      </div>
+      <a
+        href={site.affiliate_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-lg font-heading font-bold uppercase text-xs tracking-wide transition-all duration-200 active:scale-95 hover:scale-105"
+        style={{
+          background: accentColor,
+          color: "#000",
+          boxShadow: `0 0 16px ${accentColor}40`,
+        }}
+      >
+        <ExternalLink className="w-3.5 h-3.5" />
+        Kayit Ol
+      </a>
+    </div>
+  );
 
   return (
     <div className="min-h-screen" data-testid="homepage">
@@ -194,8 +250,6 @@ const HomePage = () => {
           />
         </AnimatePresence>
         <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(5,5,5,0.7) 0%, rgba(5,5,5,0.95) 100%)" }} />
-
-        {/* Neon grid overlay */}
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: `linear-gradient(${HERO_SLIDES[heroSlide].accent}4D 1px, transparent 1px), linear-gradient(90deg, ${HERO_SLIDES[heroSlide].accent}4D 1px, transparent 1px)`,
           backgroundSize: "60px 60px"
@@ -259,7 +313,6 @@ const HomePage = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Slide indicators */}
           <div className="flex gap-2 mt-8">
             {HERO_SLIDES.map((_, i) => (
               <button
@@ -275,7 +328,6 @@ const HomePage = () => {
             ))}
           </div>
 
-          {/* Stats row */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -283,8 +335,8 @@ const HomePage = () => {
             className="flex flex-wrap gap-6 mt-8"
           >
             {[
-              { icon: Trophy, value: "8+", label: "Güvenilir Site" },
-              { icon: Gift, value: "2000 TL", label: "En Yüksek Bonus" },
+              { icon: Trophy, value: "264+", label: "Firma" },
+              { icon: Gift, value: "2500 TL", label: "En Yüksek Bonus" },
               { icon: Shield, value: "7/24", label: "Destek" },
               { icon: Clock, value: "Anında", label: "Ödeme" },
             ].map((s, i) => (
@@ -298,94 +350,189 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ── MATCH HUB ────────────────────────────── */}
-      <MatchHub />
-
-      {/* ── BONUS LIST ───────────────────────────── */}
-      <section id="bonus-list" className="py-14 md:py-20 px-4 md:px-6" data-testid="bonus-sites-section">
-        <div className="container mx-auto max-w-5xl">
-
-          {/* Section header */}
-          <div className="flex items-end justify-between mb-8 gap-4">
-            <div>
-              <div
-                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
-                style={{ borderColor: "rgba(0,255,135,0.3)", color: "var(--neon-green)", background: "rgba(0,255,135,0.07)" }}
-              >
-                <Star className="w-3 h-3" /> En Popüler
+      {/* ── FİRMA REHBERİ (ÜSTE TAŞINDI) ──────── */}
+      {allFirms.length > 0 && (
+        <section className="py-14 md:py-20 px-4 md:px-6" data-testid="firma-rehberi-section"
+          style={{ background: "linear-gradient(to bottom, rgba(0,255,135,0.02), transparent)" }}>
+          <div className="container mx-auto max-w-7xl">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
+              <div>
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
+                  style={{ borderColor: "rgba(0,240,255,0.3)", color: "#00F0FF", background: "rgba(0,240,255,0.07)" }}
+                >
+                  <Users className="w-3 h-3" /> {allFirms.length}+ Site
+                </div>
+                <h2
+                  className="font-heading font-black uppercase leading-none"
+                  style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
+                >
+                  FIRMA REHBERI
+                </h2>
               </div>
-              <h2
-                className="font-heading font-black uppercase leading-none"
-                style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
-              >
-                BONUS SİTELERİ
-              </h2>
+              <div className="relative w-full md:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Firma ara..."
+                  value={firmSearch}
+                  onChange={(e) => setFirmSearch(e.target.value)}
+                  data-testid="firma-search-input"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium outline-none transition-all focus:ring-1"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    borderColor: "rgba(255,255,255,0.1)",
+                    color: "var(--foreground)",
+                  }}
+                />
+              </div>
             </div>
-            <Link
-              to="/deneme-bonusu"
-              data-testid="view-all-bonuses-btn"
-              className="hidden sm:flex items-center gap-1 text-sm font-semibold transition-opacity hover:opacity-70"
-              style={{ color: "var(--neon-green)" }}
-            >
-              Tümünü Gör <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
 
-          {/* Filter Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 mb-6" style={{ scrollbarWidth: "none" }} data-testid="bonus-filter-tabs">
-            {FILTER_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveFilter(tab.key)}
-                data-testid={`filter-tab-${tab.key}`}
-                className="shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all"
-                style={{
-                  background: activeFilter === tab.key ? "var(--neon-green)" : "transparent",
-                  color: activeFilter === tab.key ? "#000" : "var(--muted-foreground)",
-                  borderColor: activeFilter === tab.key ? "transparent" : "rgba(255,255,255,0.12)",
-                }}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="firma-grid">
+              {displayedFirms.map((firm, i) => {
+                const firmSlug = getFirmSlug(firm.name);
+                return (
+                  <div
+                    key={firm.id || i}
+                    className="group flex items-center gap-3 rounded-xl border p-3 transition-all duration-200 hover:border-[rgba(0,255,135,0.25)]"
+                    style={{
+                      background: "rgba(255,255,255,0.02)",
+                      borderColor: "rgba(255,255,255,0.06)",
+                    }}
+                    data-testid={`firma-card-${i}`}
+                  >
+                    <Link to={`/${firmSlug}`} className="shrink-0 w-11 h-11 rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                      <img
+                        src={firm.logo_url}
+                        alt={firm.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.src = "https://placehold.co/80x80/1a1a1a/00FF87?text=" + firm.name?.charAt(0); }}
+                      />
+                    </Link>
+
+                    <div className="flex-1 min-w-0">
+                      <Link to={`/${firmSlug}`} className="hover:text-[var(--neon-green)] transition-colors">
+                        <h3 className="font-heading font-bold text-sm tracking-tight truncate" style={{ color: "var(--foreground)" }}>
+                          {firm.name}
+                        </h3>
+                      </Link>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-heading font-black text-sm" style={{ color: "var(--neon-green)" }}>
+                          {firm.bonus_amount}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: "rgba(255,255,255,0.06)", color: "var(--muted-foreground)" }}>
+                          {firm.bonus_type === "deneme" ? "Deneme" : firm.bonus_type === "hosgeldin" ? "Hosgeldin" : firm.bonus_type === "casino" ? "Casino" : firm.bonus_type === "spor" ? "Spor" : firm.bonus_type}
+                        </span>
+                      </div>
+                    </div>
+
+                    <a
+                      href={firm.affiliate_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid={`firma-cta-${i}`}
+                      className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg font-heading font-bold uppercase text-[11px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-105 border"
+                      style={{
+                        background: "transparent",
+                        color: "#00FF87",
+                        borderColor: "#00FF87",
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Giris Yap
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+
+            {filteredFirms.length > 30 && (
+              <div className="text-center mt-6">
+                <button
+                  onClick={() => setShowAllFirms(!showAllFirms)}
+                  data-testid="firma-show-more-btn"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-heading font-bold uppercase text-sm tracking-wide border transition-all hover:bg-white/5"
+                  style={{ borderColor: "rgba(0,240,255,0.3)", color: "#00F0FF" }}
+                >
+                  {showAllFirms ? "Daha Az Goster" : `Tumunu Gor (${filteredFirms.length})`}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── YILIN EN İYİ SİTELERİ (Top 5 by Bonus) ── */}
+      {topFive.length > 0 && (
+        <section id="bonus-list" className="py-14 md:py-20 px-4 md:px-6" data-testid="top-sites-section">
+          <div className="container mx-auto max-w-5xl">
+            <div className="flex items-end justify-between mb-8 gap-4">
+              <div>
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
+                  style={{ borderColor: "rgba(255,215,0,0.3)", color: "#FFD700", background: "rgba(255,215,0,0.07)" }}
+                >
+                  <Crown className="w-3 h-3" /> 2026
+                </div>
+                <h2
+                  className="font-heading font-black uppercase leading-none"
+                  style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
+                >
+                  YILIN EN IYI SITELERI
+                </h2>
+              </div>
+              <Link
+                to="/deneme-bonusu"
+                data-testid="view-all-bonuses-btn"
+                className="hidden sm:flex items-center gap-1 text-sm font-semibold transition-opacity hover:opacity-70"
+                style={{ color: "#FFD700" }}
               >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+                Tumunu Gor <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
 
-          {/* Bonus Rows */}
-          {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-20 rounded-xl animate-pulse" style={{ background: "var(--card)" }} />
+              {topFive.map((site, i) => (
+                <SiteCard key={site.id || i} site={site} rank={i + 1} accentColor="#FFD700" />
               ))}
             </div>
-          ) : (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeFilter}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-3"
-                data-testid="bonus-rows-list"
-              >
-                {filteredSites.length === 0 ? (
-                  <div className="text-center py-12" style={{ color: "var(--muted-foreground)" }}>
-                    Bu kategoride site bulunamadı.
-                  </div>
-                ) : (
-                  filteredSites.map((site, i) => (
-                    <BonusRow key={site.id} site={site} rank={i + 1} />
-                  ))
-                )}
-              </motion.div>
-            </AnimatePresence>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
+
+      {/* ── EN GÜVENİLİR SİTELER (Top 5 by Rating) ── */}
+      {trustedFive.length > 0 && (
+        <section className="py-14 md:py-20 px-4 md:px-6" data-testid="trusted-sites-section"
+          style={{ background: "linear-gradient(to bottom, transparent, rgba(0,255,135,0.02), transparent)" }}>
+          <div className="container mx-auto max-w-5xl">
+            <div className="flex items-end justify-between mb-8 gap-4">
+              <div>
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
+                  style={{ borderColor: "rgba(0,255,135,0.3)", color: "#00FF87", background: "rgba(0,255,135,0.07)" }}
+                >
+                  <Shield className="w-3 h-3" /> Lisansli
+                </div>
+                <h2
+                  className="font-heading font-black uppercase leading-none"
+                  style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
+                >
+                  EN GUVENILIR SITELER
+                </h2>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {trustedFive.map((site, i) => (
+                <SiteCard key={site.id || i} site={site} rank={i + 1} accentColor="#00FF87" />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── CATEGORIES ──────────────────────────── */}
-      <section className="py-14 md:py-20 px-4 md:px-6" data-testid="categories-section"
-        style={{ background: "linear-gradient(to bottom, transparent, rgba(0,255,135,0.03), transparent)" }}>
+      <section className="py-14 md:py-20 px-4 md:px-6" data-testid="categories-section">
         <div className="container mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -413,31 +560,16 @@ const HomePage = () => {
                 className="group relative rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.05] hover:shadow-lg"
                 style={{ aspectRatio: "3/4" }}
               >
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
+                <img src={cat.image} alt={cat.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                 <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%)" }} />
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ background: `linear-gradient(to top, ${cat.color}40 0%, transparent 60%)` }}
-                />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `linear-gradient(to top, ${cat.color}40 0%, transparent 60%)` }} />
                 <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col items-start">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110"
-                    style={{ background: `${cat.color}20`, border: `1px solid ${cat.color}40` }}
-                  >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110" style={{ background: `${cat.color}20`, border: `1px solid ${cat.color}40` }}>
                     <cat.icon className="w-5 h-5" style={{ color: cat.color }} />
                   </div>
-                  <h3 className="font-heading font-bold text-sm uppercase tracking-tight text-white leading-tight">
-                    {cat.name}
-                  </h3>
+                  <h3 className="font-heading font-bold text-sm uppercase tracking-tight text-white leading-tight">{cat.name}</h3>
                 </div>
-                <div
-                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0"
-                  style={{ color: cat.color }}
-                >
+                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0" style={{ color: cat.color }}>
                   <ChevronRight className="w-5 h-5" />
                 </div>
               </Link>
@@ -446,143 +578,32 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* ── FİRMA REHBERİ ──────────────────────── */}
-      {allFirms.length > 0 && (
-        <section className="py-14 md:py-20 px-4 md:px-6" data-testid="firma-rehberi-section"
-          style={{ background: "linear-gradient(to bottom, transparent, rgba(0,240,255,0.03), transparent)" }}>
-          <div className="container mx-auto max-w-7xl">
-            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
-              <div>
-                <div
-                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
-                  style={{ borderColor: "rgba(0,240,255,0.3)", color: "#00F0FF", background: "rgba(0,240,255,0.07)" }}
-                >
-                  <Users className="w-3 h-3" /> {allFirms.length}+ Site
-                </div>
-                <h2
-                  className="font-heading font-black uppercase leading-none"
-                  style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
-                >
-                  FİRMA REHBERİ
-                </h2>
-              </div>
-              <div className="relative w-full md:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Firma ara..."
-                  value={firmSearch}
-                  onChange={(e) => setFirmSearch(e.target.value)}
-                  data-testid="firma-search-input"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium outline-none transition-all focus:ring-1"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    borderColor: "rgba(255,255,255,0.1)",
-                    color: "var(--foreground)",
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="firma-grid">
-              {displayedFirms.map((firm, i) => {
-                const firmSlug = firm.name.toLowerCase().replace(/\s+/g, '-').replace(/[!&.]/g, '');
-                return (
-                  <div
-                    key={firm.id || i}
-                    className="group flex items-center gap-3 rounded-xl border p-3 transition-all duration-200 hover:border-[rgba(0,255,135,0.25)]"
-                    style={{
-                      background: "rgba(255,255,255,0.02)",
-                      borderColor: "rgba(255,255,255,0.06)",
-                    }}
-                    data-testid={`firma-card-${i}`}
-                  >
-                    {/* Logo */}
-                    <Link to={`/${firmSlug}`} className="shrink-0 w-11 h-11 rounded-lg overflow-hidden bg-white/5 border border-white/10">
-                      <img
-                        src={firm.logo_url}
-                        alt={firm.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.target.src = "https://placehold.co/80x80/1a1a1a/00FF87?text=" + firm.name?.charAt(0); }}
-                      />
-                    </Link>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <Link to={`/${firmSlug}`} className="hover:text-[var(--neon-green)] transition-colors">
-                        <h3 className="font-heading font-bold text-sm tracking-tight truncate" style={{ color: "var(--foreground)" }}>
-                          {firm.name}
-                        </h3>
-                      </Link>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="font-heading font-black text-sm" style={{ color: "var(--neon-green)" }}>
-                          {firm.bonus_amount}
-                        </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: "rgba(255,255,255,0.06)", color: "var(--muted-foreground)" }}>
-                          {firm.bonus_type === "deneme" ? "Deneme" : firm.bonus_type === "hosgeldin" ? "Hoşgeldin" : firm.bonus_type === "casino" ? "Casino" : firm.bonus_type === "spor" ? "Spor" : firm.bonus_type}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* CTA */}
-                    <a
-                      href={firm.affiliate_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      data-testid={`firma-cta-${i}`}
-                      className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg font-heading font-bold uppercase text-[11px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-105"
-                      style={{
-                        background: "var(--neon-green)",
-                        color: "#000",
-                        boxShadow: "0 0 12px rgba(0,255,135,0.3)",
-                      }}
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      Giriş Yap
-                    </a>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Show More / Less */}
-            {filteredFirms.length > 30 && (
-              <div className="text-center mt-6">
-                <button
-                  onClick={() => setShowAllFirms(!showAllFirms)}
-                  data-testid="firma-show-more-btn"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-heading font-bold uppercase text-sm tracking-wide border transition-all hover:bg-white/5"
-                  style={{ borderColor: "rgba(0,240,255,0.3)", color: "#00F0FF" }}
-                >
-                  {showAllFirms ? "Daha Az Göster" : `Tümünü Gör (${filteredFirms.length})`}
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
+      {/* ── MATCH HUB + AI (Firmalar altına taşındı) ── */}
+      <MatchHub />
 
       {/* ── SON EKLENEN MAKALELER + EN İYİ FİRMALAR ── */}
       {latestArticles.length > 0 && (
         <section className="py-14 md:py-20 px-4 md:px-6" data-testid="latest-articles-section">
           <div className="container mx-auto max-w-7xl">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Main Content - En İyi Firmalar */}
               <div className="lg:col-span-2">
                 <div
                   className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-4 text-xs font-semibold uppercase tracking-widest"
                   style={{ borderColor: "rgba(255,215,0,0.3)", color: "#FFD700", background: "rgba(255,215,0,0.07)" }}
                 >
-                  <Star className="w-3 h-3" /> En İyi Firmalar
+                  <Star className="w-3 h-3" /> En Iyi Firmalar
                 </div>
                 <h2
                   className="font-heading font-black uppercase mb-6"
                   style={{ fontSize: "clamp(1.4rem, 3vw, 2.2rem)", color: "var(--foreground)" }}
                 >
-                  UZMAN DEĞERLENDİRMELERİ
+                  UZMAN DEGERLENDIRMELERI
                 </h2>
                 <div className="space-y-3">
-                  {latestArticles.filter(a => a.category === "en-iyi-firmalar").slice(0, 5).map((article, i) => (
+                  {(latestArticles.filter(a => a.category === "en-iyi-firmalar").length > 0
+                    ? latestArticles.filter(a => a.category === "en-iyi-firmalar").slice(0, 5)
+                    : latestArticles.slice(0, 5)
+                  ).map((article, i) => (
                     <Link
                       key={article.id || i}
                       to={`/makale/${article.slug}`}
@@ -605,29 +626,9 @@ const HomePage = () => {
                       <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-center flex-shrink-0" />
                     </Link>
                   ))}
-                  {latestArticles.filter(a => a.category === "en-iyi-firmalar").length === 0 && latestArticles.slice(0, 5).map((article, i) => (
-                    <Link
-                      key={article.id || i}
-                      to={`/makale/${article.slug}`}
-                      className="group flex gap-4 p-4 rounded-xl border transition-all hover:border-[rgba(255,215,0,0.3)]"
-                      style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}
-                      data-testid={`best-firm-article-${i}`}
-                    >
-                      <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg"
-                        style={{ background: i === 0 ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.05)", color: i === 0 ? "#FFD700" : "var(--muted-foreground)" }}>
-                        {i + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-semibold group-hover:text-[#FFD700] transition-colors line-clamp-2">{article.title}</h3>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{article.excerpt}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-center flex-shrink-0" />
-                    </Link>
-                  ))}
                 </div>
               </div>
 
-              {/* Sidebar - Son Eklenen Makaleler */}
               <div className="lg:col-span-1">
                 <div
                   className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-4 text-xs font-semibold uppercase tracking-widest"
@@ -649,19 +650,12 @@ const HomePage = () => {
                       className="group flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-white/5"
                       data-testid={`latest-article-${i}`}
                     >
-                      <span
-                        className="flex-shrink-0 w-7 h-7 rounded flex items-center justify-center text-xs font-bold"
-                        style={{ background: "rgba(0,255,135,0.1)", color: "var(--neon-green)" }}
-                      >
+                      <span className="flex-shrink-0 w-7 h-7 rounded flex items-center justify-center text-xs font-bold" style={{ background: "rgba(0,255,135,0.1)", color: "var(--neon-green)" }}>
                         {i + 1}
                       </span>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-medium group-hover:text-[var(--neon-green)] transition-colors line-clamp-2">
-                          {article.title}
-                        </h4>
-                        <span className="text-xs text-muted-foreground">
-                          {article.created_at ? new Date(article.created_at).toLocaleDateString("tr-TR") : ""}
-                        </span>
+                        <h4 className="text-sm font-medium group-hover:text-[var(--neon-green)] transition-colors line-clamp-2">{article.title}</h4>
+                        <span className="text-xs text-muted-foreground">{article.created_at ? new Date(article.created_at).toLocaleDateString("tr-TR") : ""}</span>
                       </div>
                     </Link>
                   ))}
@@ -683,13 +677,13 @@ const HomePage = () => {
                   className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
                   style={{ borderColor: "rgba(0,240,255,0.3)", color: "#00F0FF", background: "rgba(0,240,255,0.07)" }}
                 >
-                  <TrendingUp className="w-3 h-3" /> Güncel
+                  <TrendingUp className="w-3 h-3" /> Guncel
                 </div>
                 <h2
                   className="font-heading font-black uppercase leading-none"
                   style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
                 >
-                  SPOR HABERLERİ
+                  SPOR HABERLERI
                 </h2>
               </div>
               <Link
@@ -698,7 +692,7 @@ const HomePage = () => {
                 className="hidden sm:flex items-center gap-1 text-sm font-semibold"
                 style={{ color: "#00F0FF" }}
               >
-                Tümünü Gör <ChevronRight className="w-4 h-4" />
+                Tumunu Gor <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -713,20 +707,17 @@ const HomePage = () => {
       {/* ── WHY US ───────────────────────────────── */}
       <section className="py-14 md:py-20 px-4 md:px-6">
         <div className="container mx-auto max-w-7xl">
-          <h2
-            className="font-heading font-black uppercase text-center mb-10"
-            style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
-          >
-            NEDEN BİZİ SEÇMELİSİN?
+          <h2 className="font-heading font-black uppercase text-center mb-10" style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}>
+            NEDEN BIZI SECMELISIN?
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { icon: Shield, title: "Güvenli Siteler", desc: "Sadece lisanslı ve denetlenmiş platformlar", color: "var(--neon-green)" },
-              { icon: Flame, title: "Güncel Bonuslar", desc: "Her gün güncellenen bonus fırsatları", color: "#FBBF24" },
-              { icon: Target, title: "AI Sıralama", desc: "Performansa göre otomatik sıralama sistemi", color: "#00F0FF" },
-              { icon: Clock, title: "Hızlı Ödeme", desc: "Anlık para çekme garantisi", color: "var(--neon-green)" },
-              { icon: Activity, title: "Canlı Bahis", desc: "Maç içi bahis fırsatları", color: "#00F0FF" },
-              { icon: Coins, title: "Yüksek Oran", desc: "Piyasanın en iyi oranları", color: "#FBBF24" },
+              { icon: Shield, title: "Guvenli Siteler", desc: "Sadece lisansli ve denetlenmis platformlar", color: "var(--neon-green)" },
+              { icon: Flame, title: "Guncel Bonuslar", desc: "Her gun guncellenen bonus firsatlari", color: "#FBBF24" },
+              { icon: Target, title: "AI Siralama", desc: "Performansa gore otomatik siralama sistemi", color: "#00F0FF" },
+              { icon: Clock, title: "Hizli Odeme", desc: "Anlik para cekme garantisi", color: "var(--neon-green)" },
+              { icon: Activity, title: "Canli Bahis", desc: "Mac ici bahis firsatlari", color: "#00F0FF" },
+              { icon: Coins, title: "Yuksek Oran", desc: "Piyasanin en iyi oranlari", color: "#FBBF24" },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -750,11 +741,8 @@ const HomePage = () => {
       <section className="py-14 md:py-20 px-4 md:px-6" data-testid="faq-section"
         style={{ background: "var(--card)" }}>
         <div className="container mx-auto max-w-3xl">
-          <h2
-            className="font-heading font-black uppercase text-center mb-10"
-            style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
-          >
-            SIKÇA SORULAN SORULAR
+          <h2 className="font-heading font-black uppercase text-center mb-10" style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}>
+            SIKCA SORULAN SORULAR
           </h2>
           <Accordion type="single" collapsible className="space-y-3">
             {FAQ_ITEMS.map((item, i) => (
@@ -765,10 +753,7 @@ const HomePage = () => {
                 style={{ background: "rgba(255,255,255,0.03)", borderColor: "rgba(255,255,255,0.07)" }}
                 data-testid={`faq-item-${i}`}
               >
-                <AccordionTrigger
-                  className="font-heading font-bold uppercase text-base py-5 hover:no-underline"
-                  style={{ color: "var(--foreground)" }}
-                >
+                <AccordionTrigger className="font-heading font-bold uppercase text-base py-5 hover:no-underline" style={{ color: "var(--foreground)" }}>
                   {item.question}
                 </AccordionTrigger>
                 <AccordionContent className="pb-5 text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
@@ -792,29 +777,25 @@ const HomePage = () => {
               backgroundSize: "40px 40px"
             }} />
             <div className="relative z-10">
-              <h2
-                className="font-heading font-black uppercase mb-3"
-                style={{ fontSize: "clamp(1.8rem, 5vw, 3.5rem)", color: "var(--foreground)" }}
-              >
+              <h2 className="font-heading font-black uppercase mb-3" style={{ fontSize: "clamp(1.8rem, 5vw, 3.5rem)", color: "var(--foreground)" }}>
                 HEMEN BONUS AL
               </h2>
               <p className="text-base mb-8 max-w-md mx-auto" style={{ color: "var(--muted-foreground)" }}>
-                En yüksek deneme bonuslarını kaçırma. Güvenilir sitelerde hemen oynamaya başla.
+                En yuksek deneme bonuslarini kacirma. Guvenilir sitelerde hemen oynamaya basla.
               </p>
               <Link
                 to="/deneme-bonusu"
                 data-testid="cta-bonus-btn"
-                className="inline-flex items-center gap-2 rounded-lg px-8 py-3.5 font-heading font-bold uppercase tracking-wide transition-all active:scale-95"
+                className="inline-flex items-center gap-2 rounded-lg px-8 py-3.5 font-heading font-bold uppercase tracking-wide transition-all active:scale-95 hover:scale-105"
                 style={{ background: "var(--neon-green)", color: "#000", boxShadow: "0 0 32px rgba(0,255,135,0.4)" }}
               >
                 <Gift className="w-5 h-5" />
-                Bonus Listesini Gör
+                Bonus Al
               </Link>
             </div>
           </div>
         </div>
       </section>
-
     </div>
   );
 };
