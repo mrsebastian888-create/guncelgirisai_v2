@@ -8,7 +8,16 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v1-v6: Base MVP, Match Hub, Production Hardening, Admin CRUD, Auto-Site Generation, Categories
 ### v7.0: SEO Infrastructure (Sitemap, Robots.txt, JSON-LD, Canonical, OG Tags, Twitter Cards)
 ### v8.0: Otomatik İçerik Zamanlayıcı Sistemi (Feb 2026)
-### v9.0: GoDaddy API Entegrasyonu (Feb 2026) - CURRENT
+### v9.0: GoDaddy API Entegrasyonu (Feb 2026)
+### v10.0: Otomatik İçerik Hızlandırma (Feb 2026) - CURRENT
+
+**Scheduler Güncellemesi:**
+- Batch boyutu: 5 makale paralel (eski: 1)
+- Aralık: 2 dakika (eski: 5 dakika)
+- Bulk generate endpoint: /api/scheduler/bulk-generate (arka plan, timeout yok)
+- AI retry mekanizması: 3 deneme, gpt-4o → gpt-4o-mini fallback
+- Rate limiter: /api/track/ endpoint'leri hariç tutuldu (dakika 200 istek)
+- Tahmini 1055 konu tamamlanma: ~7 saat
 
 **Backend - GoDaddy API Endpoints:**
 - GET /api/godaddy/domains - GoDaddy hesabındaki tüm domainleri listeler (2311+ domain, pagination destekli)
