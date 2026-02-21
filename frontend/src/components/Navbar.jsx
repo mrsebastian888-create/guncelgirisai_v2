@@ -44,6 +44,7 @@ const Navbar = () => {
         { label: "Tum Bonuslar", href: "/bonus/deneme" }
       ]
     },
+    { label: "Firma Rehberi", href: "/#firma-rehberi", icon: Globe },
     { label: "Guncel Giris", href: "/bonus/guncel-giris-adresleri", icon: Globe },
     { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
     { label: "AI Analiz", href: "/ai-analiz", icon: Brain },
@@ -52,6 +53,7 @@ const Navbar = () => {
   const isActive = (href) => location.pathname === href;
 
   const mobileLinks = [
+    { label: "Firma Rehberi", href: "/#firma-rehberi" },
     { label: "Bonuslar", href: "/bonus/deneme" },
     { label: "Deneme Bonusu", href: "/deneme-bonusu" },
     { label: "Hosgeldin Bonusu", href: "/hosgeldin-bonusu" },
