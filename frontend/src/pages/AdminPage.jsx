@@ -8,7 +8,7 @@ import {
   Globe, TrendingUp, Target, Server, AlertCircle, Loader2,
   Copy, ExternalLink, LogOut, Activity, Sparkles, Star,
   Search, Edit2, Save, X, Eye, ChevronDown, ChevronUp,
-  Gift, Calendar
+  Gift, Calendar, ArrowUp, ArrowDown, Layers, Image
 } from "lucide-react";
 import SeoAssistant from "@/components/SeoAssistant";
 import { Button } from "@/components/ui/button";
