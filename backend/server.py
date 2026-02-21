@@ -616,17 +616,19 @@ class ContentQueueItem(BaseModel):
 class ContentScheduler:
     def __init__(self):
         self.is_running = False
-        self.interval_minutes = 5
+        self.interval_minutes = 2
+        self.batch_size = 5
         self.task = None
         self.last_run = None
         self.total_generated = 0
+        self.is_bulk_running = False
     
     async def start(self):
         if self.is_running:
             return
         self.is_running = True
         self.task = asyncio.create_task(self._run_loop())
-        logger.info(f"Content scheduler started (interval: {self.interval_minutes}min)")
+        logger.info(f"Content scheduler started (interval: {self.interval_minutes}min, batch: {self.batch_size})")
     
     async def stop(self):
         self.is_running = False
@@ -638,36 +640,15 @@ class ContentScheduler:
     async def _run_loop(self):
         while self.is_running:
             try:
-                await self._process_next()
+                await self._process_batch()
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error(f"Scheduler error: {e}")
             await asyncio.sleep(self.interval_minutes * 60)
     
-    async def _process_next(self):
-        # Get next pending item from queue
-        item = await db.content_queue.find_one({"status": "pending"}, {"_id": 0})
-        if not item:
-            logger.info("Content queue empty, scheduler waiting...")
-            return
-        
-        item_id = item["id"]
-        company = item.get("company", "")
-        topic = item.get("topic", "")
-        
-        # Mark as processing
-        await db.content_queue.update_one({"id": item_id}, {"$set": {"status": "processing"}})
-        
-        try:
-            # Get bonus sites for internal recommendations
-            bonus_sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "name": 1, "bonus_amount": 1, "bonus_type": 1, "affiliate_url": 1, "rating": 1, "features": 1}).to_list(20)
-            sites_info = "\n".join([f"- {s['name']}: {s.get('bonus_amount','')} bonus, {s.get('rating',4.5)} puan, Özellikler: {', '.join(s.get('features',[]))}" for s in bonus_sites])
-            
-            # Build rich prompt
-            subject = f"{company} {topic}".strip() if company and topic else (company or topic)
-            
-            prompt = f"""'{subject}' konusunda profesyonel, SEO uyumlu, benzersiz ve kapsamlı bir makale yaz.
+    async def _build_article_prompt(self, subject: str, sites_info: str) -> str:
+        return f"""'{subject}' konusunda profesyonel, SEO uyumlu, benzersiz ve kapsamlı bir makale yaz.
 
 ZORUNLU KURALLAR:
 - EN AZ 2000 kelime olmalı (uzun form içerik)
@@ -702,10 +683,20 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
 - Başka hiçbir makaleye benzememeli
 - Google'ın E-E-A-T (Deneyim, Uzmanlık, Otorite, Güvenilirlik) standartlarına uygun olmalı
 - Kopyala-yapıştır içerik üretme, her cümle yeni ve özgün olmalı"""
-            
+
+    async def _generate_single_article(self, item: dict, sites_info: str) -> bool:
+        """Generate a single article from queue item. Returns True on success."""
+        item_id = item["id"]
+        company = item.get("company", "")
+        topic = item.get("topic", "")
+        subject = f"{company} {topic}".strip() if company and topic else (company or topic)
+        
+        await db.content_queue.update_one({"id": item_id}, {"$set": {"status": "processing"}})
+        
+        try:
+            prompt = await self._build_article_prompt(subject, sites_info)
             content = await generate_ai_content(prompt, "Sen Türkiye'nin en iyi bonus ve bahis uzmanısın. 10 yıllık deneyiminle sektörü yakından takip ediyorsun. Makalelerini gerçek deneyimler ve güncel bilgilerle yazıyorsun. Sadece HTML formatında yanıt ver, markdown kullanma.")
             
-            # Generate SEO metadata
             title_clean = subject.title()
             seo_title = f"{title_clean} - Detaylı Rehber 2026"[:60]
             seo_desc = f"{title_clean} hakkında kapsamlı ve güncel uzman rehberi. En iyi fırsatlar, karşılaştırmalar ve stratejiler."[:160]
@@ -728,8 +719,6 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
             )
             
             await db.articles.insert_one(article.model_dump())
-            
-            # Update queue item
             await db.content_queue.update_one({"id": item_id}, {"$set": {
                 "status": "completed",
                 "article_id": article.id,
@@ -738,14 +727,62 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
             
             self.total_generated += 1
             self.last_run = datetime.now(timezone.utc).isoformat()
-            logger.info(f"Scheduler generated article: {article.title} (#{self.total_generated})")
+            logger.info(f"Scheduler generated: {article.title} (#{self.total_generated})")
+            return True
             
         except Exception as e:
-            logger.error(f"Scheduler article generation failed: {e}")
+            logger.error(f"Article generation failed for '{subject}': {e}")
             await db.content_queue.update_one({"id": item_id}, {"$set": {
                 "status": "failed",
                 "error": str(e),
             }})
+            return False
+
+    async def _process_batch(self):
+        """Process a batch of pending items concurrently."""
+        items = await db.content_queue.find({"status": "pending"}, {"_id": 0}).limit(self.batch_size).to_list(self.batch_size)
+        if not items:
+            logger.info("Content queue empty, scheduler waiting...")
+            return
+        
+        bonus_sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "name": 1, "bonus_amount": 1, "bonus_type": 1, "affiliate_url": 1, "rating": 1, "features": 1}).to_list(20)
+        sites_info = "\n".join([f"- {s['name']}: {s.get('bonus_amount','')} bonus, {s.get('rating',4.5)} puan, Özellikler: {', '.join(s.get('features',[]))}" for s in bonus_sites])
+        
+        logger.info(f"Processing batch of {len(items)} articles...")
+        tasks = [self._generate_single_article(item, sites_info) for item in items]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        success = sum(1 for r in results if r is True)
+        failed = len(results) - success
+        logger.info(f"Batch complete: {success} success, {failed} failed")
+
+    async def bulk_generate(self, count: int = 20):
+        """One-shot bulk generation of articles."""
+        if self.is_bulk_running:
+            return {"error": "Bulk generation already running"}
+        self.is_bulk_running = True
+        try:
+            bonus_sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "name": 1, "bonus_amount": 1, "bonus_type": 1, "affiliate_url": 1, "rating": 1, "features": 1}).to_list(20)
+            sites_info = "\n".join([f"- {s['name']}: {s.get('bonus_amount','')} bonus, {s.get('rating',4.5)} puan, Özellikler: {', '.join(s.get('features',[]))}" for s in bonus_sites])
+            
+            items = await db.content_queue.find({"status": "pending"}, {"_id": 0}).limit(count).to_list(count)
+            if not items:
+                return {"generated": 0, "message": "Kuyruk boş"}
+            
+            # Process in batches of 5
+            total_success = 0
+            total_failed = 0
+            for i in range(0, len(items), 5):
+                batch = items[i:i+5]
+                tasks = [self._generate_single_article(item, sites_info) for item in batch]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                total_success += sum(1 for r in results if r is True)
+                total_failed += sum(1 for r in results if r is not True)
+                logger.info(f"Bulk batch {i//5 + 1}: {sum(1 for r in results if r is True)} success")
+            
+            return {"generated": total_success, "failed": total_failed, "total_processed": len(items)}
+        finally:
+            self.is_bulk_running = False
 
 content_scheduler = ContentScheduler()
 
