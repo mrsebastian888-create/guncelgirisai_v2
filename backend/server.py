@@ -2080,9 +2080,17 @@ async def reorder_bonus_sites(data: Dict[str, Any]):
 # ============== SEO ENDPOINTS ==============
 
 @api_router.get("/sitemap.xml")
-async def sitemap_xml(request: Request):
+async def sitemap_xml(request: Request, domain: Optional[str] = None):
     """Generate dynamic sitemap.xml for all domains and articles"""
-    base_url = str(request.base_url).rstrip("/")
+    # Use X-Forwarded headers or domain param for proper URL
+    forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    if domain:
+        base_url = f"https://{domain}"
+    elif forwarded_host:
+        base_url = f"{forwarded_proto}://{forwarded_host}"
+    else:
+        base_url = str(request.base_url).rstrip("/")
     
     # Collect all domains
     domains = await db.domains.find({}, {"_id": 0, "domain_name": 1}).to_list(100)
