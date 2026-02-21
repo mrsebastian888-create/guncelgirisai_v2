@@ -1013,42 +1013,9 @@ const AdminPage = () => {
           <TabsContent value="categories"><CategoriesTab onRefresh={fetchData} /></TabsContent>
           <TabsContent value="seo" className="space-y-6"><SeoAssistant domainId={selectedDomain} /></TabsContent>
 
-          {/* AUTO CONTENT TAB */}
+          {/* AUTO CONTENT TAB - SCHEDULER */}
           <TabsContent value="auto-content" className="space-y-6">
-            <Card className="glass-card border-white/10">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Wand2 className="w-5 h-5 text-neon-green" />Otomatik İçerik Motoru</CardTitle>
-                <CardDescription>AI ile SEO uyumlu içerik üretin. %80 bilgilendirici, %20 doğal affiliate.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><Label>Makale Konusu</Label><Input value={aiTopic} onChange={(e) => setAiTopic(e.target.value)} placeholder="Deneme Bonusu Rehberi 2026" data-testid="ai-topic-input" /></div>
-                  <div className="flex items-end gap-2">
-                    <Button onClick={() => handleAutoGenerate("article")} disabled={generating} className="flex-1" data-testid="generate-article-btn">
-                      {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><FileText className="w-4 h-4 mr-2" />Makale Üret</>}
-                    </Button>
-                    <Button onClick={() => handleAutoGenerate("news")} disabled={generating} variant="outline">
-                      <TrendingUp className="w-4 h-4 mr-2" />Haber Üret
-                    </Button>
-                  </div>
-                </div>
-                <div className="border-t border-white/10 pt-4">
-                  <Button onClick={() => handleAutoGenerate("bulk")} disabled={generating} variant="secondary" className="w-full" data-testid="bulk-generate-btn">
-                    {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Wand2 className="w-4 h-4 mr-2" />}
-                    Toplu İçerik Üret (5 Makale)
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-            {generatedContent && (
-              <Card className="glass-card border-white/10">
-                <CardHeader><CardTitle>Sonuç</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="bg-background/50 rounded-lg p-4 max-h-96 overflow-y-auto whitespace-pre-wrap text-sm">{generatedContent}</div>
-                  <Button variant="outline" className="mt-4" onClick={() => { navigator.clipboard.writeText(generatedContent); toast.success("Kopyalandı"); }}>Kopyala</Button>
-                </CardContent>
-              </Card>
-            )}
+            <AutoContentScheduler onRefresh={fetchData} />
           </TabsContent>
 
           <TabsContent value="articles"><ArticlesTab articles={articles} onRefresh={fetchData} /></TabsContent>
