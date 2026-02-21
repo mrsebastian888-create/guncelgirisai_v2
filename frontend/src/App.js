@@ -100,21 +100,14 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Sadece bir kere seed et (localStorage ile kontrol)
-    const seeded = sessionStorage.getItem("dsbn_seeded");
-    if (seeded) { setIsLoading(false); return; }
-
-    const seedData = async () => {
+    // İlk yükleme kontrolü - API'nin çalıştığından emin ol
+    const checkApi = async () => {
       try {
-        await axios.post(`${API}/seed`);
-        sessionStorage.setItem("dsbn_seeded", "1");
-      } catch (e) {
-        console.log("Seed skipped or already seeded");
-      } finally {
-        setIsLoading(false);
-      }
+        await axios.get(`${API}/`);
+      } catch {}
+      finally { setIsLoading(false); }
     };
-    seedData();
+    checkApi();
   }, []);
 
   return (
