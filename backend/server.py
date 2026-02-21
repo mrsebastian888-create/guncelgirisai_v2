@@ -926,6 +926,16 @@ async def delete_article(article_id: str):
     await db.articles.delete_one({"id": article_id})
     return {"message": "Makale silindi"}
 
+@api_router.get("/articles/slug/{slug}")
+async def get_article_by_slug(slug: str):
+    """Get article by slug and increment view count"""
+    article = await db.articles.find_one({"slug": slug, "is_published": True}, {"_id": 0})
+    if not article:
+        raise HTTPException(status_code=404, detail="Makale bulunamadı")
+    await db.articles.update_one({"slug": slug}, {"$inc": {"view_count": 1}})
+    article["view_count"] = article.get("view_count", 0) + 1
+    return article
+
 @api_router.get("/articles/{article_id}")
 async def get_article(article_id: str):
     """Get single article by ID"""
