@@ -21,6 +21,173 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
+
+/* ── CATEGORIES TAB ──────────────────────────────── */
+function CategoriesTab({ onRefresh }) {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [newCat, setNewCat] = useState({ name: "", type: "bonus", image: "", description: "" });
+
+  useEffect(() => { fetchCats(); }, []);
+
+  const fetchCats = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API}/categories`);
+      setCategories(res.data);
+    } catch { toast.error("Kategoriler yüklenemedi"); }
+    finally { setLoading(false); }
+  };
+
+  const handleCreate = async () => {
+    if (!newCat.name) return toast.error("Kategori adı gerekli");
+    try {
+      await axios.post(`${API}/categories`, newCat);
+      toast.success("Kategori eklendi");
+      setNewCat({ name: "", type: "bonus", image: "", description: "" });
+      fetchCats();
+    } catch { toast.error("Eklenemedi"); }
+  };
+
+  const handleDelete = async (id, name) => {
+    if (!confirm(`"${name}" silinecek?`)) return;
+    try {
+      await axios.delete(`${API}/categories/${id}`);
+      toast.success("Kategori silindi");
+      fetchCats();
+    } catch { toast.error("Silinemedi"); }
+  };
+
+  const startEdit = (cat) => {
+    setEditingId(cat.id);
+    setEditData({ name: cat.name, type: cat.type, image: cat.image || "", description: cat.description || "", is_active: cat.is_active !== false });
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      await axios.put(`${API}/categories/${editingId}`, editData);
+      toast.success("Kategori güncellendi");
+      setEditingId(null);
+      fetchCats();
+    } catch { toast.error("Güncellenemedi"); }
+    finally { setSaving(false); }
+  };
+
+  const handleMove = async (index, dir) => {
+    const newOrder = [...categories];
+    const targetIdx = index + dir;
+    if (targetIdx < 0 || targetIdx >= newOrder.length) return;
+    [newOrder[index], newOrder[targetIdx]] = [newOrder[targetIdx], newOrder[index]];
+    try {
+      await axios.post(`${API}/categories/reorder`, { order: newOrder.map(c => c.id) });
+      fetchCats();
+    } catch { toast.error("Sıralama başarısız"); }
+  };
+
+  if (loading) return <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6" data-testid="categories-tab">
+      {/* Create Form */}
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" />Yeni Kategori</CardTitle>
+          <CardDescription>Ana sayfadaki kategori slider'ına yeni kategori ekleyin.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Input value={newCat.name} onChange={(e) => setNewCat({ ...newCat, name: e.target.value })} placeholder="Kategori Adı" data-testid="new-category-name" />
+            <Select value={newCat.type} onValueChange={(v) => setNewCat({ ...newCat, type: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bonus">Bonus</SelectItem>
+                <SelectItem value="spor">Spor</SelectItem>
+                <SelectItem value="casino">Casino</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input value={newCat.image} onChange={(e) => setNewCat({ ...newCat, image: e.target.value })} placeholder="Görsel URL" />
+            <Input value={newCat.description} onChange={(e) => setNewCat({ ...newCat, description: e.target.value })} placeholder="Açıklama" />
+          </div>
+          <Button onClick={handleCreate} className="bg-neon-green text-black hover:bg-neon-green/90" data-testid="create-category-btn">
+            <Plus className="w-4 h-4 mr-2" />Kategori Ekle
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Categories List */}
+      <Card className="glass-card border-white/10">
+        <CardHeader><CardTitle>Kategoriler ({categories.length})</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {categories.map((cat, idx) => (
+              <div key={cat.id} className="rounded-lg border p-4" style={{ borderColor: "rgba(255,255,255,0.08)" }} data-testid={`category-row-${cat.id}`}>
+                {editingId === cat.id ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                      <Input value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} placeholder="Kategori Adı" />
+                      <Select value={editData.type} onValueChange={(v) => setEditData({ ...editData, type: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bonus">Bonus</SelectItem>
+                          <SelectItem value="spor">Spor</SelectItem>
+                          <SelectItem value="casino">Casino</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input value={editData.image} onChange={(e) => setEditData({ ...editData, image: e.target.value })} placeholder="Görsel URL" />
+                      <Input value={editData.description} onChange={(e) => setEditData({ ...editData, description: e.target.value })} placeholder="Açıklama" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Switch checked={editData.is_active} onCheckedChange={(v) => setEditData({ ...editData, is_active: v })} />
+                      <span className="text-sm">{editData.is_active ? "Aktif" : "Gizli"}</span>
+                      <div className="flex gap-2 ml-auto">
+                        <Button size="sm" onClick={handleSaveEdit} disabled={saving} className="bg-neon-green text-black">
+                          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1" />Kaydet</>}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditingId(null)}><X className="w-4 h-4 mr-1" />İptal</Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-0.5 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleMove(idx, -1)} disabled={idx === 0}>
+                          <ArrowUp className="w-3 h-3" />
+                        </Button>
+                        <span className="text-xs text-center text-muted-foreground">{idx + 1}</span>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleMove(idx, 1)} disabled={idx === categories.length - 1}>
+                          <ArrowDown className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      {cat.image && <img src={cat.image} alt={cat.name} className="w-16 h-10 rounded-lg object-cover" onError={(e) => { e.target.style.display = "none"; }} />}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{cat.name}</h4>
+                          <Badge variant="outline">{cat.type}</Badge>
+                          {cat.is_active === false && <Badge className="bg-yellow-500/20 text-yellow-500 text-xs">Gizli</Badge>}
+                        </div>
+                        {cat.description && <p className="text-xs text-muted-foreground mt-0.5">{cat.description}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="sm" onClick={() => startEdit(cat)}><Edit2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(cat.id, cat.name)}><Trash2 className="w-4 h-4 text-red-400" /></Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /* ── MATCHES ADMIN TAB ───────────────────────────── */
 function MatchesAdminTab() {
   const [status, setStatus] = useState(null);
