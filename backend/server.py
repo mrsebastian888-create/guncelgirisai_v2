@@ -2147,9 +2147,16 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     return Response(content=xml, media_type="application/xml")
 
 @api_router.get("/robots.txt")
-async def robots_txt(request: Request):
+async def robots_txt(request: Request, domain: Optional[str] = None):
     """Generate robots.txt"""
-    base_url = str(request.base_url).rstrip("/")
+    forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    if domain:
+        base_url = f"https://{domain}"
+    elif forwarded_host:
+        base_url = f"{forwarded_proto}://{forwarded_host}"
+    else:
+        base_url = str(request.base_url).rstrip("/")
     content = f"""User-agent: *
 Allow: /
 Disallow: /admin
