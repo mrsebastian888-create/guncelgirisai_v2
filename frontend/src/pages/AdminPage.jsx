@@ -830,13 +830,14 @@ const AdminPage = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="domains" className="space-y-6">
-          <TabsList className="grid grid-cols-6 w-full max-w-4xl">
-            <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-2" />Domainler</TabsTrigger>
-            <TabsTrigger value="sites"><Gift className="w-4 h-4 mr-2" />Siteler</TabsTrigger>
-            <TabsTrigger value="seo" data-testid="admin-seo-tab"><Search className="w-4 h-4 mr-2" />SEO Asistanı</TabsTrigger>
-            <TabsTrigger value="auto-content"><Wand2 className="w-4 h-4 mr-2" />Oto İçerik</TabsTrigger>
-            <TabsTrigger value="articles"><FileText className="w-4 h-4 mr-2" />Makaleler</TabsTrigger>
-            <TabsTrigger value="matches"><Activity className="w-4 h-4 mr-2" />Maçlar</TabsTrigger>
+          <TabsList className="grid grid-cols-7 w-full max-w-5xl">
+            <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-1.5" />Domainler</TabsTrigger>
+            <TabsTrigger value="sites"><Gift className="w-4 h-4 mr-1.5" />Siteler</TabsTrigger>
+            <TabsTrigger value="categories" data-testid="admin-categories-tab"><Layers className="w-4 h-4 mr-1.5" />Kategoriler</TabsTrigger>
+            <TabsTrigger value="seo" data-testid="admin-seo-tab"><Search className="w-4 h-4 mr-1.5" />SEO</TabsTrigger>
+            <TabsTrigger value="auto-content"><Wand2 className="w-4 h-4 mr-1.5" />Oto İçerik</TabsTrigger>
+            <TabsTrigger value="articles"><FileText className="w-4 h-4 mr-1.5" />Makaleler</TabsTrigger>
+            <TabsTrigger value="matches"><Activity className="w-4 h-4 mr-1.5" />Maçlar</TabsTrigger>
           </TabsList>
 
           <TabsContent value="domains"><DomainsTab domains={domains} onRefresh={fetchData} /></TabsContent>
