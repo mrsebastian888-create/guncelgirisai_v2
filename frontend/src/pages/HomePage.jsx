@@ -552,28 +552,33 @@ const HomePage = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-            {MAIN_CATEGORIES.map((cat) => (
-              <Link
-                key={cat.slug}
-                to={cat.slug === "spor-haberleri" ? "/spor-haberleri" : cat.slug === "ai-analiz" ? "/ai-analiz" : `/bonus/${cat.slug}`}
-                data-testid={`category-card-${cat.slug}`}
-                className="group relative rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.05] hover:shadow-lg"
-                style={{ aspectRatio: "3/4" }}
-              >
-                <img src={cat.image} alt={cat.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%)" }} />
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `linear-gradient(to top, ${cat.color}40 0%, transparent 60%)` }} />
-                <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col items-start">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110" style={{ background: `${cat.color}20`, border: `1px solid ${cat.color}40` }}>
-                    <cat.icon className="w-5 h-5" style={{ color: cat.color }} />
+            {MAIN_CATEGORIES.map((cat) => {
+              const href = cat.isAnchor ? `/#${cat.slug}` : (cat.slug === "spor-haberleri" ? "/spor-haberleri" : `/bonus/${cat.slug}`);
+              const TagName = cat.isAnchor ? 'a' : Link;
+              const linkProps = cat.isAnchor ? { href } : { to: href };
+              return (
+                <TagName
+                  key={cat.slug}
+                  {...linkProps}
+                  data-testid={`category-card-${cat.slug}`}
+                  className="group relative rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.05] hover:shadow-lg"
+                  style={{ aspectRatio: "3/4" }}
+                >
+                  <img src={cat.image} alt={cat.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.1) 100%)" }} />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ background: `linear-gradient(to top, ${cat.color}40 0%, transparent 60%)` }} />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col items-start">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110" style={{ background: `${cat.color}20`, border: `1px solid ${cat.color}40` }}>
+                      <cat.icon className="w-5 h-5" style={{ color: cat.color }} />
+                    </div>
+                    <h3 className="font-heading font-bold text-sm uppercase tracking-tight text-white leading-tight">{cat.name}</h3>
                   </div>
-                  <h3 className="font-heading font-bold text-sm uppercase tracking-tight text-white leading-tight">{cat.name}</h3>
-                </div>
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0" style={{ color: cat.color }}>
-                  <ChevronRight className="w-5 h-5" />
-                </div>
-              </Link>
-            ))}
+                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0" style={{ color: cat.color }}>
+                    <ChevronRight className="w-5 h-5" />
+                  </div>
+                </TagName>
+              );
+            })}
           </div>
         </div>
       </section>
