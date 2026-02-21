@@ -676,11 +676,6 @@ function DomainsTab({ domains, onRefresh }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        {domain.nameservers?.length > 0 && (
-                          <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(domain.nameservers.join("\n")); toast.success("Kopyalandı"); }}>
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        )}
                         <Button variant="ghost" size="sm" onClick={() => startEdit(domain)} data-testid={`edit-domain-${domain.id}`}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
