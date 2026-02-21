@@ -378,6 +378,116 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* ── SON EKLENEN MAKALELER + EN İYİ FİRMALAR ── */}
+      {latestArticles.length > 0 && (
+        <section className="py-14 md:py-20 px-4 md:px-6" data-testid="latest-articles-section">
+          <div className="container mx-auto max-w-7xl">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Main Content - En İyi Firmalar */}
+              <div className="lg:col-span-2">
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-4 text-xs font-semibold uppercase tracking-widest"
+                  style={{ borderColor: "rgba(255,215,0,0.3)", color: "#FFD700", background: "rgba(255,215,0,0.07)" }}
+                >
+                  <Star className="w-3 h-3" /> En İyi Firmalar
+                </div>
+                <h2
+                  className="font-heading font-black uppercase mb-6"
+                  style={{ fontSize: "clamp(1.4rem, 3vw, 2.2rem)", color: "var(--foreground)" }}
+                >
+                  UZMAN DEĞERLENDİRMELERİ
+                </h2>
+                <div className="space-y-3">
+                  {latestArticles.filter(a => a.category === "en-iyi-firmalar").slice(0, 5).map((article, i) => (
+                    <Link
+                      key={article.id || i}
+                      to={`/makale/${article.slug}`}
+                      className="group flex gap-4 p-4 rounded-xl border transition-all hover:border-[rgba(255,215,0,0.3)]"
+                      style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}
+                      data-testid={`best-firm-article-${i}`}
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg"
+                        style={{ background: i === 0 ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.05)", color: i === 0 ? "#FFD700" : "var(--muted-foreground)" }}>
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold group-hover:text-[#FFD700] transition-colors line-clamp-2">{article.title}</h3>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{article.excerpt}</p>
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                          {article.author && <span>{article.author}</span>}
+                          {article.created_at && <span>{new Date(article.created_at).toLocaleDateString("tr-TR")}</span>}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-center flex-shrink-0" />
+                    </Link>
+                  ))}
+                  {latestArticles.filter(a => a.category === "en-iyi-firmalar").length === 0 && latestArticles.slice(0, 5).map((article, i) => (
+                    <Link
+                      key={article.id || i}
+                      to={`/makale/${article.slug}`}
+                      className="group flex gap-4 p-4 rounded-xl border transition-all hover:border-[rgba(255,215,0,0.3)]"
+                      style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.06)" }}
+                      data-testid={`best-firm-article-${i}`}
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg"
+                        style={{ background: i === 0 ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.05)", color: i === 0 ? "#FFD700" : "var(--muted-foreground)" }}>
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-semibold group-hover:text-[#FFD700] transition-colors line-clamp-2">{article.title}</h3>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{article.excerpt}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity self-center flex-shrink-0" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sidebar - Son Eklenen Makaleler */}
+              <div className="lg:col-span-1">
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-4 text-xs font-semibold uppercase tracking-widest"
+                  style={{ borderColor: "rgba(0,255,135,0.3)", color: "var(--neon-green)", background: "rgba(0,255,135,0.07)" }}
+                >
+                  <Clock className="w-3 h-3" /> Yeni
+                </div>
+                <h2
+                  className="font-heading font-black uppercase mb-6"
+                  style={{ fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)", color: "var(--foreground)" }}
+                >
+                  SON MAKALELER
+                </h2>
+                <div className="space-y-2" data-testid="latest-articles-sidebar">
+                  {latestArticles.slice(0, 8).map((article, i) => (
+                    <Link
+                      key={article.id || i}
+                      to={`/makale/${article.slug}`}
+                      className="group flex items-start gap-3 p-3 rounded-lg transition-all hover:bg-white/5"
+                      data-testid={`latest-article-${i}`}
+                    >
+                      <span
+                        className="flex-shrink-0 w-7 h-7 rounded flex items-center justify-center text-xs font-bold"
+                        style={{ background: "rgba(0,255,135,0.1)", color: "var(--neon-green)" }}
+                      >
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-medium group-hover:text-[var(--neon-green)] transition-colors line-clamp-2">
+                          {article.title}
+                        </h4>
+                        <span className="text-xs text-muted-foreground">
+                          {article.created_at ? new Date(article.created_at).toLocaleDateString("tr-TR") : ""}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── SPORTS NEWS ──────────────────────────── */}
       {articles.length > 0 && (
         <section className="py-14 md:py-20 px-4 md:px-6" data-testid="news-section"
