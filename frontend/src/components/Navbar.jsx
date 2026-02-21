@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Gift, Activity, ChevronDown, Globe, Sparkles, Award, Brain } from "lucide-react";
+import { Menu, X, Gift, Activity, ChevronDown, Globe, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
+import { API } from "@/App";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +14,25 @@ import {
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [topSites, setTopSites] = useState([]);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    axios.get(`${API}/bonus-sites?limit=20`).then(res => setTopSites(res.data)).catch(() => {});
+  }, []);
+
+  const handleBonusClick = (e) => {
+    e.preventDefault();
+    if (topSites.length > 0) {
+      const randomSite = topSites[Math.floor(Math.random() * topSites.length)];
+      if (randomSite.affiliate_url) {
+        window.open(randomSite.affiliate_url, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      navigate('/deneme-bonusu');
+    }
+  };
 
   const navLinks = [
     { 
@@ -43,7 +63,6 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 h-16" data-testid="navbar">
       <div className="container mx-auto h-full px-6 flex items-center justify-between">
-        {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group" data-testid="nav-logo">
           <div className="w-10 h-10 rounded-lg bg-neon-green flex items-center justify-center">
             <span className="font-heading text-black text-xl font-black">DS</span>
@@ -55,7 +74,6 @@ const Navbar = () => {
           </div>
         </Link>
 
-        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link, index) => (
             link.children ? (
@@ -103,21 +121,17 @@ const Navbar = () => {
           ))}
         </div>
 
-        {/* CTA Button */}
         <div className="hidden md:block">
           <Button 
             className="bg-neon-green text-black font-bold uppercase tracking-wide text-sm hover:bg-neon-green/90 neon-glow press"
-            asChild
+            onClick={handleBonusClick}
             data-testid="nav-cta-btn"
           >
-            <Link to="/deneme-bonusu">
-              <Gift className="w-4 h-4 mr-2" />
-              Bonus Al
-            </Link>
+            <Gift className="w-4 h-4 mr-2" />
+            Bonus Al
           </Button>
         </div>
 
-        {/* Mobile Menu Button */}
         <Button
           variant="ghost"
           size="icon"
@@ -129,7 +143,6 @@ const Navbar = () => {
         </Button>
       </div>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
@@ -152,12 +165,10 @@ const Navbar = () => {
               ))}
               <Button 
                 className="bg-neon-green text-black font-bold uppercase tracking-wide hover:bg-neon-green/90 neon-glow mt-4"
-                asChild
+                onClick={(e) => { setMobileMenuOpen(false); handleBonusClick(e); }}
               >
-                <Link to="/deneme-bonusu" onClick={() => setMobileMenuOpen(false)}>
-                  <Gift className="w-5 h-5 mr-2" />
-                  Bonus Al
-                </Link>
+                <Gift className="w-5 h-5 mr-2" />
+                Bonus Al
               </Button>
             </div>
           </motion.div>
