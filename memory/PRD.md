@@ -65,6 +65,7 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - [x] GoDaddy domain kategorileme
 - [x] MongoDB indexleri
 - [x] Production deployment hazirliklari
+- [x] Firma detay sayfalari (FirmPage) - /firma-adi URL'leri calisiyor (Feb 2026)
 
 ### P1 (Next)
 - [ ] Production deployment (MongoDB Atlas + Railway + Vercel)
