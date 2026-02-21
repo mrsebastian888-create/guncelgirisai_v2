@@ -338,7 +338,7 @@ async def request_middleware(request: Request, call_next):
     request.state.request_id = request_id
     
     # Rate limiting — tracking ve health endpoint'lerini dışla
-    RATE_LIMIT_SKIP = ("/api/sports/", "/api/performance/", "/api/go/", "/health", "/version", "/db-check")
+    RATE_LIMIT_SKIP = ("/api/sports/", "/api/performance/", "/api/go/", "/api/track/", "/health", "/version", "/db-check")
     rl_remaining: Optional[int] = None
     if request.url.path.startswith("/api") and not request.url.path.startswith(RATE_LIMIT_SKIP):
         allowed, rl_remaining = rate_limiter.is_allowed(client_ip)
