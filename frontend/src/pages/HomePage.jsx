@@ -51,12 +51,12 @@ const HERO_SLIDES = [
 ];
 
 const MAIN_CATEGORIES = [
+  { name: "Firma Rehberi", slug: "firma-rehberi", icon: Users, color: "#00F0FF", image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&q=80", isAnchor: true },
   { name: "Bonuslar", slug: "bonuslar", icon: Gift, color: "#00FF87", image: "https://images.pexels.com/photos/29825624/pexels-photo-29825624.jpeg?auto=compress&cs=tinysrgb&w=400" },
   { name: "Guncel Giris", slug: "guncel-giris-adresleri", icon: Globe, color: "#00F0FF", image: "https://images.unsplash.com/photo-1530900198670-847f22a849fe?w=400&q=80" },
   { name: "Deneme Bonusu", slug: "deneme-bonusu", icon: Coins, color: "#FBBF24", image: "https://images.pexels.com/photos/10741372/pexels-photo-10741372.jpeg?auto=compress&cs=tinysrgb&w=400" },
   { name: "Hosgeldin Bonusu", slug: "hosgeldin-bonusu", icon: Gift, color: "#FFD700", image: "https://images.pexels.com/photos/6102155/pexels-photo-6102155.jpeg?auto=compress&cs=tinysrgb&w=400" },
   { name: "Spor Haberleri", slug: "spor-haberleri", icon: Activity, color: "#FF6B6B", image: "https://images.pexels.com/photos/12201296/pexels-photo-12201296.jpeg?auto=compress&cs=tinysrgb&w=400" },
-  { name: "AI Analiz", slug: "ai-analiz", icon: Target, color: "#A78BFA", image: "https://images.unsplash.com/photo-1580617971627-cffa74e39d1d?w=400&q=80" },
 ];
 
 const HomePage = () => {
