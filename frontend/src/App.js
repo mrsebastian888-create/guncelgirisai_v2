@@ -13,6 +13,7 @@ import ArticlePage from "@/pages/ArticlePage";
 import AdminPage from "@/pages/AdminPage";
 import LoginPage from "@/pages/LoginPage";
 import MatchDetailPage from "@/pages/MatchDetailPage";
+import FirmPage from "@/pages/FirmPage";
 
 // Components
 import Navbar from "@/components/Navbar";
