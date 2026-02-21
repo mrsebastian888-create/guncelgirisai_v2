@@ -109,16 +109,18 @@ const HomePage = () => {
           setArticles(siteData.articles || []);
         } else {
           // Varsayılan (preview veya global)
-          const [sitesRes, articlesRes, categoriesRes, latestRes] = await Promise.all([
+          const [sitesRes, articlesRes, categoriesRes, latestRes, allFirmsRes] = await Promise.all([
             axios.get(`${API}/bonus-sites?limit=20`),
             axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
             axios.get(`${API}/categories`).catch(() => ({ data: [] })),
             axios.get(`${API}/articles/latest?limit=8`).catch(() => ({ data: [] })),
+            axios.get(`${API}/bonus-sites?limit=300`).catch(() => ({ data: [] })),
           ]);
           setBonusSites(sitesRes.data);
           setArticles(articlesRes.data);
           setCategories(categoriesRes.data);
           setLatestArticles(latestRes.data);
+          setAllFirms(allFirmsRes.data);
         }
       } catch (error) {
         console.error("Error:", error);
