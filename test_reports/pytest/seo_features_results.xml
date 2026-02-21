@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="18" time="2.606" timestamp="2026-02-21T16:10:11.532087+00:00" hostname="agent-env-0af3e4a6-d95d-4402-9b4c-e9eaac97c044"><testcase classname="backend.tests.test_seo_features.TestSitemapXml" name="test_sitemap_returns_valid_xml" time="0.310" /><testcase classname="backend.tests.test_seo_features.TestSitemapXml" name="test_sitemap_contains_static_pages" time="0.112" /><testcase classname="backend.tests.test_seo_features.TestSitemapXml" name="test_sitemap_contains_articles" time="0.114" /><testcase classname="backend.tests.test_seo_features.TestSitemapXml" name="test_sitemap_contains_categories" time="0.112" /><testcase classname="backend.tests.test_seo_features.TestRobotsTxt" name="test_robots_txt_returns_200" time="0.100" /><testcase classname="backend.tests.test_seo_features.TestRobotsTxt" name="test_robots_contains_user_agent" time="0.131" /><testcase classname="backend.tests.test_seo_features.TestRobotsTxt" name="test_robots_disallows_admin" time="0.125" /><testcase classname="backend.tests.test_seo_features.TestRobotsTxt" name="test_robots_contains_sitemap_reference" time="0.135" /><testcase classname="backend.tests.test_seo_features.TestSeoDataEndpoint" name="test_seo_data_for_article" time="0.096" /><testcase classname="backend.tests.test_seo_features.TestSeoDataEndpoint" name="test_seo_data_for_nonexistent_slug" time="0.138" /><testcase classname="backend.tests.test_seo_features.TestArticleSlugEndpoint" name="test_article_slug_returns_article" time="0.106" /><testcase classname="backend.tests.test_seo_features.TestArticleSlugEndpoint" name="test_article_slug_increments_view_count" time="0.233" /><testcase classname="backend.tests.test_seo_features.TestArticleSlugEndpoint" name="test_article_slug_returns_404_for_nonexistent" time="0.151" /><testcase classname="backend.tests.test_seo_features.TestHealthEndpoints" name="test_health_endpoint" time="0.105"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_seo_features.py:166: in test_health_endpoint
+    data = response.json()
+           ^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_seo_features.TestHealthEndpoints" name="test_db_check_endpoint" time="0.126"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_seo_features.py:174: in test_db_check_endpoint
+    data = response.json()
+           ^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_seo_features.TestArticlesEndpoint" name="test_articles_list" time="0.111" /><testcase classname="backend.tests.test_seo_features.TestBonusSitesEndpoint" name="test_bonus_sites_list" time="0.123" /><testcase classname="backend.tests.test_seo_features.TestCategoriesEndpoint" name="test_categories_list" time="0.106" /></testsuite></testsuites>
