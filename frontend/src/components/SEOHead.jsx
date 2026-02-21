@@ -19,11 +19,11 @@ export default function SEOHead({
   const metaImage = image || DEFAULT_IMAGE;
   const url = canonical || (typeof window !== "undefined" ? window.location.href : "");
 
-  // Handle JSON-LD via useEffect since Helmet doesn't support .map() well
+  // Handle JSON-LD via useEffect since Helmet doesn't support dynamic children well
   useEffect(() => {
     const scripts = [];
     const ldData = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]).filter(Boolean) : [];
-    ldData.forEach((ld, i) => {
+    ldData.forEach((ld) => {
       const script = document.createElement("script");
       script.type = "application/ld+json";
       script.setAttribute("data-seo-head", "true");
@@ -36,35 +36,27 @@ export default function SEOHead({
     };
   }, [jsonLd]);
 
-  const metaTags = [
-    { name: "description", content: metaDesc },
-    { property: "og:type", content: type },
-    { property: "og:title", content: fullTitle },
-    { property: "og:description", content: metaDesc },
-    { property: "og:image", content: metaImage },
-    { property: "og:url", content: url },
-    { property: "og:site_name", content: SITE_NAME },
-    { property: "og:locale", content: "tr_TR" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: fullTitle },
-    { name: "twitter:description", content: metaDesc },
-    { name: "twitter:image", content: metaImage },
-  ];
-
-  if (noindex) metaTags.push({ name: "robots", content: "noindex, nofollow" });
-  if (article) {
-    if (article.publishedTime) metaTags.push({ property: "article:published_time", content: article.publishedTime });
-    if (article.modifiedTime) metaTags.push({ property: "article:modified_time", content: article.modifiedTime });
-    if (article.author) metaTags.push({ property: "article:author", content: article.author });
-    if (article.category) metaTags.push({ property: "article:section", content: article.category });
-  }
-
   return (
-    <Helmet
-      defer={false}
-      title={fullTitle}
-      meta={metaTags}
-      link={url ? [{ rel: "canonical", href: url }] : []}
-    />
+    <Helmet defer={false}>
+      <title>{String(fullTitle)}</title>
+      <meta name="description" content={metaDesc} />
+      <link rel="canonical" href={url} />
+      {noindex && <meta name="robots" content="noindex, nofollow" />}
+      <meta property="og:type" content={type} />
+      <meta property="og:title" content={fullTitle} />
+      <meta property="og:description" content={metaDesc} />
+      <meta property="og:image" content={metaImage} />
+      <meta property="og:url" content={url} />
+      <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:locale" content="tr_TR" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={fullTitle} />
+      <meta name="twitter:description" content={metaDesc} />
+      <meta name="twitter:image" content={metaImage} />
+      {article && article.publishedTime && <meta property="article:published_time" content={article.publishedTime} />}
+      {article && article.modifiedTime && <meta property="article:modified_time" content={article.modifiedTime} />}
+      {article && article.author && <meta property="article:author" content={article.author} />}
+      {article && article.category && <meta property="article:section" content={article.category} />}
+    </Helmet>
   );
 }
