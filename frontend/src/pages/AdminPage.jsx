@@ -653,16 +653,26 @@ function DomainsTab({ domains, onRefresh }) {
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className={`w-3 h-3 rounded-full ${domain.cloudflare_status === "active" ? "bg-neon-green" : "bg-yellow-500"}`} />
+                        <div className={`w-3 h-3 rounded-full ${siteStatus[domain.id]?.is_ready ? "bg-neon-green" : "bg-yellow-500 animate-pulse"}`} />
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-medium">{domain.domain_name}</h4>
                             <Badge variant="outline">{domain.focus}</Badge>
                             {domain.display_name && <span className="text-xs text-muted-foreground">({domain.display_name})</span>}
                           </div>
-                          {domain.nameservers?.length > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">NS: {domain.nameservers.join(", ")}</p>
-                          )}
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            {siteStatus[domain.id]?.is_ready ? (
+                              <>
+                                <span className="text-neon-green">{siteStatus[domain.id]?.stats?.total_articles || 0} makale</span>
+                                <span>{siteStatus[domain.id]?.stats?.total_bonus_sites || 0} bonus sitesi</span>
+                                <a href={`https://${domain.domain_name}`} target="_blank" rel="noopener noreferrer" className="text-[#00F0FF] hover:underline flex items-center gap-1">
+                                  <ExternalLink className="w-3 h-3" />Siteyi Gör
+                                </a>
+                              </>
+                            ) : (
+                              <span className="text-yellow-500">AI içerik üretiliyor...</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
