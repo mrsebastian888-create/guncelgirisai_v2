@@ -114,10 +114,17 @@ const Navbar = () => {
                   isActive(link.href) ? "text-neon-green" : "hover:text-neon-green"
                 }`}
               >
-                <Link to={link.href} data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
-                  <link.icon className="w-4 h-4 mr-1.5" />
-                  {link.label}
-                </Link>
+                {link.href.startsWith('/#') ? (
+                  <a href={link.href} data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <link.icon className="w-4 h-4 mr-1.5" />
+                    {link.label}
+                  </a>
+                ) : (
+                  <Link to={link.href} data-testid={`nav-link-${link.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <link.icon className="w-4 h-4 mr-1.5" />
+                    {link.label}
+                  </Link>
+                )}
               </Button>
             )
           ))}
