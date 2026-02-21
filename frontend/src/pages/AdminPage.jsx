@@ -749,6 +749,8 @@ function DomainsTab({ domains, onRefresh }) {
   const [godaddyFetched, setGodaddyFetched] = useState(false);
   const [importingDomain, setImportingDomain] = useState(null);
   const [godaddySearch, setGodaddySearch] = useState("");
+  const [godaddyFilter, setGodaddyFilter] = useState("all");
+  const [godaddyStats, setGodaddyStats] = useState({ total: 0, parked: 0, hosted: 0, platform: 0 });
 
   useEffect(() => {
     domains.forEach(async (d) => {
@@ -767,6 +769,7 @@ function DomainsTab({ domains, onRefresh }) {
     try {
       const res = await axios.get(`${API}/godaddy/domains`);
       setGodaddyDomains(res.data.domains || []);
+      setGodaddyStats(res.data.stats || { total: 0, parked: 0, hosted: 0, platform: 0 });
       setGodaddyFetched(true);
     } catch (e) {
       setGodaddyError(e.response?.data?.detail || "GoDaddy domainleri alınamadı");
