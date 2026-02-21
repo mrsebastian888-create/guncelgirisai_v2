@@ -136,6 +136,11 @@ const HomePage = () => {
     ? bonusSites
     : bonusSites.filter((s) => s.bonus_type === activeFilter);
 
+  const filteredFirms = firmSearch
+    ? allFirms.filter(f => f.name.toLowerCase().includes(firmSearch.toLowerCase()))
+    : allFirms;
+  const displayedFirms = showAllFirms ? filteredFirms : filteredFirms.slice(0, 30);
+
   const scrollSlider = (dir) => {
     if (sliderRef.current) {
       sliderRef.current.scrollBy({ left: dir * 300, behavior: "smooth" });
