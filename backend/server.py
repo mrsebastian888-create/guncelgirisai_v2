@@ -2047,6 +2047,104 @@ async def reorder_bonus_sites(data: Dict[str, Any]):
         await db.bonus_sites.update_one({"id": site_id}, {"$set": {"sort_order": i + 1}})
     return {"message": "Site sıralaması güncellendi"}
 
+# ============== SEO ENDPOINTS ==============
+
+@api_router.get("/sitemap.xml")
+async def sitemap_xml(request: Request):
+    """Generate dynamic sitemap.xml for all domains and articles"""
+    base_url = str(request.base_url).rstrip("/")
+    
+    # Collect all domains
+    domains = await db.domains.find({}, {"_id": 0, "domain_name": 1}).to_list(100)
+    # Collect all published articles
+    articles = await db.articles.find(
+        {"is_published": True},
+        {"_id": 0, "slug": 1, "domain_id": 1, "updated_at": 1, "created_at": 1, "category": 1}
+    ).to_list(5000)
+    # Collect all categories
+    categories = await db.categories.find({}, {"_id": 0, "slug": 1}).to_list(100)
+
+    urls = []
+    
+    # Static pages
+    static_pages = [
+        {"loc": "/", "priority": "1.0", "changefreq": "daily"},
+        {"loc": "/deneme-bonusu", "priority": "0.9", "changefreq": "daily"},
+        {"loc": "/hosgeldin-bonusu", "priority": "0.9", "changefreq": "daily"},
+        {"loc": "/spor-haberleri", "priority": "0.8", "changefreq": "hourly"},
+    ]
+    for page in static_pages:
+        urls.append(f"""  <url>
+    <loc>{base_url}{page["loc"]}</loc>
+    <changefreq>{page["changefreq"]}</changefreq>
+    <priority>{page["priority"]}</priority>
+  </url>""")
+    
+    # Category pages
+    for cat in categories:
+        urls.append(f"""  <url>
+    <loc>{base_url}/bonus/{cat["slug"]}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>""")
+
+    # Article pages
+    for article in articles:
+        lastmod = article.get("updated_at") or article.get("created_at", "")
+        if lastmod:
+            lastmod_tag = f"\n    <lastmod>{lastmod[:10]}</lastmod>"
+        else:
+            lastmod_tag = ""
+        urls.append(f"""  <url>
+    <loc>{base_url}/makale/{article["slug"]}</loc>{lastmod_tag}
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    
+    return Response(content=xml, media_type="application/xml")
+
+@api_router.get("/robots.txt")
+async def robots_txt(request: Request):
+    """Generate robots.txt"""
+    base_url = str(request.base_url).rstrip("/")
+    content = f"""User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin-login
+Disallow: /api/
+
+User-agent: Googlebot
+Allow: /api/sitemap.xml
+
+Sitemap: {base_url}/api/sitemap.xml
+"""
+    return PlainTextResponse(content=content)
+
+@api_router.get("/seo-data/{slug}")
+async def get_seo_data(slug: str):
+    """Get SEO metadata for a page - used by frontend for meta tags"""
+    # Check if it's an article slug
+    article = await db.articles.find_one({"slug": slug, "is_published": True}, {"_id": 0})
+    if article:
+        return {
+            "type": "article",
+            "title": article.get("seo_title") or article.get("title", ""),
+            "description": article.get("seo_description") or article.get("excerpt", ""),
+            "image": article.get("image_url", ""),
+            "author": article.get("author", "Admin"),
+            "published_time": article.get("created_at", ""),
+            "modified_time": article.get("updated_at", ""),
+            "category": article.get("category", ""),
+            "tags": article.get("tags", []),
+            "schema_type": article.get("schema_type", "Article"),
+        }
+    return {"type": "page", "title": "", "description": ""}
+
 # Seed
 @api_router.post("/seed")
 async def seed_database():
