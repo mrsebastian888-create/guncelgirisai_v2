@@ -596,7 +596,7 @@ function DomainsTab({ domains, onRefresh }) {
       <Card className="glass-card border-white/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" />Yeni Domain Ekle</CardTitle>
-          <CardDescription>Domain eklendiğinde Cloudflare'da zone oluşturulur, DNS kayıtları ve SSL otomatik ayarlanır.</CardDescription>
+          <CardDescription>Domain eklendiğinde bonus siteleri otomatik bağlanır ve AI ile 5 SEO makale üretilir.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
