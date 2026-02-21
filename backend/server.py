@@ -602,8 +602,8 @@ async def api_root():
 
 # Domain Management
 @api_router.post("/domains", response_model=Domain)
-async def create_domain(domain: DomainCreate):
-    """Create a new domain"""
+async def create_domain(domain: DomainCreate, background_tasks: BackgroundTasks):
+    """Create a new domain with auto-generated content"""
     existing = await db.domains.find_one({"domain_name": domain.domain_name})
     if existing:
         raise HTTPException(status_code=400, detail="Domain already exists")
@@ -619,8 +619,108 @@ async def create_domain(domain: DomainCreate):
         perf = DomainPerformance(domain_id=domain_obj.id, site_id=site["id"], performance_score=calculate_heuristic_score(site))
         await db.domain_performance.insert_one(perf.model_dump())
     
-    logger.info(f"Domain created: {domain.domain_name}")
+    # Auto-generate starter content in background
+    background_tasks.add_task(auto_generate_domain_content, domain_obj.id, domain_obj.domain_name, domain_obj.focus)
+    
+    logger.info(f"Domain created: {domain.domain_name} - auto content generation started")
     return domain_obj
+
+async def auto_generate_domain_content(domain_id: str, domain_name: str, focus: str):
+    """Generate starter content for a new domain"""
+    topic_map = {
+        "bonus": [
+            "Deneme Bonusu Veren Siteler 2026 Guncel Liste",
+            "Hosgeldin Bonusu Rehberi En Yuksek Bonuslar",
+            "Cevrim Sarti Nedir Nasil Hesaplanir",
+            "Yatirimsiz Bonus Veren Siteler Tam Liste",
+            "Canli Bahis Bonuslari ve Promosyonlar",
+        ],
+        "spor": [
+            "Super Lig Haftalik Analiz ve Tahminler",
+            "Canli Bahis Stratejileri Rehberi",
+            "Futbol Istatistikleri Ile Kazanma Taktikleri",
+            "Basketbol Bahis Rehberi NBA ve Euroleague",
+            "Spor Bahislerinde Banko Maclar Nasil Bulunur",
+        ],
+        "hibrit": [
+            "Deneme Bonusu Veren Siteler 2026 Guncel Liste",
+            "Super Lig Haftalik Analiz ve Tahminler",
+            "Hosgeldin Bonusu Rehberi En Yuksek Bonuslar",
+            "Canli Bahis Stratejileri ve Bonuslari",
+            "Spor Bahislerinde Kazanma Taktikleri",
+        ],
+    }
+    topics = topic_map.get(focus, topic_map["bonus"])
+    
+    for topic in topics:
+        try:
+            existing = await db.articles.find_one({"domain_id": domain_id, "title": {"$regex": topic[:20], "$options": "i"}})
+            if existing:
+                continue
+            
+            prompt = f"""'{domain_name}' sitesi için '{topic}' konusunda SEO uyumlu, özgün bir makale yaz.
+800-1200 kelime, HTML formatında. Başlıklar h2/h3 ile. Doğal ve bilgilendirici ton kullan."""
+            
+            content = await generate_ai_content(prompt)
+            
+            article = Article(
+                domain_id=domain_id,
+                title=topic.replace("Guncel", "Güncel").replace("Yuksek", "Yüksek").replace("Sarti", "Şartı").replace("Nasil", "Nasıl").replace("Hesaplanir", "Hesaplanır").replace("Yatirimsiz", "Yatırımsız").replace("Canli", "Canlı").replace("Istatistikleri", "İstatistikleri").replace("Ile", "İle").replace("Taktikleri", "Taktikleri"),
+                slug=slugify(topic),
+                excerpt=f"{topic} hakkında detaylı rehber.",
+                content=content,
+                category="bonus" if "bonus" in topic.lower() or "cevrim" in topic.lower() else "spor",
+                tags=[slugify(t) for t in topic.split()[:4]],
+                seo_title=f"{topic} | {domain_name}",
+                seo_description=f"{topic} - {domain_name} güncel rehber ve bilgiler.",
+                is_ai_generated=True,
+                is_auto_generated=True,
+                is_published=True,
+                content_hash=hashlib.md5(content.encode()).hexdigest(),
+                content_updated_at=datetime.now(timezone.utc).isoformat(),
+            )
+            await db.articles.insert_one(article.model_dump())
+            logger.info(f"Auto article for {domain_name}: {topic}")
+            await asyncio.sleep(2)
+        except Exception as e:
+            logger.error(f"Auto content failed for {domain_name}/{topic}: {e}")
+
+# Public Site API - domain bazlı içerik sunma
+@api_router.get("/site/{domain_name}")
+async def get_site_data(domain_name: str):
+    """Get complete site data for a domain - used by frontend to render the site"""
+    domain = await db.domains.find_one({"domain_name": domain_name}, {"_id": 0})
+    if not domain:
+        raise HTTPException(status_code=404, detail="Site bulunamadı")
+    
+    domain_id = domain["id"]
+    
+    # Bonus sites for this domain
+    domain_site_links = await db.domain_sites.find({"domain_id": domain_id, "is_active": True}, {"_id": 0}).to_list(100)
+    site_ids = [ds["site_id"] for ds in domain_site_links]
+    bonus_sites = await db.bonus_sites.find({"id": {"$in": site_ids}, "is_active": True}, {"_id": 0}).to_list(100)
+    
+    # Articles for this domain
+    articles = await db.articles.find(
+        {"domain_id": domain_id, "is_published": True},
+        {"_id": 0, "content": 0}
+    ).sort("created_at", -1).limit(20).to_list(20)
+    
+    # Stats
+    article_count = await db.articles.count_documents({"domain_id": domain_id, "is_published": True})
+    generating = await db.articles.count_documents({"domain_id": domain_id, "is_auto_generated": True})
+    
+    return {
+        "domain": domain,
+        "bonus_sites": bonus_sites,
+        "articles": articles,
+        "stats": {
+            "total_articles": article_count,
+            "auto_generated": generating,
+            "total_bonus_sites": len(bonus_sites),
+        },
+        "is_ready": article_count > 0,
+    }
 
 @api_router.get("/domains")
 async def list_domains():
