@@ -34,6 +34,7 @@ const HomePage = () => {
   const [bonusSites, setBonusSites] = useState([]);
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [latestArticles, setLatestArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
   const sliderRef = useRef(null);
