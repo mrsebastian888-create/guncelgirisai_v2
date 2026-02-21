@@ -40,14 +40,34 @@ const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [sitesRes, articlesRes, categoriesRes] = await Promise.all([
-          axios.get(`${API}/bonus-sites?limit=20`),
-          axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
-          axios.get(`${API}/categories`).catch(() => ({ data: [] })),
-        ]);
-        setBonusSites(sitesRes.data);
-        setArticles(articlesRes.data);
-        setCategories(categoriesRes.data);
+        // Hostname'e göre domain-spesifik veri çek
+        const hostname = window.location.hostname;
+        const isPreview = hostname.endsWith(".preview.emergentagent.com") || hostname === "localhost" || hostname === "127.0.0.1";
+        
+        let siteData = null;
+        if (!isPreview && hostname !== "adminguncelgiris.company") {
+          // Canlı domain - domain-spesifik veri çek
+          try {
+            const siteRes = await axios.get(`${API}/site/${hostname}`);
+            siteData = siteRes.data;
+          } catch {}
+        }
+
+        if (siteData && siteData.is_ready) {
+          // Domain-spesifik veri var
+          setBonusSites(siteData.bonus_sites || []);
+          setArticles(siteData.articles || []);
+        } else {
+          // Varsayılan (preview veya global)
+          const [sitesRes, articlesRes, categoriesRes] = await Promise.all([
+            axios.get(`${API}/bonus-sites?limit=20`),
+            axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
+            axios.get(`${API}/categories`).catch(() => ({ data: [] })),
+          ]);
+          setBonusSites(sitesRes.data);
+          setArticles(articlesRes.data);
+          setCategories(categoriesRes.data);
+        }
       } catch (error) {
         console.error("Error:", error);
       } finally {
