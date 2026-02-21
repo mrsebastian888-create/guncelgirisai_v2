@@ -677,16 +677,20 @@ KURALLAR:
             
             content = await generate_ai_content(prompt)
             
+            title_clean = topic.replace("Guncel", "Güncel").replace("Yuksek", "Yüksek").replace("Sarti", "Şartı").replace("Nasil", "Nasıl").replace("Hesaplanir", "Hesaplanır").replace("Yatirimsiz", "Yatırımsız").replace("Canli", "Canlı").replace("Istatistikleri", "İstatistikleri").replace("Ile", "İle").replace("Taktikleri", "Taktikleri")
+            seo_title = f"{title_clean} - {domain_name} Rehberi"[:60]
+            seo_desc = f"{title_clean} hakkında detaylı ve güncel rehber. En iyi fırsatlar, stratejiler ve uzman tavsiyeleri {domain_name}'da."[:160]
+            
             article = Article(
                 domain_id=domain_id,
-                title=topic.replace("Guncel", "Güncel").replace("Yuksek", "Yüksek").replace("Sarti", "Şartı").replace("Nasil", "Nasıl").replace("Hesaplanir", "Hesaplanır").replace("Yatirimsiz", "Yatırımsız").replace("Canli", "Canlı").replace("Istatistikleri", "İstatistikleri").replace("Ile", "İle").replace("Taktikleri", "Taktikleri"),
+                title=title_clean,
                 slug=slugify(topic),
-                excerpt=f"{topic} hakkında detaylı rehber.",
+                excerpt=f"{title_clean} hakkında kapsamlı ve güncel rehber.",
                 content=content,
                 category="bonus" if "bonus" in topic.lower() or "cevrim" in topic.lower() else "spor",
                 tags=[slugify(t) for t in topic.split()[:4]],
-                seo_title=f"{topic} | {domain_name}",
-                seo_description=f"{topic} - {domain_name} güncel rehber ve bilgiler.",
+                seo_title=seo_title,
+                seo_description=seo_desc,
                 is_ai_generated=True,
                 is_auto_generated=True,
                 is_published=True,
