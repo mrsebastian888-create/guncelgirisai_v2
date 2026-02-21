@@ -128,18 +128,15 @@ const BonusRow = ({ site, rank }) => {
           rel="noopener noreferrer"
           onClick={handleClick}
           data-testid={`bonus-cta-${site.id}`}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg font-heading font-bold uppercase tracking-wide text-sm transition-all duration-200 active:scale-95"
+          className="flex items-center gap-1.5 px-5 py-2.5 rounded-lg font-heading font-bold uppercase tracking-wide text-sm transition-all duration-200 active:scale-95 hover:scale-105"
           style={{
             background: "var(--neon-green)",
             color: "#000",
-            boxShadow: "0 0 16px rgba(0,255,135,0.3)",
+            boxShadow: "0 0 20px rgba(0,255,135,0.4)",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 0 28px rgba(0,255,135,0.55)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 0 16px rgba(0,255,135,0.3)"; }}
         >
-          <ExternalLink className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Siteye Git</span>
-          <span className="sm:hidden">Git</span>
+          <ExternalLink className="w-4 h-4" />
+          <span>Siteye Git</span>
         </a>
       </div>
     </motion.div>
