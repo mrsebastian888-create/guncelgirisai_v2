@@ -446,6 +446,122 @@ const HomePage = () => {
         </div>
       </section>
 
+      {/* ── FİRMA REHBERİ ──────────────────────── */}
+      {allFirms.length > 0 && (
+        <section className="py-14 md:py-20 px-4 md:px-6" data-testid="firma-rehberi-section"
+          style={{ background: "linear-gradient(to bottom, transparent, rgba(0,240,255,0.03), transparent)" }}>
+          <div className="container mx-auto max-w-7xl">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4">
+              <div>
+                <div
+                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
+                  style={{ borderColor: "rgba(0,240,255,0.3)", color: "#00F0FF", background: "rgba(0,240,255,0.07)" }}
+                >
+                  <Users className="w-3 h-3" /> {allFirms.length}+ Site
+                </div>
+                <h2
+                  className="font-heading font-black uppercase leading-none"
+                  style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
+                >
+                  FİRMA REHBERİ
+                </h2>
+              </div>
+              <div className="relative w-full md:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Firma ara..."
+                  value={firmSearch}
+                  onChange={(e) => setFirmSearch(e.target.value)}
+                  data-testid="firma-search-input"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium outline-none transition-all focus:ring-1"
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    borderColor: "rgba(255,255,255,0.1)",
+                    color: "var(--foreground)",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="firma-grid">
+              {displayedFirms.map((firm, i) => {
+                const firmSlug = firm.name.toLowerCase().replace(/\s+/g, '-').replace(/[!&.]/g, '');
+                return (
+                  <div
+                    key={firm.id || i}
+                    className="group flex items-center gap-3 rounded-xl border p-3 transition-all duration-200 hover:border-[rgba(0,255,135,0.25)]"
+                    style={{
+                      background: "rgba(255,255,255,0.02)",
+                      borderColor: "rgba(255,255,255,0.06)",
+                    }}
+                    data-testid={`firma-card-${i}`}
+                  >
+                    {/* Logo */}
+                    <Link to={`/${firmSlug}`} className="shrink-0 w-11 h-11 rounded-lg overflow-hidden bg-white/5 border border-white/10">
+                      <img
+                        src={firm.logo_url}
+                        alt={firm.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.src = "https://placehold.co/80x80/1a1a1a/00FF87?text=" + firm.name?.charAt(0); }}
+                      />
+                    </Link>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <Link to={`/${firmSlug}`} className="hover:text-[var(--neon-green)] transition-colors">
+                        <h3 className="font-heading font-bold text-sm tracking-tight truncate" style={{ color: "var(--foreground)" }}>
+                          {firm.name}
+                        </h3>
+                      </Link>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-heading font-black text-sm" style={{ color: "var(--neon-green)" }}>
+                          {firm.bonus_amount}
+                        </span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: "rgba(255,255,255,0.06)", color: "var(--muted-foreground)" }}>
+                          {firm.bonus_type === "deneme" ? "Deneme" : firm.bonus_type === "hosgeldin" ? "Hoşgeldin" : firm.bonus_type === "casino" ? "Casino" : firm.bonus_type === "spor" ? "Spor" : firm.bonus_type}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* CTA */}
+                    <a
+                      href={firm.affiliate_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid={`firma-cta-${i}`}
+                      className="shrink-0 flex items-center gap-1 px-3 py-2 rounded-lg font-heading font-bold uppercase text-[11px] tracking-wide transition-all duration-200 active:scale-95 hover:scale-105"
+                      style={{
+                        background: "var(--neon-green)",
+                        color: "#000",
+                        boxShadow: "0 0 12px rgba(0,255,135,0.3)",
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Giriş Yap
+                    </a>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Show More / Less */}
+            {filteredFirms.length > 30 && (
+              <div className="text-center mt-6">
+                <button
+                  onClick={() => setShowAllFirms(!showAllFirms)}
+                  data-testid="firma-show-more-btn"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-heading font-bold uppercase text-sm tracking-wide border transition-all hover:bg-white/5"
+                  style={{ borderColor: "rgba(0,240,255,0.3)", color: "#00F0FF" }}
+                >
+                  {showAllFirms ? "Daha Az Göster" : `Tümünü Gör (${filteredFirms.length})`}
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* ── SON EKLENEN MAKALELER + EN İYİ FİRMALAR ── */}
       {latestArticles.length > 0 && (
         <section className="py-14 md:py-20 px-4 md:px-6" data-testid="latest-articles-section">
