@@ -160,7 +160,7 @@ const HomePage = () => {
   /* ── Reusable: Top-5 Site Card ── */
   const SiteCard = ({ site, rank, accentColor }) => (
     <div
-      className="group rounded-xl border p-4 transition-all duration-200 hover:scale-[1.01]"
+      className="group relative rounded-xl border p-4 transition-all duration-200 hover:scale-[1.01]"
       style={{
         background: rank === 1 ? `${accentColor}08` : "rgba(255,255,255,0.02)",
         borderColor: rank === 1 ? `${accentColor}30` : "rgba(255,255,255,0.06)",
