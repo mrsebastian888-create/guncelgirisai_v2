@@ -19,6 +19,7 @@ import FirmPage from "@/pages/FirmPage";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import WelcomePopup from "@/components/WelcomePopup";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
