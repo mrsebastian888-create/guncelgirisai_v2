@@ -316,7 +316,7 @@ const HomePage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="flex flex-wrap gap-6 mt-8"
+            className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-6 mt-8"
           >
             {[
               { icon: Trophy, value: "264+", label: "Firma" },
