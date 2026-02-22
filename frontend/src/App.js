@@ -94,6 +94,7 @@ function AppLayout({ isLoading }) {
         </Routes>
       </main>
       {!isAdminPath && !isAdminOnlyDomain && <Footer />}
+      {!isAdminPath && !isAdminOnlyDomain && <MobileBottomNav />}
       <Toaster position="top-right" richColors />
     </div>
   );
