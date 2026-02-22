@@ -201,7 +201,7 @@ const HomePage = () => {
         href={site.affiliate_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-heading font-bold uppercase text-xs tracking-wide transition-all duration-200 active:scale-95"
+        className="mt-3 sm:mt-0 w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-heading font-bold uppercase text-xs tracking-wide transition-all duration-200 active:scale-95 sm:hover:scale-105 sm:absolute sm:right-4 sm:top-1/2 sm:-translate-y-1/2"
         style={{ background: accentColor, color: "#000", boxShadow: `0 0 16px ${accentColor}40` }}
       >
         <ExternalLink className="w-3.5 h-3.5" />
