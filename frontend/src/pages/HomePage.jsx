@@ -160,65 +160,49 @@ const HomePage = () => {
   /* ── Reusable: Top-5 Site Card ── */
   const SiteCard = ({ site, rank, accentColor }) => (
     <div
-      className="group flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 hover:scale-[1.01]"
+      className="group rounded-xl border p-4 transition-all duration-200 hover:scale-[1.01]"
       style={{
         background: rank === 1 ? `${accentColor}08` : "rgba(255,255,255,0.02)",
         borderColor: rank === 1 ? `${accentColor}30` : "rgba(255,255,255,0.06)",
       }}
       data-testid={`top-site-${rank}`}
     >
-      <div
-        className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-heading font-black text-lg"
-        style={{
-          background: rank <= 3 ? `${accentColor}18` : "rgba(255,255,255,0.05)",
-          color: rank <= 3 ? accentColor : "var(--muted-foreground)",
-          border: rank === 1 ? `1px solid ${accentColor}40` : "none",
-        }}
-      >
-        {rank}
-      </div>
-      <Link to={`/${getFirmSlug(site.name)}`} className="shrink-0 w-11 h-11 rounded-lg overflow-hidden border border-white/10">
-        <img
-          src={site.logo_url}
-          alt={site.name}
-          className="w-full h-full object-cover"
-          onError={(e) => { e.target.src = `https://placehold.co/80x80/1a1a1a/${accentColor.replace('#', '')}?text=${site.name?.charAt(0)}`; }}
-        />
-      </Link>
-      <div className="flex-1 min-w-0">
-        <Link to={`/${getFirmSlug(site.name)}`} className="hover:opacity-80 transition-opacity">
-          <h3 className="font-heading font-bold text-sm uppercase tracking-tight truncate" style={{ color: "var(--foreground)" }}>
-            {site.name}
-          </h3>
+      <div className="flex items-center gap-3">
+        <div
+          className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center font-heading font-black text-base"
+          style={{
+            background: rank <= 3 ? `${accentColor}18` : "rgba(255,255,255,0.05)",
+            color: rank <= 3 ? accentColor : "var(--muted-foreground)",
+          }}
+        >
+          {rank}
+        </div>
+        <Link to={`/${getFirmSlug(site.name)}`} className="shrink-0 w-10 h-10 rounded-lg overflow-hidden border border-white/10">
+          <img src={site.logo_url} alt={site.name} className="w-full h-full object-cover"
+            onError={(e) => { e.target.src = `https://placehold.co/80x80/1a1a1a/${accentColor.replace('#', '')}?text=${site.name?.charAt(0)}`; }} />
         </Link>
-        <div className="flex items-center gap-2 mt-0.5">
-          <Star className="w-3 h-3 fill-current" style={{ color: "#FBBF24" }} />
-          <span className="text-xs font-medium" style={{ color: "#FBBF24" }}>{site.rating || "4.5"}</span>
-          {site.features && site.features.slice(0, 2).map((f, fi) => (
-            <span key={fi} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "rgba(255,255,255,0.06)", color: "var(--muted-foreground)" }}>
-              {f}
-            </span>
-          ))}
+        <div className="flex-1 min-w-0">
+          <Link to={`/${getFirmSlug(site.name)}`} className="hover:opacity-80 transition-opacity">
+            <h3 className="font-heading font-bold text-sm uppercase tracking-tight truncate" style={{ color: "var(--foreground)" }}>{site.name}</h3>
+          </Link>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Star className="w-3 h-3 fill-current" style={{ color: "#FBBF24" }} />
+            <span className="text-xs font-medium" style={{ color: "#FBBF24" }}>{site.rating || "4.5"}</span>
+          </div>
         </div>
-      </div>
-      <div className="shrink-0 text-right mr-2">
-        <div className="font-heading font-black text-base" style={{ color: accentColor }}>
-          {site.bonus_amount}
-        </div>
-        <div className="text-[10px] uppercase" style={{ color: "var(--muted-foreground)" }}>
-          {site.bonus_type === "deneme" ? "Deneme" : site.bonus_type === "hosgeldin" ? "Hosgeldin" : site.bonus_type === "casino" ? "Casino" : site.bonus_type === "spor" ? "Spor" : site.bonus_type}
+        <div className="shrink-0 text-right">
+          <div className="font-heading font-black text-base" style={{ color: accentColor }}>{site.bonus_amount}</div>
+          <div className="text-[10px] uppercase" style={{ color: "var(--muted-foreground)" }}>
+            {site.bonus_type === "deneme" ? "Deneme" : site.bonus_type === "hosgeldin" ? "Hosgeldin" : site.bonus_type === "casino" ? "Casino" : site.bonus_type === "spor" ? "Spor" : site.bonus_type}
+          </div>
         </div>
       </div>
       <a
         href={site.affiliate_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-lg font-heading font-bold uppercase text-xs tracking-wide transition-all duration-200 active:scale-95 hover:scale-105"
-        style={{
-          background: accentColor,
-          color: "#000",
-          boxShadow: `0 0 16px ${accentColor}40`,
-        }}
+        className="mt-3 w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg font-heading font-bold uppercase text-xs tracking-wide transition-all duration-200 active:scale-95"
+        style={{ background: accentColor, color: "#000", boxShadow: `0 0 16px ${accentColor}40` }}
       >
         <ExternalLink className="w-3.5 h-3.5" />
         Kayit Ol
