@@ -227,7 +227,7 @@ const HomePage = () => {
   );
 
   return (
-    <div className="min-h-screen" data-testid="homepage">
+    <div className="min-h-screen pb-16 md:pb-0" data-testid="homepage">
       <SEOHead
         title="Deneme Bonusu Veren Siteler 2026 - En Güncel Bonus Rehberi"
         description="En güvenilir deneme bonusu veren siteler 2026 listesi. Yatırımsız bonus fırsatları, hoşgeldin bonusları ve güncel bahis rehberleri."
