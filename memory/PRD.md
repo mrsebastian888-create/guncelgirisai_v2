@@ -11,7 +11,15 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v9.0: GoDaddy API Entegrasyonu (Feb 2026)
 ### v10.0: Otomatik İçerik Hızlandırma (Feb 2026)
 ### v11.0: Firma Rehberi + Affiliate URL Güncellemesi (Feb 2026)
-### v12.0: Ana Sayfa Kapsamlı Güncelleme (Feb 2026) - CURRENT
+### v12.0: Ana Sayfa Kapsamlı Güncelleme (Feb 2026)
+### v13.0: Production Cleanup - Emergent Badge Kaldırma (Feb 2026) - CURRENT
+
+**Değişiklikler:**
+- "Made with Emergent" badge tamamen kaldırıldı (index.html)
+- emergent-main.js script kaldırıldı
+- debug-monitor.js iframe script kaldırıldı
+- Visual Edits tailwind CDN injection kaldırıldı
+- Tüm codebase'de sıfır Emergent branding referansı
 
 **Değişiklikler:**
 - "BONUS SİTELERİ" → "YILIN EN İYİ SİTELERİ" (5 firma, altın tema)
