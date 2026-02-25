@@ -18,6 +18,8 @@
 .env.test.local
 .env.production.local
 
+# NOTE: .env is tracked intentionally for deployment
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
