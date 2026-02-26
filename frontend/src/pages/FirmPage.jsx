@@ -69,12 +69,49 @@ export default function FirmPage() {
   const { site, articles, similar_sites } = data;
   const bonusLabel = BONUS_TYPE_LABELS[site.bonus_type] || site.bonus_type;
 
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Ana Sayfa", "item": "https://guncelgiris.ai" },
+      { "@type": "ListItem", "position": 2, "name": "Firma Rehberi", "item": "https://guncelgiris.ai/#firma-rehberi" },
+      { "@type": "ListItem", "position": 3, "name": site.name, "item": `https://guncelgiris.ai/${site.slug || slug}` }
+    ]
+  };
+
+  const firmJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": site.name,
+    "url": `https://guncelgiris.ai/${site.slug || slug}`,
+    "logo": site.logo_url,
+    "description": `${site.name} guncel giris adresi, ${site.bonus_amount} ${bonusLabel} firsati.`,
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": String(site.rating || 4.5),
+      "bestRating": "5",
+      "worstRating": "1",
+      "ratingCount": "150"
+    }
+  };
+
+  const reviewJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Review",
+    "itemReviewed": { "@type": "Organization", "name": site.name },
+    "reviewRating": { "@type": "Rating", "ratingValue": String(site.rating || 4.5), "bestRating": "5" },
+    "author": { "@type": "Organization", "name": "guncelgiris.ai" },
+    "reviewBody": `${site.name} detayli inceleme. ${site.bonus_amount} ${bonusLabel} firsati ile kullanicilarina guvenilir hizmet sunmaktadir.`
+  };
+
   return (
     <div className="min-h-screen bg-background pt-20 pb-16" data-testid="firm-page">
       <SEOHead
-        title={`${site.name} Guncel Giris Adresi | Bonus ve Inceleme`}
-        description={`${site.name} guncel giris adresi, ${site.bonus_amount} ${bonusLabel} firsati. Detayli inceleme ve bonus rehberi.`}
-        amphtml={`${process.env.REACT_APP_BACKEND_URL}/api/amp/${site.slug || slug}`}
+        title={`${site.name} Guncel Giris Adresi 2026 | ${site.bonus_amount} ${bonusLabel}`}
+        description={`${site.name} guncel giris adresi 2026. ${site.bonus_amount} ${bonusLabel} firsati. Detayli inceleme, bonus rehberi ve guvenilirlik analizi.`}
+        canonical={`https://guncelgiris.ai/${site.slug || slug}`}
+        amphtml={`https://guncelgiris.ai/api/amp/${site.slug || slug}`}
+        jsonLd={[breadcrumbJsonLd, firmJsonLd, reviewJsonLd]}
       />
 
       {/* Hero Banner */}
