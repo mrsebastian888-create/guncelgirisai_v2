@@ -2670,28 +2670,41 @@ async def admin_login(req: LoginRequest):
     if req.username != ADMIN_USERNAME:
         raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
     
-    # Try env-based hash first
+    verified = False
+    
+    # Try env-based hash
     if ADMIN_PASSWORD_HASH:
-        if pwd_context.verify(req.password, ADMIN_PASSWORD_HASH):
-            token = create_jwt_token(req.username)
-            logger.info(f"Admin login successful (env): {req.username}")
-            return {"token": token, "username": req.username, "expires_in": JWT_EXPIRE_HOURS * 3600}
+        try:
+            verified = pwd_context.verify(req.password, ADMIN_PASSWORD_HASH)
+        except Exception:
+            pass
     
     # Try database-based hash
-    user = await db.users.find_one({"username": req.username}, {"_id": 0})
-    if user and user.get("hashed_password"):
-        if pwd_context.verify(req.password, user["hashed_password"]):
-            token = create_jwt_token(req.username)
-            logger.info(f"Admin login successful (db): {req.username}")
-            return {"token": token, "username": req.username, "expires_in": JWT_EXPIRE_HOURS * 3600}
+    if not verified:
+        try:
+            user = await db.users.find_one({"username": req.username}, {"_id": 0})
+            if user and user.get("hashed_password"):
+                verified = pwd_context.verify(req.password, user["hashed_password"])
+        except Exception:
+            pass
     
-    # Fallback: direct password check for initial setup
-    if req.password == "123123..":
-        token = create_jwt_token(req.username)
-        logger.info(f"Admin login successful (fallback): {req.username}")
-        return {"token": token, "username": req.username, "expires_in": JWT_EXPIRE_HOURS * 3600}
+    # Fallback: direct password check via hashlib
+    if not verified:
+        import hashlib
+        stored = await db.users.find_one({"username": req.username}, {"_id": 0})
+        if stored and stored.get("plain_hash"):
+            verified = stored["plain_hash"] == hashlib.sha256(req.password.encode()).hexdigest()
     
-    raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
+    # Last resort: hardcoded check for initial setup
+    if not verified and req.password == "123123..":
+        verified = True
+    
+    if not verified:
+        raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
+    
+    token = create_jwt_token(req.username)
+    logger.info(f"Admin login successful: {req.username}")
+    return {"token": token, "username": req.username, "expires_in": JWT_EXPIRE_HOURS * 3600}
 
 @api_router.get("/auth/verify")
 async def verify_token(request: Request):
