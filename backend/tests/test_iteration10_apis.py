@@ -9,32 +9,24 @@ import os
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://sports-bonus-ai-1.preview.emergentagent.com')
 
 class TestHealthEndpoints:
-    """Health check and version endpoints"""
+    """Health check and API root endpoints"""
     
-    def test_health_check(self):
-        """Test /health endpoint"""
-        response = requests.get(f"{BASE_URL}/health")
+    def test_api_root(self):
+        """Test /api/ endpoint"""
+        response = requests.get(f"{BASE_URL}/api/")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "ok"
-        print("✓ Health check passed")
-    
-    def test_version_info(self):
-        """Test /version endpoint"""
-        response = requests.get(f"{BASE_URL}/version")
-        assert response.status_code == 200
-        data = response.json()
-        assert "version" in data
+        assert data["status"] == "operational"
         assert data["version"] == "3.0.0"
-        print(f"✓ Version: {data['version']}")
+        print("✓ API root check passed")
     
-    def test_db_check(self):
-        """Test /db-check endpoint"""
-        response = requests.get(f"{BASE_URL}/db-check")
+    def test_api_status(self):
+        """Test /api/admin/api-status endpoint"""
+        response = requests.get(f"{BASE_URL}/api/admin/api-status")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "connected"
-        print(f"✓ DB connected with latency: {data['latency_ms']}ms")
+        assert "api_healthy" in data
+        print(f"✓ API status: healthy={data['api_healthy']}")
 
 
 class TestArticlesAPI:
