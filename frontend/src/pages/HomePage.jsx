@@ -255,120 +255,264 @@ const HomePage = () => {
         jsonLd={[faqJsonLd, orgJsonLd, organizationJsonLd, itemListJsonLd].filter(Boolean)}
       />
 
-      {/* ── HERO SLIDER ─────────────────────────── */}
-      <section className="relative overflow-hidden" style={{ minHeight: "60vh" }}>
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={`hero-img-${heroSlide}`}
-            src={HERO_SLIDES[heroSlide].image}
-            alt="Hero"
-            className="absolute inset-0 w-full h-full object-cover opacity-25"
-            initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 0.25, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.8 }}
-          />
-        </AnimatePresence>
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(5,5,5,0.7) 0%, rgba(5,5,5,0.95) 100%)" }} />
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: `linear-gradient(${HERO_SLIDES[heroSlide].accent}4D 1px, transparent 1px), linear-gradient(90deg, ${HERO_SLIDES[heroSlide].accent}4D 1px, transparent 1px)`,
+      {/* ── HERO — 3-Column Sponsor Slider ─────────────────────────── */}
+      <section className="relative overflow-hidden" style={{ minHeight: "650px" }} data-testid="hero-section">
+        {/* Background */}
+        <div className="absolute inset-0 bg-[#050505]" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{
+          backgroundImage: "linear-gradient(rgba(0,255,135,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,135,0.3) 1px, transparent 1px)",
           backgroundSize: "60px 60px"
         }} />
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(0,255,135,0.06) 0%, transparent 60%)" }} />
 
-        <div className="relative z-10 container mx-auto max-w-7xl px-4 md:px-6 flex flex-col justify-center" style={{ minHeight: "60vh" }}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`hero-content-${heroSlide}`}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -24 }}
-              transition={{ duration: 0.5 }}
-              className="max-w-3xl"
-            >
-              <div
-                className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 mb-5 text-xs font-semibold uppercase tracking-widest"
-                style={{ borderColor: `${HERO_SLIDES[heroSlide].accent}4D`, color: HERO_SLIDES[heroSlide].accent, background: `${HERO_SLIDES[heroSlide].accent}12` }}
+        <div className="relative z-10 container mx-auto max-w-7xl px-4 md:px-6 h-full flex flex-col justify-center" style={{ minHeight: "650px" }}>
+          
+          {/* 3-Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_300px] gap-6 items-center">
+            
+            {/* LEFT — Firma Kimlik Bloğu */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`hero-left-${heroSlide}`}
+                initial={{ opacity: 0, x: -30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.5 }}
+                className="hidden lg:flex flex-col items-center text-center gap-4 p-6 rounded-2xl"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
               >
-                <Zap className="w-3.5 h-3.5" />
-                {HERO_SLIDES[heroSlide].badge}
-              </div>
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-2xl animate-[pulseGlow_2s_ease-in-out_infinite]" style={{ background: "rgba(0,255,135,0.15)", filter: "blur(12px)" }} />
+                  <img
+                    src={topFive[heroSlide % topFive.length]?.logo_url || ""}
+                    alt={topFive[heroSlide % topFive.length]?.name || ""}
+                    className="relative w-20 h-20 rounded-2xl object-cover border-2"
+                    style={{ borderColor: "rgba(0,255,135,0.3)" }}
+                  />
+                </div>
+                <div>
+                  <h3 className="font-heading font-black text-xl uppercase tracking-tight text-white">
+                    {topFive[heroSlide % topFive.length]?.name || ""}
+                  </h3>
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(0,255,135,0.12)", color: "#00FF87" }}>
+                      <Globe className="w-3 h-3" /> {topFive[heroSlide % topFive.length]?.category || "Turkiye"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(251,191,36,0.12)", color: "#FBBF24" }}>
+                      <Star className="w-3 h-3" /> {topFive[heroSlide % topFive.length]?.rating || "4.5"}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                  Guncel giris adresi ve bonus firsatlari icin hemen kayit olun
+                </p>
+                <div className="w-full flex items-center gap-2 mt-1">
+                  {topFive.slice(0, 5).map((s, i) => (
+                    <button key={i} onClick={() => setHeroSlide(i)} className="flex-1 h-1 rounded-full transition-all duration-300" style={{
+                      background: heroSlide === i ? "#00FF87" : "rgba(255,255,255,0.1)"
+                    }} />
+                  ))}
+                </div>
+              </motion.div>
+            </AnimatePresence>
 
-              <h1
-                className="font-heading font-black uppercase leading-none mb-4"
-                style={{ fontSize: "clamp(2.8rem, 7vw, 5.5rem)", letterSpacing: "-0.02em" }}
+            {/* CENTER — Ana Slider Alani */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`hero-center-${heroSlide}`}
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.03 }}
+                transition={{ duration: 0.6 }}
+                className="relative flex flex-col items-center justify-center text-center py-8 lg:py-0"
+                style={{ minHeight: "450px" }}
               >
-                <span style={{ color: "var(--foreground)" }}>{HERO_SLIDES[heroSlide].title[0]}</span>
-                <br />
-                <span style={{ color: HERO_SLIDES[heroSlide].accent, textShadow: `0 0 40px ${HERO_SLIDES[heroSlide].accent}66` }}>
-                  {HERO_SLIDES[heroSlide].title[1]}
-                </span>
-                <br />
-                <span style={{ color: "var(--foreground)" }}>{HERO_SLIDES[heroSlide].title[2]}</span>
-              </h1>
+                {/* Slide Background Image */}
+                <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                  <img
+                    src={HERO_SLIDES[heroSlide % HERO_SLIDES.length]?.image || ""}
+                    alt="Hero"
+                    className="w-full h-full object-cover opacity-15"
+                  />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(5,5,5,0.85) 0%, rgba(5,5,5,0.7) 50%, rgba(5,5,5,0.9) 100%)" }} />
+                </div>
 
-              <p className="text-base md:text-lg mb-8 max-w-xl" style={{ color: "var(--muted-foreground)" }}>
-                {HERO_SLIDES[heroSlide].desc}
-              </p>
+                <div className="relative z-10 px-4 md:px-8">
+                  <div
+                    className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 mb-5 text-xs font-semibold uppercase tracking-widest"
+                    style={{ borderColor: "rgba(0,255,135,0.3)", color: "#00FF87", background: "rgba(0,255,135,0.08)" }}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                    {HERO_SLIDES[heroSlide % HERO_SLIDES.length]?.badge || ""}
+                  </div>
 
-              <div className="flex flex-wrap gap-3">
-                <a
-                  href={HERO_SLIDES[heroSlide].cta.href}
-                  data-testid="hero-cta-btn"
-                  className="inline-flex items-center gap-2 rounded-lg px-7 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all active:scale-95 hover:scale-105"
-                  style={{ background: HERO_SLIDES[heroSlide].accent, color: "#000", boxShadow: `0 0 24px ${HERO_SLIDES[heroSlide].accent}59` }}
-                >
-                  <Gift className="w-4 h-4" />
-                  {HERO_SLIDES[heroSlide].cta.label}
-                </a>
-                <Link
-                  to="/spor-haberleri"
-                  data-testid="hero-sports-btn"
-                  className="inline-flex items-center gap-2 rounded-lg border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5 hover:scale-105"
-                  style={{ borderColor: "rgba(255,255,255,0.2)", color: "var(--foreground)" }}
-                >
-                  <Activity className="w-4 h-4" />
-                  Spor Haberleri
-                </Link>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+                  <h1 className="font-heading font-black uppercase leading-none mb-4" style={{ fontSize: "clamp(2.2rem, 6vw, 4.5rem)", letterSpacing: "-0.02em" }}>
+                    <span className="text-white">{HERO_SLIDES[heroSlide % HERO_SLIDES.length]?.title[0] || ""}</span>
+                    <br />
+                    <span style={{ color: "#00FF87", textShadow: "0 0 40px rgba(0,255,135,0.5)" }}>
+                      {HERO_SLIDES[heroSlide % HERO_SLIDES.length]?.title[1] || ""}
+                    </span>
+                    <br />
+                    <span className="text-white">{HERO_SLIDES[heroSlide % HERO_SLIDES.length]?.title[2] || ""}</span>
+                  </h1>
 
-          <div className="flex gap-2 mt-8">
-            {HERO_SLIDES.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setHeroSlide(i)}
-                data-testid={`hero-slide-${i}`}
-                className="h-1.5 rounded-full transition-all duration-300"
+                  <p className="text-sm md:text-base mb-6 max-w-xl mx-auto" style={{ color: "var(--muted-foreground)" }}>
+                    {HERO_SLIDES[heroSlide % HERO_SLIDES.length]?.desc || ""}
+                  </p>
+
+                  <div className="flex flex-wrap gap-3 justify-center">
+                    <a
+                      href={HERO_SLIDES[heroSlide % HERO_SLIDES.length]?.cta?.href || "#"}
+                      data-testid="hero-cta-btn"
+                      className="inline-flex items-center gap-2 rounded-xl px-7 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all active:scale-95 hover:scale-105"
+                      style={{ background: "#00FF87", color: "#000", boxShadow: "0 0 30px rgba(0,255,135,0.4)" }}
+                    >
+                      <Gift className="w-4 h-4" />
+                      {HERO_SLIDES[heroSlide % HERO_SLIDES.length]?.cta?.label || "Bonus Al"}
+                    </a>
+                    <Link
+                      to="/spor-haberleri"
+                      data-testid="hero-sports-btn"
+                      className="inline-flex items-center gap-2 rounded-xl border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5 hover:scale-105"
+                      style={{ borderColor: "rgba(255,255,255,0.15)", color: "var(--foreground)" }}
+                    >
+                      <Activity className="w-4 h-4" />
+                      Spor Haberleri
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Slide Dots — Mobil */}
+                <div className="flex gap-2 mt-6 lg:hidden">
+                  {HERO_SLIDES.map((_, i) => (
+                    <button key={i} onClick={() => setHeroSlide(i)} className="h-1.5 rounded-full transition-all" style={{
+                      width: heroSlide === i ? "28px" : "10px",
+                      background: heroSlide === i ? "#00FF87" : "rgba(255,255,255,0.2)"
+                    }} />
+                  ))}
+                </div>
+
+                {/* Statik Firma Tanitim Logosu — Alt Orta */}
+                <div className="relative z-10 mt-8 flex items-center justify-center gap-3 opacity-60">
+                  <div className="h-px flex-1 max-w-[80px]" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15))" }} />
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-semibold" style={{ color: "var(--muted-foreground)" }}>guncelgiris.ai</span>
+                  <div className="h-px flex-1 max-w-[80px]" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.15), transparent)" }} />
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* RIGHT — Bonus Karti */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`hero-right-${heroSlide}`}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 30 }}
+                transition={{ duration: 0.5 }}
+                className="flex flex-col items-center text-center gap-4 p-6 rounded-2xl relative overflow-hidden transition-transform hover:scale-[1.03]"
                 style={{
-                  width: heroSlide === i ? "32px" : "12px",
-                  background: heroSlide === i ? HERO_SLIDES[heroSlide].accent : "rgba(255,255,255,0.2)",
+                  background: "linear-gradient(160deg, rgba(0,50,20,0.6) 0%, rgba(0,20,10,0.8) 100%)",
+                  border: "1px solid rgba(0,255,135,0.15)",
+                  backdropFilter: "blur(16px)",
+                  boxShadow: "0 0 60px rgba(0,255,135,0.08), inset 0 0 60px rgba(0,255,135,0.03)"
                 }}
-              />
-            ))}
+                data-testid="hero-bonus-card"
+              >
+                {/* Radial glow behind bonus */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full" style={{
+                  background: "radial-gradient(circle, rgba(0,255,135,0.2) 0%, transparent 70%)",
+                  filter: "blur(30px)",
+                  animation: "pulseGlow 2s ease-in-out infinite"
+                }} />
+
+                <div className="relative z-10">
+                  <span className="text-xs uppercase tracking-[0.25em] font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    HOSGELDIN BONUSU
+                  </span>
+
+                  <div className="my-4">
+                    <span
+                      className="font-heading font-black text-5xl md:text-6xl"
+                      style={{
+                        color: "#00FF87",
+                        textShadow: "0 0 40px rgba(0,255,135,0.5), 0 0 80px rgba(0,255,135,0.25)",
+                        animation: "pulseGlow 2s ease-in-out infinite"
+                      }}
+                    >
+                      {topFive[heroSlide % topFive.length]?.bonus_amount || "1700 TL"}
+                    </span>
+                  </div>
+
+                  <p className="text-xs mb-5" style={{ color: "var(--muted-foreground)" }}>
+                    Ilk yatiriminiza ozel bonus firsati
+                  </p>
+
+                  <a
+                    href={topFive[heroSlide % topFive.length]?.affiliate_url || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative inline-flex items-center justify-center gap-2 w-full rounded-xl px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm overflow-hidden"
+                    style={{
+                      background: "linear-gradient(135deg, #00FF87, #00CC6B)",
+                      color: "#000",
+                      boxShadow: "0 0 30px rgba(0,255,135,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+                      animation: "breathing 2s ease-in-out infinite"
+                    }}
+                    data-testid="hero-bonus-cta"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    SITEYE GIT
+                  </a>
+
+                  <div className="flex items-center justify-center gap-3 mt-4">
+                    <div className="flex items-center gap-1">
+                      <Shield className="w-3 h-3" style={{ color: "#00FF87" }} />
+                      <span className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>Lisansli</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" style={{ color: "#00FF87" }} />
+                      <span className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>Hizli Odeme</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
+          {/* Stats Bar */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-6 mt-8"
+            className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:gap-6 mt-8 justify-center"
           >
             {[
               { icon: Trophy, value: "264+", label: "Firma" },
-              { icon: Gift, value: "2500 TL", label: "En Yüksek Bonus" },
+              { icon: Gift, value: "2500 TL", label: "En Yuksek Bonus" },
               { icon: Shield, value: "7/24", label: "Destek" },
-              { icon: Clock, value: "Anında", label: "Ödeme" },
+              { icon: Clock, value: "Aninda", label: "Odeme" },
             ].map((s, i) => (
               <div key={i} className="flex items-center gap-2">
-                <s.icon className="w-5 h-5" style={{ color: "var(--neon-green)" }} />
-                <span className="font-heading font-bold text-lg" style={{ color: "var(--foreground)" }}>{s.value}</span>
+                <s.icon className="w-5 h-5" style={{ color: "#00FF87" }} />
+                <span className="font-heading font-bold text-lg text-white">{s.value}</span>
                 <span className="text-sm" style={{ color: "var(--muted-foreground)" }}>{s.label}</span>
               </div>
             ))}
           </motion.div>
         </div>
       </section>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes pulseGlow {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+        @keyframes breathing {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.04); }
+        }
+      `}</style>
 
       {/* ── YILIN EN İYİ SİTELERİ (Slider sonrası ilk alan) ── */}
       {topFive.length > 0 && (
