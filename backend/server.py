@@ -1204,14 +1204,10 @@ async def get_all_bonus_sites(limit: int = 500, category: str = None):
     return sites
 
 
-@api_router.get("/firma/{slug}")
-async def get_firma_detail(slug: str):
-    """Get firm detail page data by slug"""
-    # Try slug field first (firmaismi-guncelgiris format)
+async def resolve_site_by_slug(slug: str) -> Dict[str, Any]:
+    """Resolve firm by slug with backward-compatible fallbacks."""
     site = await db.bonus_sites.find_one({"slug": slug}, {"_id": 0})
-    
     if not site:
-        # Fallback: try name-based matching for backward compatibility
         site = await db.bonus_sites.find_one(
             {"$or": [
                 {"name": {"$regex": f"^{slug}$", "$options": "i"}},
@@ -1220,15 +1216,50 @@ async def get_firma_detail(slug: str):
             ]},
             {"_id": 0}
         )
-    
     if not site:
         site = await db.bonus_sites.find_one(
             {"name": {"$regex": slug.replace("-guncelgiris", "").replace("-", ".*"), "$options": "i"}},
             {"_id": 0}
         )
-    
     if not site:
         raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    return site
+
+
+def normalize_video_urls(site: Dict[str, Any]) -> Dict[str, str]:
+    """Build firm specific video links (custom if exists, fallback to YouTube search embed)."""
+    site_name = site.get("name", "")
+    search_query = quote_plus(f"{site_name} bonus inceleme guncel giris")
+    fallback_watch_url = f"https://www.youtube.com/results?search_query={search_query}"
+    fallback_embed_url = f"https://www.youtube.com/embed?listType=search&list={search_query}"
+
+    video_url = (site.get("video_url") or "").strip()
+    video_embed_url = video_url
+
+    if "watch?v=" in video_url:
+        video_embed_url = video_url.replace("watch?v=", "embed/")
+    elif "youtu.be/" in video_url:
+        video_id = video_url.split("youtu.be/")[-1].split("?")[0].strip("/")
+        video_embed_url = f"https://www.youtube.com/embed/{video_id}" if video_id else fallback_embed_url
+    elif not video_url:
+        video_url = fallback_watch_url
+        video_embed_url = fallback_embed_url
+
+    video_title = site.get("video_title") or f"{site_name} Video İncelemesi"
+    video_description = site.get("video_description") or f"{site_name} için güncel giriş, bonus ve güvenilirlik odaklı video özeti."
+
+    return {
+        "video_url": video_url,
+        "video_embed_url": video_embed_url,
+        "video_title": video_title,
+        "video_description": video_description,
+    }
+
+
+@api_router.get("/firma/{slug}")
+async def get_firma_detail(slug: str):
+    """Get firm detail page data by slug"""
+    site = await resolve_site_by_slug(slug)
     
     # Get related articles
     site_name = site["name"]
