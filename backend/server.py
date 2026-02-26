@@ -3050,11 +3050,19 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
+    <loc>{base_url}/api/sitemap-videos.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+  <sitemap>
     <loc>{base_url}/api/sitemap-articles.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
     <loc>{base_url}/api/sitemap-amp.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-amp-videos.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
 </sitemapindex>"""
@@ -3121,6 +3129,32 @@ async def sitemap_firms(request: Request):
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
+
+@api_router.get("/sitemap-videos.xml")
+async def sitemap_videos(request: Request):
+    """Firm video pages sitemap (/{slug}/video)."""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
+
+    urls = []
+    for firm in firms:
+        slug = firm.get("slug", "")
+        if not slug:
+            continue
+        urls.append(f"""  <url>
+    <loc>{base_url}/{slug}/video</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
 @api_router.get("/sitemap-articles.xml")
 async def sitemap_articles(request: Request):
     """All published articles sitemap"""
@@ -3161,6 +3195,32 @@ async def sitemap_amp(request: Request):
             continue
         urls.append(f"""  <url>
     <loc>{base_url}/api/amp/{slug}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
+
+@api_router.get("/sitemap-amp-videos.xml")
+async def sitemap_amp_videos(request: Request):
+    """AMP video pages sitemap (/api/amp-video/{slug})."""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
+
+    urls = []
+    for firm in firms:
+        slug = firm.get("slug", "")
+        if not slug:
+            continue
+        urls.append(f"""  <url>
+    <loc>{base_url}/api/amp-video/{slug}</loc>
     <lastmod>{today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
