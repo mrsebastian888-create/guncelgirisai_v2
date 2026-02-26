@@ -13,7 +13,15 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v11.0: Firma Rehberi + Affiliate URL Güncellemesi (Feb 2026)
 ### v12.0: Ana Sayfa Kapsamlı Güncelleme (Feb 2026)
 ### v13.0: Production Cleanup - Emergent Badge Kaldırma (Feb 2026)
-### v13.1: Kapsamlı Sistem Kontrolü & Test (Feb 2026) - CURRENT
+### v13.1: Kapsamlı Sistem Kontrolü & Test (Feb 2026)
+### v14.0: Firma URL Yapısı Güncelleme (Feb 2026) - CURRENT
+
+**Değişiklikler:**
+- 264 firmaya `slug` alanı eklendi: `firmaismi-guncelgiris` formatı
+- Backend `/api/firma/{slug}` endpoint'i slug alanından eşleşecek şekilde güncellendi (backward compatible)
+- Homepage getFirmSlug fonksiyonu Türkçe karakter desteğiyle güncellendi
+- FirmPage benzer siteler linkleri yeni formata güncellendi
+- Örnek URL'ler: /maxwin-guncelgiris, /hiltonbet-guncelgiris, /casino-dior-guncelgiris
 
 **Test Sonuçları (iteration_10):**
 - Backend: 14/14 test geçti (%100)
