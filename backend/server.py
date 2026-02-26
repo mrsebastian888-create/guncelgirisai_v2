@@ -2967,6 +2967,72 @@ async def sitemap_amp(request: Request):
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
+
+MIGRATION_SECRET = "dsbn-migrate-2026-guncelgiris"
+
+@api_router.post("/migrate/bulk-import")
+async def migrate_bulk_import(data: Dict[str, Any]):
+    """Bulk import data for migration. Requires secret token."""
+    if data.get("secret") != MIGRATION_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+    
+    collection = data.get("collection")
+    items = data.get("items", [])
+    mode = data.get("mode", "upsert")  # upsert or replace
+    
+    if not collection or not items:
+        raise HTTPException(status_code=400, detail="collection and items required")
+    
+    col = db[collection]
+    inserted = 0
+    updated = 0
+    
+    if mode == "replace":
+        await col.delete_many({})
+        if items:
+            for item in items:
+                item.pop("_id", None)
+            await col.insert_many(items)
+            inserted = len(items)
+    else:
+        for item in items:
+            item.pop("_id", None)
+            item_id = item.get("id")
+            if item_id:
+                result = await col.update_one(
+                    {"id": item_id}, {"$set": item}, upsert=True
+                )
+                if result.upserted_id:
+                    inserted += 1
+                else:
+                    updated += 1
+            else:
+                await col.insert_one(item)
+                inserted += 1
+    
+    return {"status": "ok", "collection": collection, "inserted": inserted, "updated": updated, "total": len(items)}
+
+@api_router.post("/migrate/setup-admin")
+async def migrate_setup_admin(data: Dict[str, Any]):
+    """Setup admin user for production."""
+    if data.get("secret") != MIGRATION_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid secret")
+    
+    from passlib.context import CryptContext
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    
+    username = data.get("username", "admin")
+    password = data.get("password", "123123..")
+    
+    hashed = pwd_context.hash(password)
+    await db.users.update_one(
+        {"username": username},
+        {"$set": {"username": username, "hashed_password": hashed}},
+        upsert=True
+    )
+    return {"status": "ok", "message": f"Admin user '{username}' created/updated"}
+
+
 @api_router.get("/robots.txt")
 async def robots_txt(request: Request, domain: Optional[str] = None):
     """Generate robots.txt"""
