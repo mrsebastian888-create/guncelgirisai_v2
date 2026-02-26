@@ -1,0 +1,75 @@
+{
+  "summary": "Iteration 11: Verified new 3-column hero design on firm detail pages and homepage hero preservation. All requested test-ids working. Admin login flow successful.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_11.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (3/3 API tests passed)",
+    "frontend": "100% (All UI tests passed)"
+  },
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "123123.."
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New 3-column hero design verified on firm detail pages (/casibom-guncelgiris, /betpark-guncelgiris). Homepage preserves original hero slider. All new data-testid attributes verified.",
+  "features_verified": {
+    "firm_detail_page_hero": {
+      "casibom_guncelgiris": {
+        "firm-page": "PASS - Page renders correctly",
+        "firm-hero": "PASS - 3-column hero section visible",
+        "firm-breadcrumb-home-link": "PASS - Breadcrumb home link visible",
+        "firm-bonus-amount-hero": "PASS - Shows '500 TL'",
+        "firm-cta-main": "PASS - Main CTA button visible",
+        "firm-cta-all-sites": "PASS - 'Tum Siteler' link visible",
+        "firm-bonus-cta": "PASS - Bonus box CTA visible",
+        "firm-bonus-box": "PASS - Bonus box visible with dynamic content"
+      },
+      "betpark_guncelgiris": {
+        "firm-page": "PASS - Page renders correctly",
+        "firm-hero": "PASS - 3-column hero section visible",
+        "firm-breadcrumb-home-link": "PASS - Breadcrumb home link visible",
+        "firm-bonus-amount-hero": "PASS - Shows '1700 TL'",
+        "firm-cta-main": "PASS - Main CTA button visible",
+        "firm-cta-all-sites": "PASS - 'Tum Siteler' link visible",
+        "firm-bonus-cta": "PASS - Bonus box CTA visible",
+        "firm-bonus-box": "PASS - Bonus box visible with dynamic content"
+      }
+    },
+    "homepage_hero_preservation": {
+      "homepage": "PASS - data-testid='homepage' visible",
+      "hero-cta-btn": "PASS - Original hero CTA button visible",
+      "hero-sports-btn": "PASS - Sports button visible",
+      "hero-slide-0": "PASS - Slider indicator 0 visible",
+      "hero-slide-1": "PASS - Slider indicator 1 visible",
+      "hero-slide-2": "PASS - Slider indicator 2 visible",
+      "firm-hero_on_homepage": "PASS - NOT visible (correct behavior)",
+      "firm-breadcrumb_on_homepage": "PASS - NOT visible (correct behavior)"
+    },
+    "admin_login_flow": {
+      "admin_login_page": "PASS - /admin-login page loads with login form",
+      "login_with_credentials": "PASS - admin/123123.. credentials accepted",
+      "redirect_to_admin": "PASS - Redirected to /admin after login",
+      "admin_tabs_visible": "PASS - Domainler, Siteler tabs visible"
+    },
+    "backend_api": {
+      "POST /api/auth/login": "PASS - Returns JWT token with valid credentials",
+      "GET /api/firma/casibom-guncelgiris": "PASS - Returns Casibom data (500 TL, features)",
+      "GET /api/firma/betpark-guncelgiris": "PASS - Returns Betpark data (1700 TL, features)"
+    }
+  }
+}
