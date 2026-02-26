@@ -72,11 +72,12 @@ const HomePage = () => {
   const sliderRef = useRef(null);
 
   useEffect(() => {
+    const maxSlides = Math.max(HERO_SLIDES.length, topFive.length || 1);
     const timer = setInterval(() => {
-      setHeroSlide(prev => (prev + 1) % HERO_SLIDES.length);
-    }, 5000);
+      setHeroSlide(prev => (prev + 1) % maxSlides);
+    }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [topFive.length]);
 
   useEffect(() => {
     const fetchData = async () => {
