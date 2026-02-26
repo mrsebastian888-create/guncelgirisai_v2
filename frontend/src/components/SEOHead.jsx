@@ -64,6 +64,7 @@ export default function SEOHead({
 
     // Twitter Card
     setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:site", "@guncelgirisai");
     setMeta("name", "twitter:title", fullTitle);
     setMeta("name", "twitter:description", metaDesc);
     setMeta("name", "twitter:image", metaImage);
