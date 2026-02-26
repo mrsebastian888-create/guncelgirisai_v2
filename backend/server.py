@@ -1279,19 +1279,34 @@ async def get_firma_detail(slug: str):
     
     return {"site": site, "articles": articles, "similar_sites": similar}
 
+
+@api_router.get("/firma/{slug}/video")
+async def get_firma_video_detail(slug: str):
+    """Get firm specific video page data."""
+    site = await resolve_site_by_slug(slug)
+    firm_slug = site.get("slug") or slug
+    video_data = normalize_video_urls(site)
+
+    return {
+        "site": {
+            "id": site.get("id", ""),
+            "name": site.get("name", ""),
+            "slug": firm_slug,
+            "logo_url": site.get("logo_url", ""),
+            "bonus_amount": site.get("bonus_amount", ""),
+            "bonus_type": site.get("bonus_type", ""),
+            "rating": site.get("rating", 4.5),
+            "affiliate_url": site.get("affiliate_url", "#"),
+        },
+        "video": video_data,
+        "canonical_url": f"https://guncelgiris.ai/{firm_slug}/video",
+        "amp_url": f"https://guncelgiris.ai/api/amp-video/{firm_slug}",
+    }
+
 @api_router.get("/amp/{slug}", response_class=HTMLResponse)
 async def get_amp_page(slug: str, request: Request):
     """Serve AMP HTML page for a firm"""
-    site = await db.bonus_sites.find_one({"slug": slug}, {"_id": 0})
-    if not site:
-        site = await db.bonus_sites.find_one(
-            {"$or": [
-                {"name": {"$regex": f"^{slug.replace('-guncelgiris','').replace('-',' ')}$", "$options": "i"}},
-                {"name": {"$regex": f"^{slug}$", "$options": "i"}},
-            ]}, {"_id": 0}
-        )
-    if not site:
-        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    site = await resolve_site_by_slug(slug)
 
     site_name = site["name"]
     bonus_amount = site.get("bonus_amount", "")
