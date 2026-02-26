@@ -2830,28 +2830,39 @@ async def reorder_bonus_sites(data: Dict[str, Any]):
 
 @api_router.get("/sitemap.xml")
 async def sitemap_xml(request: Request, domain: Optional[str] = None):
-    """Generate dynamic sitemap.xml for all domains and articles"""
-    # Use X-Forwarded headers or domain param for proper URL
-    forwarded_proto = request.headers.get("x-forwarded-proto", "https")
-    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
-    if domain:
-        base_url = f"https://{domain}"
-    elif forwarded_host:
-        base_url = f"{forwarded_proto}://{forwarded_host}"
-    else:
-        base_url = str(request.base_url).rstrip("/")
+    """Generate sitemap index pointing to sub-sitemaps"""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
-    # Collect all published articles
-    articles = await db.articles.find(
-        {"is_published": True},
-        {"_id": 0, "slug": 1, "domain_id": 1, "updated_at": 1, "created_at": 1, "category": 1}
-    ).to_list(5000)
-    # Collect all categories
-    categories = await db.categories.find({}, {"_id": 0, "slug": 1}).to_list(100)
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>{base_url}/api/sitemap-pages.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-firms.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-articles.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-amp.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+</sitemapindex>"""
+    return Response(content=xml, media_type="application/xml")
 
-    urls = []
+@api_router.get("/sitemap-pages.xml")
+async def sitemap_pages(request: Request):
+    """Static pages + categories sitemap"""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    categories = await db.categories.find({}, {"_id": 0, "slug": 1}).to_list(100)
     
-    # Static pages
+    urls = []
     static_pages = [
         {"loc": "/", "priority": "1.0", "changefreq": "daily"},
         {"loc": "/deneme-bonusu", "priority": "0.9", "changefreq": "daily"},
@@ -2861,27 +2872,40 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     for page in static_pages:
         urls.append(f"""  <url>
     <loc>{base_url}{page["loc"]}</loc>
+    <lastmod>{today}</lastmod>
     <changefreq>{page["changefreq"]}</changefreq>
     <priority>{page["priority"]}</priority>
   </url>""")
     
-    # Category pages
     for cat in categories:
         urls.append(f"""  <url>
     <loc>{base_url}/bonus/{cat["slug"]}</loc>
+    <lastmod>{today}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>""")
 
-    # Article pages
-    for article in articles:
-        lastmod = article.get("updated_at") or article.get("created_at", "")
-        if lastmod:
-            lastmod_tag = f"\n    <lastmod>{lastmod[:10]}</lastmod>"
-        else:
-            lastmod_tag = ""
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
+@api_router.get("/sitemap-firms.xml")
+async def sitemap_firms(request: Request):
+    """All 264 firm pages sitemap"""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1, "name": 1}).to_list(500)
+    
+    urls = []
+    for firm in firms:
+        slug = firm.get("slug", "")
+        if not slug:
+            continue
         urls.append(f"""  <url>
-    <loc>{base_url}/makale/{article["slug"]}</loc>{lastmod_tag}
+    <loc>{base_url}/{slug}</loc>
+    <lastmod>{today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>""")
@@ -2890,7 +2914,57 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 {chr(10).join(urls)}
 </urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
+@api_router.get("/sitemap-articles.xml")
+async def sitemap_articles(request: Request):
+    """All published articles sitemap"""
+    base_url = "https://guncelgiris.ai"
+    articles = await db.articles.find(
+        {"is_published": True},
+        {"_id": 0, "slug": 1, "updated_at": 1, "created_at": 1}
+    ).to_list(5000)
     
+    urls = []
+    for article in articles:
+        lastmod = article.get("updated_at") or article.get("created_at", "")
+        lastmod_str = str(lastmod)[:10] if lastmod else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        urls.append(f"""  <url>
+    <loc>{base_url}/makale/{article["slug"]}</loc>
+    <lastmod>{lastmod_str}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
+@api_router.get("/sitemap-amp.xml")
+async def sitemap_amp(request: Request):
+    """AMP pages sitemap for all firms"""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
+    
+    urls = []
+    for firm in firms:
+        slug = firm.get("slug", "")
+        if not slug:
+            continue
+        urls.append(f"""  <url>
+    <loc>{base_url}/api/amp/{slug}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
     return Response(content=xml, media_type="application/xml")
 
 @api_router.get("/robots.txt")
