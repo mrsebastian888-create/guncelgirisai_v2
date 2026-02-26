@@ -3310,17 +3310,23 @@ Disallow: /api/
 Allow: /api/sitemap.xml
 Allow: /api/sitemap-pages.xml
 Allow: /api/sitemap-firms.xml
+Allow: /api/sitemap-videos.xml
 Allow: /api/sitemap-articles.xml
 Allow: /api/sitemap-amp.xml
+Allow: /api/sitemap-amp-videos.xml
 Allow: /api/amp/
+Allow: /api/amp-video/
 
 User-agent: Googlebot
 Allow: /api/sitemap.xml
 Allow: /api/sitemap-pages.xml
 Allow: /api/sitemap-firms.xml
+Allow: /api/sitemap-videos.xml
 Allow: /api/sitemap-articles.xml
 Allow: /api/sitemap-amp.xml
+Allow: /api/sitemap-amp-videos.xml
 Allow: /api/amp/
+Allow: /api/amp-video/
 
 Sitemap: {base_url}/api/sitemap.xml
 """
