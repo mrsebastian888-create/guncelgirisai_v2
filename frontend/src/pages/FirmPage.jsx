@@ -222,6 +222,15 @@ export default function FirmPage() {
                 >
                   Tum Siteler
                 </Link>
+                <Link
+                  to={`/${site.slug || slug}/video`}
+                  data-testid="firm-cta-video-page"
+                  className="inline-flex items-center gap-2 rounded-xl border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5"
+                  style={{ borderColor: "rgba(0,240,255,0.35)", color: "#00F0FF" }}
+                >
+                  <FileText className="w-4 h-4" />
+                  Video Incele
+                </Link>
               </div>
 
               {/* Mini Stats */}
