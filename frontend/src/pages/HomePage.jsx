@@ -249,10 +249,10 @@ const HomePage = () => {
   return (
     <div className="min-h-screen pb-16 md:pb-0" data-testid="homepage">
       <SEOHead
-        title="Deneme Bonusu Veren Siteler 2026 - En Güncel Bonus Rehberi"
-        description="En güvenilir deneme bonusu veren siteler 2026 listesi. Yatırımsız bonus fırsatları, hoşgeldin bonusları ve güncel bahis rehberleri."
-        canonical={window.location.origin}
-        jsonLd={[faqJsonLd, orgJsonLd]}
+        title="Deneme Bonusu Veren Siteler 2026 - En Guncel Bonus Rehberi"
+        description="En guvenilir deneme bonusu veren siteler 2026 listesi. Yatirimsiz bonus firsatlari, hosgeldin bonuslari ve guncel bahis rehberleri. 264 firma detayli inceleme."
+        canonical="https://guncelgiris.ai"
+        jsonLd={[faqJsonLd, orgJsonLd, organizationJsonLd, itemListJsonLd].filter(Boolean)}
       />
 
       {/* ── HERO SLIDER ─────────────────────────── */}
