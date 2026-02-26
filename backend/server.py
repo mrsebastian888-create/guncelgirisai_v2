@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from collections import defaultdict
 import httpx
 import re
+from urllib.parse import quote_plus
 from passlib.context import CryptContext
 import jwt as pyjwt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -523,6 +524,9 @@ class BonusSite(BaseModel):
     rating: float = 4.5
     features: List[str] = []
     turnover_requirement: float = 10.0
+    video_url: str = ""
+    video_title: str = ""
+    video_description: str = ""
     global_cta_clicks: int = 0
     global_affiliate_clicks: int = 0
     global_impressions: int = 0
