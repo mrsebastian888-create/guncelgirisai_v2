@@ -1368,6 +1368,138 @@ async def get_firma_video_detail(slug: str):
         "amp_url": f"https://guncelgiris.ai/api/amp-video/{firm_slug}",
     }
 
+
+class VideoGenerationRequest(BaseModel):
+    model: str = "sora-2"
+    size: str = "1280x720"
+    duration_seconds: int = 12
+
+
+def resolve_sora_duration(seconds: int) -> int:
+    """Map requested duration to supported Sora durations (4, 8, 12)."""
+    if seconds <= 6:
+        return 4
+    if seconds <= 10:
+        return 8
+    return 12
+
+
+def require_admin_request(request: Request) -> str:
+    """Validate admin JWT from Authorization header."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Admin token gerekli")
+    token = auth.removeprefix("Bearer ").strip()
+    username = verify_jwt_token(token)
+    if not username:
+        raise HTTPException(status_code=401, detail="Admin token geçersiz")
+    return username
+
+
+async def process_firm_video_generation(
+    site_id: str,
+    model: str,
+    size: str,
+    duration: int,
+):
+    """Background task to generate and persist firm AI video."""
+    try:
+        site = await db.bonus_sites.find_one({"id": site_id}, {"_id": 0})
+        if not site:
+            return
+
+        video_path, prompt = await generate_sora_video_file(site, model=model, size=size, duration=duration)
+        await db.bonus_sites.update_one(
+            {"id": site_id},
+            {
+                "$set": {
+                    "ai_video_status": "ready",
+                    "ai_video_error": "",
+                    "ai_video_model": model,
+                    "ai_video_duration": duration,
+                    "ai_video_prompt": prompt,
+                    "ai_video_generated_at": datetime.now(timezone.utc).isoformat(),
+                    "ai_video_url": video_path,
+                    "video_url": video_path,
+                    "video_title": site.get("video_title") or f"{site.get('name', 'Firma')} AI Video İncelemesi",
+                    "video_description": site.get("video_description") or f"{site.get('name', 'Firma')} için Sora 2 ile oluşturulan kısa video özeti.",
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+        )
+        logger.info(f"Sora video ready for site_id={site_id} | model={model} | duration={duration}")
+    except Exception as e:
+        await db.bonus_sites.update_one(
+            {"id": site_id},
+            {
+                "$set": {
+                    "ai_video_status": "failed",
+                    "ai_video_error": str(e),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+        )
+        logger.error(f"Sora video generation failed for site_id={site_id}: {e}")
+
+
+@api_router.post("/firma/{slug}/video/generate")
+async def generate_firma_video(slug: str, payload: VideoGenerationRequest, request: Request, background_tasks: BackgroundTasks):
+    """Start AI video generation for a single firm using Sora 2."""
+    admin_user = require_admin_request(request)
+    site = await resolve_site_by_slug(slug)
+
+    allowed_models = {"sora-2", "sora-2-pro"}
+    allowed_sizes = {"1280x720", "1792x1024", "1024x1792", "1024x1024"}
+
+    model = payload.model if payload.model in allowed_models else "sora-2"
+    size = payload.size if payload.size in allowed_sizes else "1280x720"
+    duration = resolve_sora_duration(payload.duration_seconds)
+
+    await db.bonus_sites.update_one(
+        {"id": site["id"]},
+        {
+            "$set": {
+                "ai_video_status": "generating",
+                "ai_video_error": "",
+                "ai_video_model": model,
+                "ai_video_duration": duration,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
+
+    background_tasks.add_task(
+        process_firm_video_generation,
+        site["id"],
+        model,
+        size,
+        duration,
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content={
+            "message": "AI video üretimi başlatıldı",
+            "site": site.get("name", ""),
+            "slug": site.get("slug") or slug,
+            "requested_by": admin_user,
+            "model": model,
+            "size": size,
+            "duration": duration,
+            "status": "generating",
+        },
+    )
+
+
+@api_router.get("/generated-videos/{filename}")
+async def get_generated_video_file(filename: str):
+    """Serve generated AI videos."""
+    safe_name = os.path.basename(filename)
+    file_path = GENERATED_VIDEOS_DIR / safe_name
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Video bulunamadı")
+    return FileResponse(path=str(file_path), media_type="video/mp4", filename=safe_name)
+
 @api_router.get("/amp/{slug}", response_class=HTMLResponse)
 async def get_amp_page(slug: str, request: Request):
     """Serve AMP HTML page for a firm"""
