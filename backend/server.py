@@ -1764,10 +1764,8 @@ async def get_scheduler_status():
 
 @api_router.post("/scheduler/bulk-generate")
 async def bulk_generate_articles(data: Dict[str, Any] = {}):
-    """Bulk generate articles from queue. count=20 default."""
-    count = data.get("count", 20)
-    if count > 50:
-        count = 50
+    """Bulk generate articles from queue."""
+    count = data.get("count", 50)
     result = await content_scheduler.bulk_generate(count)
     return result
 
