@@ -2676,14 +2676,14 @@ async def admin_login(req: LoginRequest):
     verified = False
     
     # Try env-based hash
-    if ADMIN_PASSWORD_HASH:
+    if ADMIN_PASSWORD_HASH and pwd_context:
         try:
             verified = pwd_context.verify(req.password, ADMIN_PASSWORD_HASH)
         except Exception:
             pass
     
     # Try database-based hash
-    if not verified:
+    if not verified and pwd_context:
         try:
             user = await db.users.find_one({"username": req.username}, {"_id": 0})
             if user and user.get("hashed_password"):
