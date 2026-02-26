@@ -152,15 +152,46 @@ const HomePage = () => {
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "name": "Bonus Rehberi",
-    "url": window.location.origin,
-    "description": "En güvenilir bonus siteleri, deneme bonusları ve spor bahis rehberleri.",
+    "name": "guncelgiris.ai",
+    "alternateName": "Bonus Rehberi",
+    "url": "https://guncelgiris.ai",
+    "description": "Turkiye'nin en guvenilir bahis siteleri rehberi. Deneme bonuslari, guncel giris adresleri ve firma incelemeleri.",
+    "inLanguage": "tr",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": `${window.location.origin}/makale/{search_term_string}`,
+      "target": "https://guncelgiris.ai/makale/{search_term_string}",
       "query-input": "required name=search_term_string",
     },
   };
+
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "guncelgiris.ai",
+    "url": "https://guncelgiris.ai",
+    "logo": "https://guncelgiris.ai/logo.png",
+    "description": "Turkiye ve Avrupa'nin en guvenilir bahis ve bonus siteleri rehberi.",
+    "sameAs": [],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "availableLanguage": "Turkish"
+    }
+  };
+
+  const itemListJsonLd = topFive.length > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "2026 Yilinin En Iyi Bonus Siteleri",
+    "description": "Turkiye'nin en yuksek bonuslu bahis siteleri siralamasi",
+    "numberOfItems": topFive.length,
+    "itemListElement": topFive.map((site, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "name": site.name,
+      "url": `https://guncelgiris.ai/${getFirmSlug(site.name)}`
+    }))
+  } : null;
 
   /* ── Reusable: Top-5 Site Card ── */
   const SiteCard = ({ site, rank, accentColor }) => (
