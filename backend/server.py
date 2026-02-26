@@ -776,14 +776,14 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
                 logger.info("Bulk generate: queue empty")
                 return
             
-            logger.info(f"Bulk generate started: {len(items)} articles")
-            for i in range(0, len(items), 3):
-                batch = items[i:i+3]
+            logger.info(f"Bulk generate started: {len(items)} articles (5 parallel)")
+            for i in range(0, len(items), 5):
+                batch = items[i:i+5]
                 tasks = [self._generate_single_article(item, sites_info) for item in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 success = sum(1 for r in results if r is True)
-                logger.info(f"Bulk batch {i//3 + 1}/{(len(items)+2)//3}: {success}/{len(batch)} success")
-                await asyncio.sleep(2)
+                logger.info(f"Bulk batch {i//5 + 1}/{(len(items)+4)//5}: {success}/{len(batch)} success | Total: {self.total_generated}")
+                await asyncio.sleep(1)
             
             logger.info(f"Bulk generate complete. Total generated this session: {self.total_generated}")
         except Exception as e:
