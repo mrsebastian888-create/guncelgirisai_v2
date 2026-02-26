@@ -1228,34 +1228,95 @@ async def resolve_site_by_slug(slug: str) -> Dict[str, Any]:
     return site
 
 
-def normalize_video_urls(site: Dict[str, Any]) -> Dict[str, str]:
-    """Build firm specific video links (custom if exists, fallback to YouTube search embed)."""
+def normalize_video_urls(site: Dict[str, Any]) -> Dict[str, Any]:
+    """Build firm specific video links and rendering type."""
     site_name = site.get("name", "")
     search_query = quote_plus(f"{site_name} bonus inceleme guncel giris")
     fallback_watch_url = f"https://www.youtube.com/results?search_query={search_query}"
     fallback_embed_url = f"https://www.youtube.com/embed?listType=search&list={search_query}"
 
+    ai_video_url = (site.get("ai_video_url") or "").strip()
     video_url = (site.get("video_url") or "").strip()
-    video_embed_url = video_url
+    selected_url = ai_video_url or video_url
+    video_embed_url = selected_url
+    video_type = "embed"
 
-    if "watch?v=" in video_url:
-        video_embed_url = video_url.replace("watch?v=", "embed/")
-    elif "youtu.be/" in video_url:
-        video_id = video_url.split("youtu.be/")[-1].split("?")[0].strip("/")
+    if selected_url.endswith(".mp4") or "/api/generated-videos/" in selected_url:
+        video_type = "file"
+        video_embed_url = selected_url
+    elif "watch?v=" in selected_url:
+        video_embed_url = selected_url.replace("watch?v=", "embed/")
+    elif "youtu.be/" in selected_url:
+        video_id = selected_url.split("youtu.be/")[-1].split("?")[0].strip("/")
         video_embed_url = f"https://www.youtube.com/embed/{video_id}" if video_id else fallback_embed_url
-    elif not video_url:
-        video_url = fallback_watch_url
+    elif not selected_url:
+        selected_url = fallback_watch_url
         video_embed_url = fallback_embed_url
 
     video_title = site.get("video_title") or f"{site_name} Video İncelemesi"
     video_description = site.get("video_description") or f"{site_name} için güncel giriş, bonus ve güvenilirlik odaklı video özeti."
 
     return {
-        "video_url": video_url,
+        "video_url": selected_url,
         "video_embed_url": video_embed_url,
         "video_title": video_title,
         "video_description": video_description,
+        "video_type": video_type,
+        "ai_video_status": site.get("ai_video_status", "idle"),
+        "ai_video_error": site.get("ai_video_error", ""),
+        "ai_video_generated_at": site.get("ai_video_generated_at", ""),
+        "ai_video_model": site.get("ai_video_model", ""),
     }
+
+
+def build_firm_video_prompt(site: Dict[str, Any]) -> str:
+    """Create a compact promotional-safe prompt for short Sora videos."""
+    site_name = site.get("name", "Firma")
+    bonus_amount = site.get("bonus_amount", "Guncel Bonus")
+    bonus_type = site.get("bonus_type", "deneme")
+    rating = site.get("rating", 4.5)
+    return (
+        f"Create a cinematic 12-second promotional video in Turkish market style for '{site_name}'. "
+        f"Theme: modern neon black-green interface, dynamic motion graphics, confident premium feel. "
+        f"Show text overlays: '{site_name}', '{bonus_amount}', '{bonus_type}', 'Guncel Giris 2026'. "
+        f"Include trust cues and score highlight: '{rating}/5'. "
+        "No real people, no gambling gameplay scene, no logos of third parties, no copyrighted brands. "
+        "Visual style: clean UI-focused abstract animations, smooth transitions, high contrast, 16:9. "
+        "End frame CTA text: 'Detay ve Guncel Link Icın Siteyi Ziyaret Et'."
+    )
+
+
+async def generate_sora_video_file(site: Dict[str, Any], model: str, size: str, duration: int) -> tuple[str, str]:
+    """Generate a video file with Sora and return (public_url_path, prompt)."""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="EMERGENT_LLM_KEY tanımlı değil")
+
+    from emergentintegrations.llm.openai.video_generation import OpenAIVideoGeneration
+
+    prompt = build_firm_video_prompt(site)
+    firm_slug = site.get("slug") or slugify(site.get("name", "firma"))
+    filename = f"{firm_slug}-{int(time.time())}.mp4"
+    output_path = GENERATED_VIDEOS_DIR / filename
+
+    def _run_generation() -> bool:
+        video_gen = OpenAIVideoGeneration(api_key=EMERGENT_LLM_KEY)
+        video_bytes = video_gen.text_to_video(
+            prompt=prompt,
+            model=model,
+            size=size,
+            duration=duration,
+            max_wait_time=900,
+        )
+        if not video_bytes:
+            return False
+        video_gen.save_video(video_bytes, str(output_path))
+        return True
+
+    success = await asyncio.to_thread(_run_generation)
+    if not success:
+        raise HTTPException(status_code=500, detail="Sora video üretimi başarısız")
+
+    return f"/api/generated-videos/{filename}", prompt
 
 
 @api_router.get("/firma/{slug}")
