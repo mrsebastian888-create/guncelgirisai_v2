@@ -16,7 +16,8 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v13.1: Kapsamlı Sistem Kontrolü & Test (Feb 2026)
 ### v14.0: Firma URL Yapısı Güncelleme (Feb 2026)
 ### v15.0: AMP Sayfaları (Feb 2026)
-### v16.0: Google Search Console SEO Optimizasyonu (Feb 2026) - CURRENT
+### v16.0: Google Search Console SEO Optimizasyonu (Feb 2026)
+### v17.0: Firma Detay Hero Taşıma + Test Stabilizasyonu (Feb 2026) - CURRENT
 
 **Değişiklikler:**
 - Sitemap Index yapısı: 4 alt sitemap (pages, firms, articles, amp)
@@ -107,6 +108,12 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - Uygulama başlangıcında otomatik oluşturma
 - Scheduler ile üretilen makaleler bu kategoride
 
+**v17.0 Değişiklikler (Bu fork):**
+- Yeni 3 kolonlu hero tasarımı `FirmPage.jsx` üzerinde aktif ve dinamik firma verileriyle çalışır hale getirildi
+- Ana sayfanın mevcut hero slider yapısının korunduğu doğrulandı (hero yanlış sayfada değil)
+- FirmPage üzerinde kritik etkileşimler/ana içerikler için ek `data-testid` etiketleri eklendi
+- Admin login akışı preview ortamında test edildi: `/admin-login` → `/admin` başarılı
+
 ## Architecture
 ```
 /app/
@@ -125,6 +132,7 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - iteration_7: SEO Infrastructure 21/23
 - iteration_8: Content Scheduler 16/18 backend + 100% frontend
 - iteration_9: GoDaddy API Integration 100% backend + 100% frontend
+- iteration_11: Firm hero taşıma + homepage koruma + admin login doğrulama = 100% backend + 100% frontend
 
 ## Production Readiness
 - MongoDB indexes (17 index across 8 collections)
@@ -136,6 +144,7 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ## Prioritized Backlog
 ### P0 (Resolved)
 - [x] Admin login fix
+- [x] Admin login preview doğrulaması (/admin-login -> /admin) (Feb 2026)
 - [x] SEO altyapi
 - [x] Otomatik icerik zamanlayici
 - [x] GoDaddy API entegrasyonu
@@ -143,11 +152,13 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - [x] MongoDB indexleri
 - [x] Production deployment hazirliklari
 - [x] Firma detay sayfalari (FirmPage) - /firma-adi URL'leri calisiyor (Feb 2026)
+- [x] Yeni 3-kolon hero tasariminin FirmPage'e tasinmasi ve dogrulanmasi (Feb 2026)
 
 ### P1 (Next)
-- [ ] Production deployment (MongoDB Atlas + Railway + Vercel)
+- [ ] Production admin login canli domainde kullanici dogrulamasi (adminguncelgiris.company)
+- [ ] Sponsors tabanli dinamik GIF hero slider sistemi (DB + admin CRUD + oncelik + auto-refresh)
 - [ ] Backend moduler refactoring (server.py bolunmesi)
-- [ ] AMP uyumlu sayfalar
+- [ ] AMP kapsam/genisleme ve validasyon
 
 ### P2 (Future)
 - [ ] Gelismis AI Style Engine
