@@ -25,8 +25,9 @@ class TestHealthEndpoints:
         response = requests.get(f"{BASE_URL}/api/admin/api-status")
         assert response.status_code == 200
         data = response.json()
-        assert "api_healthy" in data
-        print(f"✓ API status: healthy={data['api_healthy']}")
+        # This endpoint returns sports cache status, not api_healthy
+        assert "ai_insight_enabled" in data
+        print(f"✓ API status: ai_enabled={data['ai_insight_enabled']}")
 
 
 class TestArticlesAPI:
