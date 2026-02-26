@@ -2641,7 +2641,10 @@ async def get_dashboard_stats(domain_id: Optional[str] = None):
 
 # ============== AUTH ==============
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+try:
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+except Exception:
+    pwd_context = None
 
 class LoginRequest(BaseModel):
     username: str
