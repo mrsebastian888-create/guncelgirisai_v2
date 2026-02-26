@@ -2970,22 +2970,26 @@ async def sitemap_amp(request: Request):
 @api_router.get("/robots.txt")
 async def robots_txt(request: Request, domain: Optional[str] = None):
     """Generate robots.txt"""
-    forwarded_proto = request.headers.get("x-forwarded-proto", "https")
-    forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
-    if domain:
-        base_url = f"https://{domain}"
-    elif forwarded_host:
-        base_url = f"{forwarded_proto}://{forwarded_host}"
-    else:
-        base_url = str(request.base_url).rstrip("/")
+    base_url = "https://guncelgiris.ai"
     content = f"""User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin-login
 Disallow: /api/
+Allow: /api/sitemap.xml
+Allow: /api/sitemap-pages.xml
+Allow: /api/sitemap-firms.xml
+Allow: /api/sitemap-articles.xml
+Allow: /api/sitemap-amp.xml
+Allow: /api/amp/
 
 User-agent: Googlebot
 Allow: /api/sitemap.xml
+Allow: /api/sitemap-pages.xml
+Allow: /api/sitemap-firms.xml
+Allow: /api/sitemap-articles.xml
+Allow: /api/sitemap-amp.xml
+Allow: /api/amp/
 
 Sitemap: {base_url}/api/sitemap.xml
 """
