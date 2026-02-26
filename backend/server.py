@@ -1244,6 +1244,188 @@ async def get_firma_detail(slug: str):
     
     return {"site": site, "articles": articles, "similar_sites": similar}
 
+@api_router.get("/amp/{slug}", response_class=HTMLResponse)
+async def get_amp_page(slug: str, request: Request):
+    """Serve AMP HTML page for a firm"""
+    site = await db.bonus_sites.find_one({"slug": slug}, {"_id": 0})
+    if not site:
+        site = await db.bonus_sites.find_one(
+            {"$or": [
+                {"name": {"$regex": f"^{slug.replace('-guncelgiris','').replace('-',' ')}$", "$options": "i"}},
+                {"name": {"$regex": f"^{slug}$", "$options": "i"}},
+            ]}, {"_id": 0}
+        )
+    if not site:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+
+    site_name = site["name"]
+    bonus_amount = site.get("bonus_amount", "")
+    bonus_type = site.get("bonus_type", "deneme")
+    rating = site.get("rating", 4.5)
+    affiliate_url = site.get("affiliate_url", "#")
+    features = site.get("features", [])
+    logo_url = site.get("logo_url", "")
+    category = site.get("category", "Turkiye")
+    firm_slug = site.get("slug", slug)
+
+    bonus_labels = {"deneme": "Deneme Bonusu", "hosgeldin": "Hosgeldin Bonusu", "casino": "Casino Bonusu", "spor": "Spor Bahis Bonusu"}
+    bonus_label = bonus_labels.get(bonus_type, bonus_type)
+
+    articles = await db.articles.find(
+        {"$or": [
+            {"title": {"$regex": site_name, "$options": "i"}},
+            {"content": {"$regex": site_name, "$options": "i"}},
+        ], "is_published": True},
+        {"_id": 0, "content": 0}
+    ).sort("created_at", -1).limit(5).to_list(5)
+
+    similar = await db.bonus_sites.find(
+        {"category": category, "name": {"$ne": site_name}, "is_active": True},
+        {"_id": 0}
+    ).sort("rating", -1).limit(5).to_list(5)
+
+    canonical_url = f"https://guncelgiris.ai/{firm_slug}"
+    amp_url = f"https://guncelgiris.ai/api/amp/{firm_slug}"
+
+    features_html = "".join(f'<li class="feature-item">{f}</li>' for f in features)
+
+    articles_html = ""
+    for a in articles:
+        date_str = a.get("created_at", "")[:10] if a.get("created_at") else ""
+        articles_html += f'''<a href="https://guncelgiris.ai/makale/{a.get("slug","")}" class="article-link">
+            <span class="article-title">{a.get("title","")}</span>
+            <span class="article-date">{date_str}</span>
+        </a>'''
+
+    similar_html = ""
+    for s in similar:
+        s_slug = s.get("slug", "")
+        similar_html += f'''<a href="https://guncelgiris.ai/{s_slug}" class="similar-item">
+            <amp-img src="{s.get("logo_url","")}" width="36" height="36" layout="fixed" alt="{s.get("name","")}"></amp-img>
+            <div class="similar-info">
+                <span class="similar-name">{s.get("name","")}</span>
+                <span class="similar-bonus">{s.get("bonus_amount","")}</span>
+            </div>
+        </a>'''
+
+    schema_json = {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": site_name,
+        "url": canonical_url,
+        "logo": logo_url,
+        "description": f"{site_name} guncel giris adresi, {bonus_amount} {bonus_label} firsati.",
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": str(rating),
+            "bestRating": "5",
+            "worstRating": "1",
+            "ratingCount": "150"
+        }
+    }
+    import json as json_mod
+    schema_str = json_mod.dumps(schema_json, ensure_ascii=False)
+
+    amp_html = f'''<!doctype html>
+<html amp lang="tr">
+<head>
+    <meta charset="utf-8">
+    <script async src="https://cdn.ampproject.org/v0.js"></script>
+    <title>{site_name} Guncel Giris Adresi 2026 | {bonus_amount} {bonus_label}</title>
+    <link rel="canonical" href="{canonical_url}">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+    <meta name="description" content="{site_name} guncel giris adresi, {bonus_amount} {bonus_label} firsati. Detayli inceleme, bonus rehberi ve guvenilirlik analizi.">
+    <meta name="robots" content="index, follow">
+    <link rel="amphtml" href="{amp_url}">
+    <meta property="og:title" content="{site_name} Guncel Giris | {bonus_amount} Bonus">
+    <meta property="og:description" content="{site_name} {bonus_label} firsati. Guncel adres ve detayli inceleme.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{canonical_url}">
+    <script type="application/ld+json">{schema_str}</script>
+    <style amp-boilerplate>body{{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}}@-webkit-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@-moz-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}</style><noscript><style amp-boilerplate>body{{-webkit-animation:none;-moz-animation:none;animation:none}}</style></noscript>
+    <style amp-custom>
+        *{{margin:0;padding:0;box-sizing:border-box}}
+        body{{background:#0a0a0a;color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.6}}
+        .container{{max-width:720px;margin:0 auto;padding:0 16px}}
+        header{{background:linear-gradient(135deg,#0a0a0a 0%,#1a1a1a 100%);border-bottom:1px solid rgba(0,255,135,0.15);padding:12px 0}}
+        .header-inner{{display:flex;align-items:center;justify-content:space-between}}
+        .logo{{font-size:18px;font-weight:900;color:#00FF87;text-decoration:none;text-transform:uppercase;letter-spacing:1px}}
+        .nav-link{{color:#00FF87;text-decoration:none;font-size:13px;font-weight:600}}
+        .hero{{padding:32px 0;text-align:center;border-bottom:1px solid rgba(255,255,255,0.06)}}
+        .firm-logo{{width:80px;height:80px;border-radius:16px;border:2px solid rgba(0,255,135,0.3);margin:0 auto 16px;object-fit:cover;background:#1a1a1a}}
+        h1{{font-size:28px;font-weight:900;text-transform:uppercase;letter-spacing:-0.5px;margin-bottom:8px}}
+        .meta{{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px}}
+        .badge{{background:rgba(0,255,135,0.12);color:#00FF87;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}}
+        .rating{{color:#FBBF24;font-weight:700;font-size:14px}}
+        .bonus-box{{background:linear-gradient(135deg,rgba(0,255,135,0.08),rgba(0,255,135,0.02));border:1px solid rgba(0,255,135,0.2);border-radius:16px;padding:24px;margin:24px 0;text-align:center}}
+        .bonus-label{{font-size:12px;text-transform:uppercase;letter-spacing:2px;color:#999;margin-bottom:4px}}
+        .bonus-amount{{font-size:48px;font-weight:900;color:#00FF87;text-shadow:0 0 30px rgba(0,255,135,0.3)}}
+        .cta-btn{{display:block;background:#00FF87;color:#000;text-align:center;padding:14px 24px;border-radius:12px;font-weight:800;font-size:16px;text-decoration:none;text-transform:uppercase;letter-spacing:1px;margin:16px 0;transition:opacity 0.2s}}
+        .cta-btn:active{{opacity:0.8}}
+        .section{{padding:24px 0;border-bottom:1px solid rgba(255,255,255,0.06)}}
+        .section-title{{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;display:flex;align-items:center;gap:8px}}
+        .section-title span{{color:#00FF87}}
+        .features-grid{{display:grid;grid-template-columns:1fr 1fr;gap:8px}}
+        .feature-item{{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;font-size:13px;list-style:none}}
+        .article-link{{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;text-decoration:none;color:#e5e5e5;border:1px solid rgba(255,255,255,0.06);margin-bottom:8px}}
+        .article-link:active{{background:rgba(255,255,255,0.05)}}
+        .article-title{{font-size:13px;font-weight:500;flex:1;margin-right:8px}}
+        .article-date{{font-size:11px;color:#666;white-space:nowrap}}
+        .similar-item{{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;text-decoration:none;color:#e5e5e5;border:1px solid rgba(255,255,255,0.06);margin-bottom:8px}}
+        .similar-item:active{{background:rgba(255,255,255,0.05)}}
+        .similar-info{{display:flex;flex-direction:column}}
+        .similar-name{{font-size:14px;font-weight:600}}
+        .similar-bonus{{font-size:13px;color:#00FF87;font-weight:700}}
+        .legal{{background:rgba(234,179,8,0.05);border:1px solid rgba(234,179,8,0.2);border-radius:12px;padding:12px;text-align:center;font-size:11px;color:#999;margin:24px 0}}
+        footer{{text-align:center;padding:20px 0;font-size:12px;color:#666;border-top:1px solid rgba(255,255,255,0.06)}}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container header-inner">
+            <a href="https://guncelgiris.ai" class="logo">DSBN</a>
+            <a href="https://guncelgiris.ai" class="nav-link">Ana Sayfa</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <section class="hero">
+            <amp-img src="{logo_url}" width="80" height="80" layout="fixed" alt="{site_name}" class="firm-logo"></amp-img>
+            <h1>{site_name}</h1>
+            <div class="meta">
+                <span class="badge">{category}</span>
+                <span class="rating">&#9733; {rating}</span>
+            </div>
+            <div class="bonus-box">
+                <div class="bonus-label">{bonus_label}</div>
+                <div class="bonus-amount">{bonus_amount}</div>
+            </div>
+            <a href="{affiliate_url}" class="cta-btn" rel="noopener noreferrer">Siteye Git</a>
+        </section>
+
+        {"<section class='section'><h2 class='section-title'><span>&#9889;</span> Ozellikler</h2><ul class='features-grid'>" + features_html + "</ul></section>" if features else ""}
+
+        {"<section class='section'><h2 class='section-title'><span>&#128196;</span> " + site_name + " Hakkinda Makaleler</h2>" + articles_html + "</section>" if articles else ""}
+
+        {"<section class='section'><h2 class='section-title'><span>&#128101;</span> Benzer Siteler</h2>" + similar_html + "</section>" if similar else ""}
+
+        <div class="legal">
+            &#9888;&#65039; Bahis ve sans oyunlari 18 yas alti icin yasaktir. Kumar bagimliligi yardim hatti: 182.
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            &copy; 2026 guncelgiris.ai - Tum haklari saklidir.
+        </div>
+    </footer>
+</body>
+</html>'''
+
+    return HTMLResponse(content=amp_html)
+
+
+
 @api_router.post("/bonus-sites")
 async def create_bonus_site(site: Dict[str, Any]):
     """Create a new bonus site"""
