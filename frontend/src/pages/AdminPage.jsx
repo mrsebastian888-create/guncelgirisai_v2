@@ -310,7 +310,7 @@ function MatchesAdminTab() {
 
 /* ── SITES TAB ───────────────────────────────────── */
 function SitesTab({ bonusSites, onRefresh }) {
-  const [newSite, setNewSite] = useState({ name: "", logo_url: "", bonus_type: "deneme", bonus_amount: "", affiliate_url: "", rating: 4.5, features: "", turnover_requirement: 10 });
+  const [newSite, setNewSite] = useState({ name: "", logo_url: "", bonus_type: "deneme", bonus_amount: "", affiliate_url: "", video_url: "", video_title: "", rating: 4.5, features: "", turnover_requirement: 10 });
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
@@ -321,7 +321,7 @@ function SitesTab({ bonusSites, onRefresh }) {
     try {
       await axios.post(`${API}/bonus-sites`, { ...newSite, features: newSite.features.split(",").map(f => f.trim()).filter(Boolean), sort_order: bonusSites.length + 1 });
       toast.success("Site eklendi");
-      setNewSite({ name: "", logo_url: "", bonus_type: "deneme", bonus_amount: "", affiliate_url: "", rating: 4.5, features: "", turnover_requirement: 10 });
+      setNewSite({ name: "", logo_url: "", bonus_type: "deneme", bonus_amount: "", affiliate_url: "", video_url: "", video_title: "", rating: 4.5, features: "", turnover_requirement: 10 });
       onRefresh();
     } catch { toast.error("Site eklenemedi"); }
   };
@@ -342,6 +342,8 @@ function SitesTab({ bonusSites, onRefresh }) {
       bonus_type: site.bonus_type || "deneme",
       bonus_amount: site.bonus_amount || "",
       affiliate_url: site.affiliate_url || "",
+      video_url: site.video_url || "",
+      video_title: site.video_title || "",
       rating: site.rating || 4.5,
       features: Array.isArray(site.features) ? site.features.join(", ") : "",
       turnover_requirement: site.turnover_requirement || 10,
@@ -389,10 +391,11 @@ function SitesTab({ bonusSites, onRefresh }) {
       <Card className="glass-card border-white/10">
         <CardHeader><CardTitle className="flex items-center gap-2"><Plus className="w-5 h-5" />Yeni Bonus Sitesi</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Input placeholder="Site Adı" value={newSite.name} onChange={(e) => setNewSite({ ...newSite, name: e.target.value })} data-testid="new-site-name" />
             <Input placeholder="Logo URL" value={newSite.logo_url} onChange={(e) => setNewSite({ ...newSite, logo_url: e.target.value })} />
             <Input placeholder="Affiliate URL" value={newSite.affiliate_url} onChange={(e) => setNewSite({ ...newSite, affiliate_url: e.target.value })} data-testid="new-site-url" />
+            <Input placeholder="Video URL (opsiyonel)" value={newSite.video_url} onChange={(e) => setNewSite({ ...newSite, video_url: e.target.value })} data-testid="new-site-video-url" />
             <Select value={newSite.bonus_type} onValueChange={(v) => setNewSite({ ...newSite, bonus_type: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -403,6 +406,7 @@ function SitesTab({ bonusSites, onRefresh }) {
               </SelectContent>
             </Select>
             <Input placeholder="Bonus Miktarı (500 TL)" value={newSite.bonus_amount} onChange={(e) => setNewSite({ ...newSite, bonus_amount: e.target.value })} />
+            <Input placeholder="Video Başlığı (opsiyonel)" value={newSite.video_title} onChange={(e) => setNewSite({ ...newSite, video_title: e.target.value })} data-testid="new-site-video-title" />
             <Input placeholder="Özellikler (virgülle)" value={newSite.features} onChange={(e) => setNewSite({ ...newSite, features: e.target.value })} />
           </div>
           <Button onClick={handleCreate} className="bg-neon-green text-black hover:bg-neon-green/90" data-testid="create-site-btn">
@@ -421,7 +425,7 @@ function SitesTab({ bonusSites, onRefresh }) {
                 {editingId === site.id ? (
                   /* Edit Mode */
                   <div className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <Input value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} placeholder="Site Adı" />
                       <Select value={editData.bonus_type} onValueChange={(v) => setEditData({ ...editData, bonus_type: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -434,6 +438,8 @@ function SitesTab({ bonusSites, onRefresh }) {
                       </Select>
                       <Input value={editData.bonus_amount} onChange={(e) => setEditData({ ...editData, bonus_amount: e.target.value })} placeholder="Bonus Miktarı" />
                       <Input value={editData.affiliate_url} onChange={(e) => setEditData({ ...editData, affiliate_url: e.target.value })} placeholder="Affiliate URL" />
+                      <Input value={editData.video_url} onChange={(e) => setEditData({ ...editData, video_url: e.target.value })} placeholder="Video URL" data-testid={`edit-site-video-url-${site.id}`} />
+                      <Input value={editData.video_title} onChange={(e) => setEditData({ ...editData, video_title: e.target.value })} placeholder="Video Başlığı" data-testid={`edit-site-video-title-${site.id}`} />
                       <Input value={editData.features} onChange={(e) => setEditData({ ...editData, features: e.target.value })} placeholder="Özellikler" />
                       <Input type="number" value={editData.rating} onChange={(e) => setEditData({ ...editData, rating: parseFloat(e.target.value) })} placeholder="Rating" />
                     </div>
@@ -464,6 +470,7 @@ function SitesTab({ bonusSites, onRefresh }) {
                           <Badge variant="outline">{site.bonus_type}</Badge>
                           <span className="text-neon-green text-sm">{site.bonus_amount}</span>
                           <span className="text-xs text-muted-foreground">Rating: {site.rating}</span>
+                          {site.video_url && <Badge className="bg-[#00F0FF]/20 text-[#00F0FF] text-xs">Video</Badge>}
                           {site.features?.length > 0 && (
                             <span className="text-xs text-muted-foreground">{site.features.slice(0, 3).join(", ")}</span>
                           )}
@@ -474,6 +481,9 @@ function SitesTab({ bonusSites, onRefresh }) {
                       <a href={site.affiliate_url} target="_blank" rel="noopener noreferrer">
                         <Button variant="ghost" size="sm"><ExternalLink className="w-4 h-4" /></Button>
                       </a>
+                      <Link to={`/${site.slug}/video`}>
+                        <Button variant="ghost" size="sm" data-testid={`view-site-video-page-${site.id}`}><Play className="w-4 h-4" /></Button>
+                      </Link>
                       <Button variant="ghost" size="sm" onClick={() => startEdit(site)} data-testid={`edit-site-${site.id}`}>
                         <Edit2 className="w-4 h-4" />
                       </Button>
