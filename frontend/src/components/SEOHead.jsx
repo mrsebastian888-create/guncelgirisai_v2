@@ -12,6 +12,7 @@ export default function SEOHead({
   article,
   noindex = false,
   jsonLd,
+  amphtml,
 }) {
   const fullTitle = title ? title + " | " + SITE_NAME : SITE_NAME;
   const metaDesc = description || "En güvenilir bonus siteleri, deneme bonusları ve spor bahis rehberleri.";
@@ -49,6 +50,7 @@ export default function SEOHead({
     // Core meta
     setMeta("name", "description", metaDesc);
     if (url) setLink("canonical", url);
+    if (amphtml) setLink("amphtml", amphtml);
     if (noindex) setMeta("name", "robots", "noindex, nofollow");
 
     // Open Graph
@@ -89,7 +91,7 @@ export default function SEOHead({
     return () => {
       scripts.forEach((s) => s.remove());
     };
-  }, [fullTitle, metaDesc, metaImage, url, type, noindex, article, jsonLd]);
+  }, [fullTitle, metaDesc, metaImage, url, type, noindex, article, jsonLd, amphtml]);
 
   return null;
 }
