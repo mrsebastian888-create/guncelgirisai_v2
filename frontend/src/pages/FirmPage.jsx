@@ -74,6 +74,7 @@ export default function FirmPage() {
       <SEOHead
         title={`${site.name} Guncel Giris Adresi | Bonus ve Inceleme`}
         description={`${site.name} guncel giris adresi, ${site.bonus_amount} ${bonusLabel} firsati. Detayli inceleme ve bonus rehberi.`}
+        amphtml={`${process.env.REACT_APP_BACKEND_URL}/api/amp/${site.slug || slug}`}
       />
 
       {/* Hero Banner */}
