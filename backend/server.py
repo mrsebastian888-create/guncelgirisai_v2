@@ -5,7 +5,7 @@ Version: 3.0.0
 """
 
 from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, status, BackgroundTasks
-from fastapi.responses import JSONResponse, PlainTextResponse, Response, HTMLResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -35,6 +35,8 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+GENERATED_VIDEOS_DIR = ROOT_DIR / "generated_videos"
+GENERATED_VIDEOS_DIR.mkdir(exist_ok=True)
 
 # Environment validation with fail-fast
 def get_required_env(key: str, default: str = None) -> str:
