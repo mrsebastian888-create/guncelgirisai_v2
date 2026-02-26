@@ -271,10 +271,15 @@ export default function FirmPage() {
                   <Users className="w-4 h-4 text-[#00F0FF]" /> Benzer Siteler
                 </h3>
                 <div className="space-y-2">
-                  {similar_sites.map((s) => (
+                  {similar_sites.map((s) => {
+                    const trMap = {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','Ç':'c','Ğ':'g','İ':'i','Ö':'o','Ş':'s','Ü':'u'};
+                    let sl = s.name.toLowerCase();
+                    for (const [k,v] of Object.entries(trMap)) sl = sl.replaceAll(k,v);
+                    const firmSlug = sl.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-guncelgiris';
+                    return (
                     <Link
                       key={s.id}
-                      to={`/${s.name.toLowerCase().replace(/\s+/g, '-').replace(/[!&.]/g, '')}`}
+                      to={`/${s.slug || firmSlug}`}
                       className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-all group"
                     >
                       <img src={s.logo_url} alt={s.name} className="w-8 h-8 rounded-lg" />
@@ -284,7 +289,8 @@ export default function FirmPage() {
                       </div>
                       <ChevronRight className="w-4 h-4 text-muted-foreground" />
                     </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
