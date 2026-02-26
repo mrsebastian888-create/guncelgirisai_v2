@@ -1202,22 +1202,23 @@ async def get_all_bonus_sites(limit: int = 500, category: str = None):
 @api_router.get("/firma/{slug}")
 async def get_firma_detail(slug: str):
     """Get firm detail page data by slug"""
-    name_query = slug.lower().replace("-", " ").replace(".", "")
-    
-    # Try exact name match first, then slug-based
-    site = await db.bonus_sites.find_one(
-        {"$or": [
-            {"name": {"$regex": f"^{slug}$", "$options": "i"}},
-            {"name": {"$regex": f"^{slug.replace('-', ' ')}$", "$options": "i"}},
-            {"name": {"$regex": f"^{slug.replace('-', '')}$", "$options": "i"}},
-        ]},
-        {"_id": 0}
-    )
+    # Try slug field first (firmaismi-guncelgiris format)
+    site = await db.bonus_sites.find_one({"slug": slug}, {"_id": 0})
     
     if not site:
-        # Try partial match
+        # Fallback: try name-based matching for backward compatibility
         site = await db.bonus_sites.find_one(
-            {"name": {"$regex": slug.replace("-", ".*"), "$options": "i"}},
+            {"$or": [
+                {"name": {"$regex": f"^{slug}$", "$options": "i"}},
+                {"name": {"$regex": f"^{slug.replace('-', ' ')}$", "$options": "i"}},
+                {"name": {"$regex": f"^{slug.replace('-guncelgiris', '').replace('-', ' ')}$", "$options": "i"}},
+            ]},
+            {"_id": 0}
+        )
+    
+    if not site:
+        site = await db.bonus_sites.find_one(
+            {"name": {"$regex": slug.replace("-guncelgiris", "").replace("-", ".*"), "$options": "i"}},
             {"_id": 0}
         )
     

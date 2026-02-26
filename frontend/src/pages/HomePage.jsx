@@ -132,7 +132,12 @@ const HomePage = () => {
   // Top 5 for "En Güvenilir" (highest rating)
   const trustedFive = [...bonusSites].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
 
-  const getFirmSlug = (name) => name.toLowerCase().replace(/\s+/g, '-').replace(/[!&.]/g, '');
+  const getFirmSlug = (name) => {
+    const trMap = {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','Ç':'c','Ğ':'g','İ':'i','Ö':'o','Ş':'s','Ü':'u'};
+    let s = name.toLowerCase();
+    for (const [k,v] of Object.entries(trMap)) s = s.replaceAll(k,v);
+    return s.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-guncelgiris';
+  };
 
   const faqJsonLd = {
     "@context": "https://schema.org",
