@@ -62,7 +62,7 @@ export default function FirmPage() {
     <div className="min-h-screen flex flex-col items-center justify-center pt-20 gap-4">
       <AlertTriangle className="w-16 h-16 text-yellow-500" />
       <h1 className="font-heading text-2xl">{error || "Firma bulunamadi"}</h1>
-      <Link to="/" className="text-neon-green hover:underline">Ana Sayfaya Don</Link>
+      <Link to="/" className="text-neon-green hover:underline" data-testid="firm-error-home-link">Ana Sayfaya Don</Link>
     </div>
   );
 
@@ -127,9 +127,9 @@ export default function FirmPage() {
 
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs mb-6" style={{ color: "var(--muted-foreground)" }}>
-            <Link to="/" className="hover:text-[#00FF87] transition-colors">Ana Sayfa</Link>
+            <Link to="/" className="hover:text-[#00FF87] transition-colors" data-testid="firm-breadcrumb-home-link">Ana Sayfa</Link>
             <ChevronRight className="w-3 h-3" />
-            <span style={{ color: "#00FF87" }}>{site.name}</span>
+            <span style={{ color: "#00FF87" }} data-testid="firm-breadcrumb-current">{site.name}</span>
           </div>
 
           {/* 3-Column Grid */}
@@ -148,12 +148,12 @@ export default function FirmPage() {
                 <img src={site.logo_url} alt={site.name} className="relative w-20 h-20 rounded-2xl object-cover border-2" style={{ borderColor: "rgba(0,255,135,0.3)" }} />
               </div>
               <div>
-                <h2 className="font-heading font-black text-xl uppercase tracking-tight text-white">{site.name}</h2>
+                <h2 className="font-heading font-black text-xl uppercase tracking-tight text-white" data-testid="firm-hero-left-name">{site.name}</h2>
                 <div className="flex items-center justify-center gap-2 mt-2">
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(0,255,135,0.12)", color: "#00FF87" }}>
                     <Globe className="w-3 h-3" /> {site.category || "Turkiye"}
                   </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(251,191,36,0.12)", color: "#FBBF24" }}>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(251,191,36,0.12)", color: "#FBBF24" }} data-testid="firm-hero-left-rating">
                     <Star className="w-3 h-3 fill-yellow-400" /> {site.rating || "4.5"}
                   </span>
                 </div>
@@ -198,7 +198,7 @@ export default function FirmPage() {
                 <span style={{ color: "#00FF87", textShadow: "0 0 40px rgba(0,255,135,0.5)" }}>GUNCEL GIRIS</span>
               </h1>
 
-              <p className="text-sm md:text-base mb-6 max-w-lg mx-auto" style={{ color: "var(--muted-foreground)" }}>
+              <p className="text-sm md:text-base mb-6 max-w-lg mx-auto" style={{ color: "var(--muted-foreground)" }} data-testid="firm-hero-description">
                 {site.name} resmi guncel giris adresi. {site.bonus_amount} {bonusLabel} firsatiyla hemen kayit olun.
               </p>
 
@@ -216,6 +216,7 @@ export default function FirmPage() {
                 </a>
                 <Link
                   to="/"
+                  data-testid="firm-cta-all-sites"
                   className="inline-flex items-center gap-2 rounded-xl border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5"
                   style={{ borderColor: "rgba(255,255,255,0.15)", color: "var(--foreground)" }}
                 >
@@ -259,13 +260,14 @@ export default function FirmPage() {
               }} />
 
               <div className="relative z-10">
-                <span className="text-xs uppercase tracking-[0.25em] font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  <span className="text-xs uppercase tracking-[0.25em] font-semibold" style={{ color: "rgba(255,255,255,0.5)" }} data-testid="firm-bonus-label-hero">
                   {bonusLabel}
                 </span>
 
                 <div className="my-4">
                   <span
                     className="font-heading font-black text-5xl md:text-6xl"
+                    data-testid="firm-bonus-amount-hero"
                     style={{
                       color: "#00FF87",
                       textShadow: "0 0 40px rgba(0,255,135,0.6), 0 0 80px rgba(0,255,135,0.3), 0 0 120px rgba(0,255,135,0.15)",
@@ -399,6 +401,7 @@ export default function FirmPage() {
                     <Link
                       key={a.id}
                       to={`/makale/${a.slug}`}
+                      data-testid={`firm-article-link-${a.id || a.slug}`}
                       className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5 hover:border-neon-green/30 transition-all group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center flex-shrink-0">
@@ -469,6 +472,7 @@ export default function FirmPage() {
                     <Link
                       key={s.id}
                       to={`/${s.slug || firmSlug}`}
+                      data-testid={`firm-similar-link-${s.id || s.slug || firmSlug}`}
                       className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-all group"
                     >
                       <img src={s.logo_url} alt={s.name} className="w-8 h-8 rounded-lg" />
