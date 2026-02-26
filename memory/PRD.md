@@ -15,7 +15,20 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v13.0: Production Cleanup - Emergent Badge Kaldırma (Feb 2026)
 ### v13.1: Kapsamlı Sistem Kontrolü & Test (Feb 2026)
 ### v14.0: Firma URL Yapısı Güncelleme (Feb 2026)
-### v15.0: AMP Sayfaları (Feb 2026) - CURRENT
+### v15.0: AMP Sayfaları (Feb 2026)
+### v16.0: Google Search Console SEO Optimizasyonu (Feb 2026) - CURRENT
+
+**Değişiklikler:**
+- Sitemap Index yapısı: 4 alt sitemap (pages, firms, articles, amp)
+- 264 firma + 545 makale + 264 AMP sayfası + 18 statik sayfa sitemap'e eklendi
+- Tüm URL'ler guncelgiris.ai domain'ini kullanıyor
+- robots.txt düzeltildi (AMP ve sitemap'lere izin verildi)
+- public/robots.txt eklendi (frontend statik dosya)
+- Homepage JSON-LD: WebSite + Organization + ItemList + FAQPage
+- FirmPage JSON-LD: BreadcrumbList + Organization + Review
+- Canonical URL'ler guncelgiris.ai'ye yönlendirildi
+- SEO title'lar 2026 yılı ve bonus miktarı ile zenginleştirildi
+- Twitter Card ve OG meta tagları güncellendi
 
 **Değişiklikler:**
 - 264 firma için AMP HTML sayfaları: `/api/amp/{slug}` endpoint'i
