@@ -816,8 +816,8 @@ async def generate_ai_content(prompt: str, system_message: str = "Sen profesyone
     """Generate AI content using Emergent integrations with retry"""
     from emergentintegrations.llm.chat import LlmChat, UserMessage
     
-    models = [("openai", "gpt-4o"), ("openai", "gpt-4o-mini")]
-    max_retries = 3
+    models = [("openai", "gpt-4o-mini"), ("openai", "gpt-4o")]
+    max_retries = 2
     
     for provider, model in models:
         for attempt in range(max_retries):
@@ -828,7 +828,7 @@ async def generate_ai_content(prompt: str, system_message: str = "Sen profesyone
             except Exception as e:
                 logger.warning(f"AI attempt {attempt+1}/{max_retries} ({model}): {e}")
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(5 * (attempt + 1))
+                    await asyncio.sleep(2)
     
     raise Exception("All AI models failed after retries")
 
