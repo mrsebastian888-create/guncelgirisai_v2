@@ -1475,6 +1475,127 @@ async def get_amp_page(slug: str, request: Request):
     return HTMLResponse(content=amp_html)
 
 
+@api_router.get("/amp-video/{slug}", response_class=HTMLResponse)
+async def get_amp_video_page(slug: str, request: Request):
+    """Serve AMP HTML video page for a firm."""
+    site = await resolve_site_by_slug(slug)
+    firm_slug = site.get("slug") or slug
+    video_data = normalize_video_urls(site)
+
+    site_name = site.get("name", "")
+    bonus_amount = site.get("bonus_amount", "")
+    rating = site.get("rating", 4.5)
+    category = site.get("category", "Turkiye")
+    logo_url = site.get("logo_url", "")
+    affiliate_url = site.get("affiliate_url", "#")
+    video_url = video_data["video_url"]
+    video_title = video_data["video_title"]
+    video_description = video_data["video_description"]
+
+    canonical_url = f"https://guncelgiris.ai/{firm_slug}/video"
+    firm_url = f"https://guncelgiris.ai/{firm_slug}"
+
+    youtube_video_id = ""
+    if "watch?v=" in video_url:
+        youtube_video_id = video_url.split("watch?v=")[-1].split("&")[0]
+    elif "youtu.be/" in video_url:
+        youtube_video_id = video_url.split("youtu.be/")[-1].split("?")[0].strip("/")
+
+    thumbnail_url = f"https://i.ytimg.com/vi/{youtube_video_id}/hqdefault.jpg" if youtube_video_id else logo_url
+
+    video_schema = {
+        "@context": "https://schema.org",
+        "@type": "VideoObject",
+        "name": video_title,
+        "description": video_description,
+        "thumbnailUrl": [thumbnail_url] if thumbnail_url else [],
+        "uploadDate": datetime.now(timezone.utc).isoformat(),
+        "contentUrl": video_url,
+        "embedUrl": video_data["video_embed_url"],
+        "publisher": {
+            "@type": "Organization",
+            "name": "guncelgiris.ai",
+            "url": "https://guncelgiris.ai",
+        },
+        "isFamilyFriendly": False,
+    }
+    video_schema_str = json.dumps(video_schema, ensure_ascii=False)
+
+    amp_html = f'''<!doctype html>
+<html amp lang="tr">
+<head>
+    <meta charset="utf-8">
+    <script async src="https://cdn.ampproject.org/v0.js"></script>
+    <title>{site_name} Video İnceleme 2026 | Güncel Bonus Rehberi</title>
+    <link rel="canonical" href="{canonical_url}">
+    <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+    <meta name="description" content="{site_name} için firma özel video inceleme, bonus detayları ve güncel giriş özeti.">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="video.other">
+    <meta property="og:title" content="{video_title}">
+    <meta property="og:description" content="{video_description}">
+    <meta property="og:url" content="{canonical_url}">
+    <meta property="og:image" content="{thumbnail_url}">
+    <script type="application/ld+json">{video_schema_str}</script>
+    <style amp-boilerplate>body{{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}}@-webkit-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@-moz-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@-ms-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@-o-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}</style><noscript><style amp-boilerplate>body{{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}}</style></noscript>
+    <style amp-custom>
+        *{{margin:0;padding:0;box-sizing:border-box}}
+        body{{background:#080808;color:#ebebeb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.55}}
+        .container{{max-width:760px;margin:0 auto;padding:0 16px}}
+        .hero{{padding:26px 0;border-bottom:1px solid rgba(255,255,255,0.08)}}
+        .top{{display:flex;align-items:center;gap:12px;margin-bottom:14px}}
+        .logo{{border-radius:14px;border:2px solid rgba(0,255,135,0.3);background:#101010}}
+        h1{{font-size:28px;font-weight:900;letter-spacing:-0.02em;text-transform:uppercase}}
+        .meta{{display:flex;gap:10px;align-items:center;margin-top:10px}}
+        .badge{{padding:4px 10px;border-radius:20px;background:rgba(0,255,135,0.14);color:#00FF87;font-size:12px;font-weight:700}}
+        .rating{{color:#FBBF24;font-weight:700;font-size:13px}}
+        .card{{margin:20px 0;padding:16px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08)}}
+        .thumb{{border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1)}}
+        .title{{font-size:18px;font-weight:800;margin-top:14px}}
+        .desc{{font-size:14px;color:#b4b4b4;margin-top:8px}}
+        .cta{{display:block;text-align:center;margin-top:16px;padding:13px 16px;border-radius:12px;background:#00FF87;color:#000;font-weight:800;text-decoration:none;text-transform:uppercase;letter-spacing:0.04em}}
+        .cta.alt{{background:transparent;color:#00FF87;border:1px solid rgba(0,255,135,0.35)}}
+        .grid{{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}}
+        .item{{padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);font-size:12px;color:#bdbdbd}}
+        .item strong{{display:block;color:#00FF87;margin-bottom:3px}}
+        .footer{{margin:24px 0 30px;font-size:11px;color:#888;text-align:center}}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <div class="top">
+                <amp-img src="{logo_url}" width="64" height="64" layout="fixed" alt="{site_name}" class="logo"></amp-img>
+                <div>
+                    <h1>{site_name} Video</h1>
+                    <div class="meta">
+                        <span class="badge">{category}</span>
+                        <span class="rating">&#9733; {rating}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="thumb">
+                    <amp-img src="{thumbnail_url}" width="1280" height="720" layout="responsive" alt="{video_title}"></amp-img>
+                </div>
+                <h2 class="title">{video_title}</h2>
+                <p class="desc">{video_description}</p>
+                <a href="{video_url}" class="cta" rel="noopener noreferrer">Videoyu Aç</a>
+                <a href="{firm_url}" class="cta alt">Firma Detayına Dön</a>
+                <div class="grid">
+                    <div class="item"><strong>Bonus</strong>{bonus_amount}</div>
+                    <div class="item"><strong>İnceleme</strong>Firma özel video odaklı içerik</div>
+                </div>
+            </div>
+            <a href="{affiliate_url}" class="cta" rel="noopener noreferrer">Siteye Git</a>
+        </section>
+        <p class="footer">18+ | Sorumlu oyun oynayınız. © 2026 guncelgiris.ai</p>
+    </div>
+</body>
+</html>'''
+
+    return HTMLResponse(content=amp_html)
+
 
 @api_router.post("/bonus-sites")
 async def create_bonus_site(site: Dict[str, Any]):
