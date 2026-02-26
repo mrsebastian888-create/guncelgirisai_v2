@@ -14,7 +14,17 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v12.0: Ana Sayfa Kapsamlı Güncelleme (Feb 2026)
 ### v13.0: Production Cleanup - Emergent Badge Kaldırma (Feb 2026)
 ### v13.1: Kapsamlı Sistem Kontrolü & Test (Feb 2026)
-### v14.0: Firma URL Yapısı Güncelleme (Feb 2026) - CURRENT
+### v14.0: Firma URL Yapısı Güncelleme (Feb 2026)
+### v15.0: AMP Sayfaları (Feb 2026) - CURRENT
+
+**Değişiklikler:**
+- 264 firma için AMP HTML sayfaları: `/api/amp/{slug}` endpoint'i
+- Her AMP sayfasında: SEO meta, Schema.org JSON-LD, OG tagleri, affiliate CTA, makaleler, benzer siteler
+- AMP endpoint rate limiter'dan hariç tutuldu
+- SEOHead bileşenine amphtml prop desteği eklendi
+- FirmPage'e amphtml link tag'i eklendi
+- Google AMP validasyonu geçecek yapıda
+- 264/264 firma başarılı test edildi
 
 **Değişiklikler:**
 - 264 firmaya `slug` alanı eklendi: `firmaismi-guncelgiris` formatı
