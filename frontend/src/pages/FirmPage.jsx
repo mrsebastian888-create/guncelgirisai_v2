@@ -114,59 +114,210 @@ export default function FirmPage() {
         jsonLd={[breadcrumbJsonLd, firmJsonLd, reviewJsonLd]}
       />
 
-      {/* Hero Banner */}
-      <section className="relative overflow-hidden py-12 md:py-16 px-4" data-testid="firm-hero">
-        <div className="absolute inset-0 opacity-10" style={{
+      {/* ── HERO — 3-Column Firma Banner ─────────────────────────── */}
+      <section className="relative overflow-hidden" style={{ minHeight: "500px" }} data-testid="firm-hero">
+        <div className="absolute inset-0 bg-[#050505]" />
+        <div className="absolute inset-0 opacity-[0.06]" style={{
           backgroundImage: "linear-gradient(rgba(0,255,135,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,135,0.3) 1px, transparent 1px)",
           backgroundSize: "60px 60px"
         }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(0,255,135,0.05) 0%, transparent 50%, rgba(0,240,255,0.05) 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(0,255,135,0.06) 0%, transparent 60%)" }} />
 
-        <div className="container mx-auto max-w-6xl relative z-10">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-10">
-            {/* Logo & Name */}
-            <div className="flex items-center gap-5">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden border-2 border-neon-green/30 bg-white/5 flex-shrink-0">
-                <img src={site.logo_url} alt={site.name} className="w-full h-full object-cover" />
+        <div className="relative z-10 container mx-auto max-w-7xl px-4 md:px-6 flex flex-col justify-center" style={{ minHeight: "500px" }}>
+
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-xs mb-6" style={{ color: "var(--muted-foreground)" }}>
+            <Link to="/" className="hover:text-[#00FF87] transition-colors">Ana Sayfa</Link>
+            <ChevronRight className="w-3 h-3" />
+            <span style={{ color: "#00FF87" }}>{site.name}</span>
+          </div>
+
+          {/* 3-Column Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_280px] gap-6 items-center">
+
+            {/* LEFT — Firma Kimlik */}
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="hidden lg:flex flex-col items-center text-center gap-4 p-6 rounded-2xl"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <div className="relative">
+                <div className="absolute inset-0 rounded-2xl" style={{ background: "rgba(0,255,135,0.15)", filter: "blur(12px)", animation: "pulseGlow 2s ease-in-out infinite" }} />
+                <img src={site.logo_url} alt={site.name} className="relative w-20 h-20 rounded-2xl object-cover border-2" style={{ borderColor: "rgba(0,255,135,0.3)" }} />
               </div>
               <div>
-                <h1 className="font-heading text-3xl md:text-4xl font-black uppercase tracking-tight" data-testid="firm-name">
-                  {site.name}
-                </h1>
-                <div className="flex items-center gap-3 mt-2">
-                  <Badge className="bg-neon-green/15 text-neon-green border-neon-green/30 font-bold">
-                    {site.category || "Turkiye"}
-                  </Badge>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-bold text-yellow-400">{site.rating}</span>
+                <h2 className="font-heading font-black text-xl uppercase tracking-tight text-white">{site.name}</h2>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(0,255,135,0.12)", color: "#00FF87" }}>
+                    <Globe className="w-3 h-3" /> {site.category || "Turkiye"}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold" style={{ background: "rgba(251,191,36,0.12)", color: "#FBBF24" }}>
+                    <Star className="w-3 h-3 fill-yellow-400" /> {site.rating || "4.5"}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                {site.name} guncel giris adresi ve bonus firsatlari
+              </p>
+
+              {/* Ozellikler mini */}
+              <div className="w-full space-y-1.5 mt-1">
+                {(site.features || []).slice(0, 3).map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: "var(--muted-foreground)" }}>
+                    <CheckCircle2 className="w-3 h-3 flex-shrink-0" style={{ color: "#00FF87" }} />
+                    <span className="truncate">{f}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* CENTER — Ana Hero */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6 }}
+              className="relative flex flex-col items-center justify-center text-center py-8 lg:py-0"
+            >
+              {/* Mobil Logo (sadece mobilde) */}
+              <div className="flex lg:hidden items-center gap-4 mb-6">
+                <img src={site.logo_url} alt={site.name} className="w-16 h-16 rounded-xl object-cover border-2" style={{ borderColor: "rgba(0,255,135,0.3)" }} />
+                <div className="text-left">
+                  <h1 className="font-heading text-2xl font-black uppercase tracking-tight" data-testid="firm-name">{site.name}</h1>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(0,255,135,0.12)", color: "#00FF87" }}>{site.category || "Turkiye"}</span>
+                    <span className="text-xs font-bold" style={{ color: "#FBBF24" }}>★ {site.rating}</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Bonus Box */}
-            <div className="flex-1" />
-            <div className="rounded-2xl border border-neon-green/20 bg-neon-green/5 p-6 md:p-8 text-center min-w-[220px]" data-testid="firm-bonus-box">
-              <div className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{bonusLabel}</div>
-              <div className="font-heading text-4xl md:text-5xl font-black text-neon-green" style={{ textShadow: "0 0 30px rgba(0,255,135,0.3)" }}>
-                {site.bonus_amount}
+              <h1 className="hidden lg:block font-heading font-black uppercase leading-none mb-3" data-testid="firm-name" style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", letterSpacing: "-0.02em" }}>
+                <span className="text-white">{site.name}</span>
+                <br />
+                <span style={{ color: "#00FF87", textShadow: "0 0 40px rgba(0,255,135,0.5)" }}>GUNCEL GIRIS</span>
+              </h1>
+
+              <p className="text-sm md:text-base mb-6 max-w-lg mx-auto" style={{ color: "var(--muted-foreground)" }}>
+                {site.name} resmi guncel giris adresi. {site.bonus_amount} {bonusLabel} firsatiyla hemen kayit olun.
+              </p>
+
+              <div className="flex flex-wrap gap-3 justify-center mb-6">
+                <a
+                  href={site.affiliate_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="firm-cta-main"
+                  className="inline-flex items-center gap-2 rounded-xl px-8 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all active:scale-95 hover:scale-105"
+                  style={{ background: "#00FF87", color: "#000", boxShadow: "0 0 30px rgba(0,255,135,0.4)" }}
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Siteye Git
+                </a>
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-2 rounded-xl border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5"
+                  style={{ borderColor: "rgba(255,255,255,0.15)", color: "var(--foreground)" }}
+                >
+                  Tum Siteler
+                </Link>
               </div>
-              <a
-                href={site.affiliate_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="firm-cta-main"
-                className="inline-flex items-center gap-2 mt-4 px-8 py-3.5 rounded-xl font-heading font-bold uppercase tracking-wide text-sm bg-neon-green text-black hover:scale-105 transition-all"
-                style={{ boxShadow: "0 0 28px rgba(0,255,135,0.4)" }}
-              >
-                <ExternalLink className="w-4 h-4" />
-                Siteye Git
-              </a>
-            </div>
+
+              {/* Mini Stats */}
+              <div className="flex items-center gap-4 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                <div className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" style={{ color: "#00FF87" }} /> Lisansli</div>
+                <div className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" style={{ color: "#00FF87" }} /> Hizli Odeme</div>
+                <div className="flex items-center gap-1.5"><HeadphonesIcon className="w-3.5 h-3.5" style={{ color: "#00FF87" }} /> 7/24 Destek</div>
+              </div>
+
+              {/* Alt Orta Logo */}
+              <div className="mt-6 flex items-center justify-center gap-3 opacity-50">
+                <div className="h-px w-16" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15))" }} />
+                <span className="text-[10px] uppercase tracking-[0.2em] font-semibold" style={{ color: "var(--muted-foreground)" }}>guncelgiris.ai</span>
+                <div className="h-px w-16" style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.15), transparent)" }} />
+              </div>
+            </motion.div>
+
+            {/* RIGHT — Bonus Karti */}
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col items-center text-center gap-3 p-6 rounded-2xl relative overflow-hidden transition-transform hover:scale-[1.03]"
+              style={{
+                background: "linear-gradient(160deg, rgba(0,50,20,0.6) 0%, rgba(0,20,10,0.8) 100%)",
+                border: "1px solid rgba(0,255,135,0.15)",
+                backdropFilter: "blur(16px)",
+                boxShadow: "0 0 60px rgba(0,255,135,0.08), inset 0 0 60px rgba(0,255,135,0.03)"
+              }}
+              data-testid="firm-bonus-box"
+            >
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full" style={{
+                background: "radial-gradient(circle, rgba(0,255,135,0.25) 0%, transparent 70%)",
+                filter: "blur(30px)",
+                animation: "pulseGlow 2s ease-in-out infinite"
+              }} />
+
+              <div className="relative z-10">
+                <span className="text-xs uppercase tracking-[0.25em] font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  {bonusLabel}
+                </span>
+
+                <div className="my-4">
+                  <span
+                    className="font-heading font-black text-5xl md:text-6xl"
+                    style={{
+                      color: "#00FF87",
+                      textShadow: "0 0 40px rgba(0,255,135,0.6), 0 0 80px rgba(0,255,135,0.3), 0 0 120px rgba(0,255,135,0.15)",
+                      animation: "pulseGlow 2s ease-in-out infinite"
+                    }}
+                  >
+                    {site.bonus_amount}
+                  </span>
+                </div>
+
+                <p className="text-xs mb-5" style={{ color: "var(--muted-foreground)" }}>
+                  Ilk yatiriminiza ozel bonus firsati
+                </p>
+
+                <a
+                  href={site.affiliate_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative inline-flex items-center justify-center gap-2 w-full rounded-xl px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm overflow-hidden"
+                  style={{
+                    background: "linear-gradient(135deg, #00FF87, #00CC6B)",
+                    color: "#000",
+                    boxShadow: "0 0 30px rgba(0,255,135,0.35), inset 0 1px 0 rgba(255,255,255,0.2)",
+                    animation: "breathing 2s ease-in-out infinite"
+                  }}
+                  data-testid="firm-bonus-cta"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  SITEYE GIT
+                </a>
+
+                <div className="flex items-center justify-center gap-3 mt-4">
+                  <div className="flex items-center gap-1"><Shield className="w-3 h-3" style={{ color: "#00FF87" }} /><span className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>Lisansli</span></div>
+                  <div className="flex items-center gap-1"><Clock className="w-3 h-3" style={{ color: "#00FF87" }} /><span className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>Hizli Odeme</span></div>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes pulseGlow {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+        @keyframes breathing {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.04); }
+        }
+      `}</style>
 
       <div className="container mx-auto max-w-6xl px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
