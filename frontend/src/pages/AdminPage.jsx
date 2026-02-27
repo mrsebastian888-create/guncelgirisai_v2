@@ -580,11 +580,16 @@ function CompaniesTab() {
     try {
       const res = await axios.post(
         `${API}/admin/companies/discovery`,
-        { query, limit: 12, auto_approve: false },
+        { query, limit: 12, auto_approve: false, run_async: true, deep_analysis: false },
         { headers: getAuthHeaders() }
       );
-      toast.success(`Keşif tamamlandı. Yeni: ${res.data.created}, Atlanan: ${res.data.skipped}`);
-      await fetchCompanies();
+      if (res.status === 202 || res.data?.status === "queued") {
+        toast.success("Company discovery kuyruğa alındı. Liste birazdan güncellenecek.");
+        setTimeout(fetchCompanies, 3500);
+      } else {
+        toast.success(`Keşif tamamlandı. Yeni: ${res.data.created}, Atlanan: ${res.data.skipped}`);
+        await fetchCompanies();
+      }
     } catch (e) {
       toast.error(e.response?.data?.detail || "Keşif çalıştırılamadı");
     } finally {
