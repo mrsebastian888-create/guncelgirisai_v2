@@ -1964,7 +1964,7 @@ const AdminPage = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="domains" className="space-y-6">
-          <TabsList className="grid grid-cols-8 w-full max-w-6xl">
+          <TabsList className="grid grid-cols-9 w-full max-w-6xl">
             <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-1.5" />Domainler</TabsTrigger>
             <TabsTrigger value="sites"><Gift className="w-4 h-4 mr-1.5" />Siteler</TabsTrigger>
             <TabsTrigger value="companies" data-testid="admin-companies-tab"><Building2 className="w-4 h-4 mr-1.5" />Companies</TabsTrigger>
@@ -1973,6 +1973,7 @@ const AdminPage = () => {
             <TabsTrigger value="auto-content"><Wand2 className="w-4 h-4 mr-1.5" />Oto İçerik</TabsTrigger>
             <TabsTrigger value="articles"><FileText className="w-4 h-4 mr-1.5" />Makaleler</TabsTrigger>
             <TabsTrigger value="matches"><Activity className="w-4 h-4 mr-1.5" />Maçlar</TabsTrigger>
+            <TabsTrigger value="telegram" data-testid="admin-telegram-tab"><Bot className="w-4 h-4 mr-1.5" />Telegram</TabsTrigger>
           </TabsList>
 
           <TabsContent value="domains"><DomainsTab domains={domains} onRefresh={fetchData} /></TabsContent>
@@ -1988,6 +1989,7 @@ const AdminPage = () => {
 
           <TabsContent value="articles"><ArticlesTab articles={articles} onRefresh={fetchData} /></TabsContent>
           <TabsContent value="matches" className="space-y-6"><MatchesAdminTab /></TabsContent>
+          <TabsContent value="telegram"><TelegramTab /></TabsContent>
         </Tabs>
       </div>
     </div>
