@@ -612,6 +612,86 @@ class Category(BaseModel):
     type: str
     order: int = 0
 
+
+class CompanyCategoryModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    slug: str
+    order: int = 0
+    is_active: bool = True
+
+
+class CompanySubcategoryModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    category_slug: str
+    name: str
+    slug: str
+    order: int = 0
+    is_active: bool = True
+
+
+class CompanyIntelligenceModel(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    slug: str
+    domain: str
+    category_id: str
+    subcategory_id: str
+    description_short: str = ""
+    description_long: str = ""
+    founded_year: str = "Unknown"
+    employee_range: str = "Unknown"
+    revenue_range: str = "Unknown"
+    global_rank: int = 0
+    country_rank: int = 0
+    category_rank: int = 0
+    estimated_visits: int = 0
+    bounce_rate: float = 0.0
+    pages_per_visit: float = 0.0
+    avg_visit_duration: str = "0m 00s"
+    technologies_json: List[str] = []
+    channels_json: List[str] = []
+    social_links_json: Dict[str, str] = {}
+    tags_json: List[str] = []
+    logo_url: str = ""
+    featured_boolean: bool = False
+    featured_reason: str = ""
+    intelligence_score: float = 0.0
+    seo_title: str = ""
+    seo_description: str = ""
+    seo_keywords: List[str] = []
+    seo_internal_links: List[str] = []
+    source_query: str = ""
+    source_provider: str = ""
+    is_approved: bool = False
+    is_active: bool = True
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+
+class CompanyDiscoveryRequest(BaseModel):
+    query: str = "Top AI tools 2026"
+    limit: int = 10
+    auto_approve: bool = False
+
+
+class CompanyAdminUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    category_id: Optional[str] = None
+    subcategory_id: Optional[str] = None
+    description_short: Optional[str] = None
+    description_long: Optional[str] = None
+    featured_boolean: Optional[bool] = None
+    is_approved: Optional[bool] = None
+
+
+class CompanyFeatureRequest(BaseModel):
+    featured: bool = True
+    reason: str = ""
+
 class DomainSite(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
