@@ -25,7 +25,7 @@ class TestAuthTokenAcquisition:
     @pytest.fixture(scope="class")
     def admin_token(self):
         """Login and get admin JWT token"""
-        response = requests.post(f"{BASE_URL}/api/admin/login", json={
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={
             "username": ADMIN_USERNAME,
             "password": ADMIN_PASSWORD
         })
