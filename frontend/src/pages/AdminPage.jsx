@@ -9,7 +9,8 @@ import {
   Copy, ExternalLink, LogOut, Activity, Sparkles, Star,
   Search, Edit2, Save, X, Eye, ChevronDown, ChevronUp,
   Gift, Calendar, ArrowUp, ArrowDown, Layers, Image,
-  Play, Pause, Clock, ListChecks, Zap, Download, Check, Building2
+  Play, Pause, Clock, ListChecks, Zap, Download, Check, Building2,
+  Send, Bot, Users, Radio, MessageSquare
 } from "lucide-react";
 import SeoAssistant from "@/components/SeoAssistant";
 import { Button } from "@/components/ui/button";
