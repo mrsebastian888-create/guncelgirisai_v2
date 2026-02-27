@@ -1256,13 +1256,17 @@ def normalize_video_urls(site: Dict[str, Any]) -> Dict[str, Any]:
     video_title = site.get("video_title") or f"{site_name} Video İncelemesi"
     video_description = site.get("video_description") or f"{site_name} için güncel giriş, bonus ve güvenilirlik odaklı video özeti."
 
+    normalized_status = site.get("ai_video_status", "idle")
+    if ai_video_url and normalized_status == "generating":
+        normalized_status = "ready"
+
     return {
         "video_url": selected_url,
         "video_embed_url": video_embed_url,
         "video_title": video_title,
         "video_description": video_description,
         "video_type": video_type,
-        "ai_video_status": site.get("ai_video_status", "idle"),
+        "ai_video_status": normalized_status,
         "ai_video_error": site.get("ai_video_error", ""),
         "ai_video_generated_at": site.get("ai_video_generated_at", ""),
         "ai_video_model": site.get("ai_video_model", ""),
