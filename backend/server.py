@@ -4569,6 +4569,7 @@ from telegram_bot_manager import (
 
 _telethon_client = None
 _telethon_lock = asyncio.Lock()
+_telethon_phone_hash = {}  # Stores phone_code_hash for auth flow
 
 async def _get_telethon_client():
     """Get or create Telethon client for BotFather automation."""
@@ -4580,8 +4581,75 @@ async def _get_telethon_client():
     from telethon import TelegramClient
     from telegram_bot_manager import SESSION_PATH
     _telethon_client = TelegramClient(SESSION_PATH, TELEGRAM_API_ID, TELEGRAM_API_HASH)
-    await _telethon_client.start()
+    await _telethon_client.connect()
     return _telethon_client
+
+
+class TelegramAuthStartRequest(BaseModel):
+    phone: str
+
+class TelegramAuthVerifyRequest(BaseModel):
+    phone: str
+    code: str
+
+class TelegramAuthPasswordRequest(BaseModel):
+    password: str
+
+
+@api_router.get("/admin/telegram/auth/status")
+async def admin_telegram_auth_status(request: Request):
+    """Check Telegram auth status."""
+    require_admin_request(request)
+    if not TELEGRAM_API_ID or not TELEGRAM_API_HASH:
+        return {"authenticated": False, "reason": "API credentials not configured"}
+    try:
+        client = await _get_telethon_client()
+        is_auth = await client.is_user_authorized()
+        return {"authenticated": is_auth}
+    except Exception as e:
+        return {"authenticated": False, "reason": str(e)[:200]}
+
+
+@api_router.post("/admin/telegram/auth/send-code")
+async def admin_telegram_auth_send_code(payload: TelegramAuthStartRequest, request: Request):
+    """Send Telegram verification code to phone number."""
+    require_admin_request(request)
+    try:
+        client = await _get_telethon_client()
+        result = await client.send_code_request(payload.phone)
+        _telethon_phone_hash["hash"] = result.phone_code_hash
+        _telethon_phone_hash["phone"] = payload.phone
+        return {"message": f"Doğrulama kodu {payload.phone} numarasına gönderildi", "success": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Kod gönderilemedi: {str(e)[:200]}")
+
+
+@api_router.post("/admin/telegram/auth/verify-code")
+async def admin_telegram_auth_verify_code(payload: TelegramAuthVerifyRequest, request: Request):
+    """Verify the Telegram code."""
+    require_admin_request(request)
+    try:
+        client = await _get_telethon_client()
+        phone_hash = _telethon_phone_hash.get("hash", "")
+        await client.sign_in(payload.phone, payload.code, phone_code_hash=phone_hash)
+        return {"message": "Telegram hesabı doğrulandı", "authenticated": True}
+    except Exception as e:
+        error_msg = str(e)
+        if "SessionPasswordNeeded" in error_msg or "Two-steps" in error_msg:
+            return {"message": "2FA şifre gerekli", "needs_password": True, "authenticated": False}
+        raise HTTPException(status_code=400, detail=f"Doğrulama başarısız: {error_msg[:200]}")
+
+
+@api_router.post("/admin/telegram/auth/verify-password")
+async def admin_telegram_auth_verify_password(payload: TelegramAuthPasswordRequest, request: Request):
+    """Verify 2FA password."""
+    require_admin_request(request)
+    try:
+        client = await _get_telethon_client()
+        await client.sign_in(password=payload.password)
+        return {"message": "Telegram 2FA doğrulandı", "authenticated": True}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Şifre doğrulaması başarısız: {str(e)[:200]}")
 
 
 class TelegramBotCreateRequest(BaseModel):
