@@ -1676,6 +1676,8 @@ const AdminPage = () => {
               { label: "Bonus Siteleri", value: stats.total_bonus_sites, color: "" },
               { label: "Makaleler", value: stats.total_articles, color: "" },
               { label: "Auto Generated", value: stats.auto_generated_articles, color: "text-[#00F0FF]" },
+              { label: "Companies", value: stats.total_companies || 0, color: "text-[#00F0FF]" },
+              { label: "Featured Company", value: stats.featured_companies || 0, color: "text-neon-green" },
             ].map((s, i) => (
               <Card key={i} className="glass-card border-white/10">
                 <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">{s.label}</CardTitle></CardHeader>
@@ -1687,9 +1689,10 @@ const AdminPage = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="domains" className="space-y-6">
-          <TabsList className="grid grid-cols-7 w-full max-w-5xl">
+          <TabsList className="grid grid-cols-8 w-full max-w-6xl">
             <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-1.5" />Domainler</TabsTrigger>
             <TabsTrigger value="sites"><Gift className="w-4 h-4 mr-1.5" />Siteler</TabsTrigger>
+            <TabsTrigger value="companies" data-testid="admin-companies-tab"><Building2 className="w-4 h-4 mr-1.5" />Companies</TabsTrigger>
             <TabsTrigger value="categories" data-testid="admin-categories-tab"><Layers className="w-4 h-4 mr-1.5" />Kategoriler</TabsTrigger>
             <TabsTrigger value="seo" data-testid="admin-seo-tab"><Search className="w-4 h-4 mr-1.5" />SEO</TabsTrigger>
             <TabsTrigger value="auto-content"><Wand2 className="w-4 h-4 mr-1.5" />Oto İçerik</TabsTrigger>
@@ -1699,6 +1702,7 @@ const AdminPage = () => {
 
           <TabsContent value="domains"><DomainsTab domains={domains} onRefresh={fetchData} /></TabsContent>
           <TabsContent value="sites"><SitesTab bonusSites={bonusSites} onRefresh={fetchData} /></TabsContent>
+          <TabsContent value="companies"><CompaniesTab /></TabsContent>
           <TabsContent value="categories"><CategoriesTab onRefresh={fetchData} /></TabsContent>
           <TabsContent value="seo" className="space-y-6"><SeoAssistant domainId={selectedDomain} /></TabsContent>
 
