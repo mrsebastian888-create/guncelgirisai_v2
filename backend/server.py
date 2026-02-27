@@ -291,12 +291,15 @@ async def lifespan(app: FastAPI):
             await db.company_categories.insert_many(taxonomy["categories"])
             await db.company_subcategories.insert_many(taxonomy["subcategories"])
             logger.info(f"Seeded company taxonomy: {len(taxonomy['categories'])} categories, {len(taxonomy['subcategories'])} subcategories")
+
+    await company_intelligence_scheduler.start()
     
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
     await content_scheduler.stop()
+    await company_intelligence_scheduler.stop()
     await disconnect_from_mongo()
     logger.info("Application shutdown complete")
 
