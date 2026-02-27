@@ -6,7 +6,7 @@ import { API } from "@/App";
 import {
   Trophy, Zap, TrendingUp, ChevronRight, ChevronLeft, Star,
   Shield, Clock, Gift, Activity, Flame, Target, Coins, Globe,
-  ExternalLink, Search, Users, Award, Crown, CheckCircle
+  ExternalLink, Search, Users, Award, Crown, CheckCircle, Building2, BarChart3
 } from "lucide-react";
 import BonusRow from "@/components/BonusRow";
 import NewsCard from "@/components/NewsCard";
@@ -65,6 +65,8 @@ const HomePage = () => {
   const [articles, setArticles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [latestArticles, setLatestArticles] = useState([]);
+  const [featuredCompanies, setFeaturedCompanies] = useState([]);
+  const [companySlide, setCompanySlide] = useState(0);
   const [loading, setLoading] = useState(true);
   const [heroSlide, setHeroSlide] = useState(0);
   const [firmSearch, setFirmSearch] = useState("");
@@ -75,6 +77,29 @@ const HomePage = () => {
     const timer = setInterval(() => {
       setHeroSlide(prev => (prev + 1) % HERO_SLIDES.length);
     }, 6000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (featuredCompanies.length <= 1) return;
+    const timer = setInterval(() => {
+      setCompanySlide((prev) => (prev + 1) % featuredCompanies.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [featuredCompanies]);
+
+  useEffect(() => {
+    const refreshFeatured = async () => {
+      try {
+        const res = await axios.get(`${API}/companies/featured/list?limit=12`);
+        setFeaturedCompanies(res.data || []);
+        setCompanySlide(0);
+      } catch {
+        setFeaturedCompanies([]);
+      }
+    };
+    refreshFeatured();
+    const timer = setInterval(refreshFeatured, 20 * 60 * 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -96,18 +121,20 @@ const HomePage = () => {
           setBonusSites(siteData.bonus_sites || []);
           setArticles(siteData.articles || []);
         } else {
-          const [sitesRes, articlesRes, categoriesRes, latestRes, allFirmsRes] = await Promise.all([
+          const [sitesRes, articlesRes, categoriesRes, latestRes, allFirmsRes, featuredRes] = await Promise.all([
             axios.get(`${API}/bonus-sites?limit=20`),
             axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
             axios.get(`${API}/categories`).catch(() => ({ data: [] })),
             axios.get(`${API}/articles/latest?limit=8`).catch(() => ({ data: [] })),
             axios.get(`${API}/bonus-sites?limit=300`).catch(() => ({ data: [] })),
+            axios.get(`${API}/companies/featured/list?limit=12`).catch(() => ({ data: [] })),
           ]);
           setBonusSites(sitesRes.data);
           setArticles(articlesRes.data);
           setCategories(categoriesRes.data);
           setLatestArticles(latestRes.data);
           setAllFirms(allFirmsRes.data);
+          setFeaturedCompanies(featuredRes.data || []);
         }
       } catch (error) {
         console.error("Error:", error);
@@ -369,6 +396,89 @@ const HomePage = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* ── FEATURED COMPANIES SLIDER ───────────────── */}
+      {featuredCompanies.length > 0 && (
+        <section className="py-14 md:py-20 px-4 md:px-6" data-testid="featured-companies-slider-section">
+          <div className="container mx-auto max-w-6xl">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div>
+                <div className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-3 text-xs font-semibold uppercase tracking-widest"
+                  style={{ borderColor: "rgba(0,240,255,0.3)", color: "#00F0FF", background: "rgba(0,240,255,0.07)" }}>
+                  <Building2 className="w-3 h-3" /> AI Company Intelligence
+                </div>
+                <h2 className="font-heading font-black uppercase" style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}>
+                  ONE CIKAN SIRKETLER
+                </h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCompanySlide((prev) => (prev - 1 + featuredCompanies.length) % featuredCompanies.length)}
+                  className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center hover:bg-white/5"
+                  data-testid="featured-companies-prev-button"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCompanySlide((prev) => (prev + 1) % featuredCompanies.length)}
+                  className="w-9 h-9 rounded-full border border-white/15 flex items-center justify-center hover:bg-white/5"
+                  data-testid="featured-companies-next-button"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 p-6 bg-white/[0.02]" data-testid="featured-company-active-card">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-center">
+                <div className="flex items-center gap-4 min-w-0 lg:col-span-2">
+                  <img
+                    src={featuredCompanies[companySlide].logo_url}
+                    alt={featuredCompanies[companySlide].name}
+                    className="w-14 h-14 rounded-xl border border-neon-green/30"
+                    data-testid="featured-company-logo"
+                  />
+                  <div className="min-w-0">
+                    <h3 className="font-heading text-2xl font-black uppercase truncate" data-testid="featured-company-name">{featuredCompanies[companySlide].name}</h3>
+                    <p className="text-sm text-muted-foreground truncate" data-testid="featured-company-category">{featuredCompanies[companySlide].category_id}</p>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(featuredCompanies[companySlide].tags_json || []).slice(0, 4).map((tag, i) => (
+                        <span key={`${tag}-${i}`} className="text-xs px-2 py-1 rounded-full border border-white/15" data-testid={`featured-company-tag-${i}`}>#{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg border border-white/10 p-2"><p className="text-muted-foreground">Visits</p><p className="font-bold text-neon-green" data-testid="featured-company-visits">{Math.round((featuredCompanies[companySlide].estimated_visits || 0) / 1000)}K</p></div>
+                    <div className="rounded-lg border border-white/10 p-2"><p className="text-muted-foreground">Score</p><p className="font-bold" data-testid="featured-company-score">{featuredCompanies[companySlide].intelligence_score}</p></div>
+                  </div>
+                  <Link
+                    to={`/companies/${featuredCompanies[companySlide].slug}`}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-heading font-bold uppercase text-xs bg-[#00F0FF] text-black"
+                    data-testid="featured-company-view-analysis-button"
+                  >
+                    <BarChart3 className="w-4 h-4" /> View Analysis
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-4" data-testid="featured-companies-indicators">
+              {featuredCompanies.map((c, idx) => (
+                <button
+                  key={c.id}
+                  onClick={() => setCompanySlide(idx)}
+                  className="h-1.5 rounded-full"
+                  style={{ width: companySlide === idx ? 28 : 12, background: companySlide === idx ? "#00F0FF" : "rgba(255,255,255,0.25)" }}
+                  data-testid={`featured-company-indicator-${idx}`}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── YILIN EN İYİ SİTELERİ (Slider sonrası ilk alan) ── */}
       {topFive.length > 0 && (
