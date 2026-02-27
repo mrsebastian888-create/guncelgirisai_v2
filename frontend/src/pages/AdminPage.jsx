@@ -539,6 +539,201 @@ function SitesTab({ bonusSites, onRefresh }) {
   );
 }
 
+
+/* ── COMPANIES TAB ───────────────────────────────── */
+function CompaniesTab() {
+  const [companies, setCompanies] = useState([]);
+  const [stats, setStats] = useState({ total: 0, approved: 0, featured: 0 });
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("Top AI tools 2026");
+  const [discovering, setDiscovering] = useState(false);
+  const [actionId, setActionId] = useState(null);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("admin_token") || "";
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const fetchCompanies = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API}/admin/companies?limit=400${search ? `&search=${encodeURIComponent(search)}` : ""}`, {
+        headers: getAuthHeaders(),
+      });
+      setCompanies(res.data.items || []);
+      setStats(res.data.stats || { total: 0, approved: 0, featured: 0 });
+    } catch {
+      toast.error("Company listesi alınamadı");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const handleDiscover = async () => {
+    if (!query.trim()) return toast.error("Keşif sorgusu gerekli");
+    setDiscovering(true);
+    try {
+      const res = await axios.post(
+        `${API}/admin/companies/discovery`,
+        { query, limit: 12, auto_approve: false },
+        { headers: getAuthHeaders() }
+      );
+      toast.success(`Keşif tamamlandı. Yeni: ${res.data.created}, Atlanan: ${res.data.skipped}`);
+      await fetchCompanies();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Keşif çalıştırılamadı");
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const handleAction = async (companyId, action, body = null, okText = "Güncellendi") => {
+    setActionId(companyId + action);
+    try {
+      if (action === "approve") {
+        await axios.post(`${API}/admin/companies/${companyId}/approve`, {}, { headers: getAuthHeaders() });
+      } else if (action === "refresh") {
+        await axios.post(`${API}/admin/companies/${companyId}/refresh`, {}, { headers: getAuthHeaders() });
+      } else if (action === "feature") {
+        await axios.post(`${API}/admin/companies/${companyId}/feature`, body, { headers: getAuthHeaders() });
+      } else if (action === "delete") {
+        await axios.delete(`${API}/admin/companies/${companyId}`, { headers: getAuthHeaders() });
+      }
+      toast.success(okText);
+      await fetchCompanies();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "İşlem başarısız");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6" data-testid="companies-tab">
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Wand2 className="w-5 h-5" />AI Company Discovery</CardTitle>
+          <CardDescription>Arama API key'leri eksik olsa bile fallback modda şirket keşfi çalışır.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Top AI tools 2026" data-testid="company-discovery-query-input" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Listede ara (name/domain/category)" data-testid="company-search-input" />
+            <Button onClick={fetchCompanies} variant="outline" data-testid="refresh-companies-button"><RefreshCw className="w-4 h-4 mr-2" />Listeyi Yenile</Button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handleDiscover} disabled={discovering} className="bg-[#00F0FF] text-black hover:bg-[#00F0FF]/90" data-testid="run-company-discovery-button">
+              {discovering ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Keşfi Başlat
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  await axios.post(`${API}/admin/companies/refresh-metrics`, {}, { headers: getAuthHeaders() });
+                  toast.success("Metrikler yenilendi");
+                  await fetchCompanies();
+                } catch {
+                  toast.error("Metrik yenileme başarısız");
+                }
+              }}
+              variant="outline"
+              data-testid="refresh-company-metrics-button"
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />Metrikleri Yenile
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 text-sm" data-testid="companies-stats-cards">
+            <div className="rounded-lg border border-white/10 p-3"><p className="text-muted-foreground text-xs">Toplam</p><p className="text-xl font-heading" data-testid="companies-total-stat">{stats.total}</p></div>
+            <div className="rounded-lg border border-white/10 p-3"><p className="text-muted-foreground text-xs">Onaylı</p><p className="text-xl font-heading text-neon-green" data-testid="companies-approved-stat">{stats.approved}</p></div>
+            <div className="rounded-lg border border-white/10 p-3"><p className="text-muted-foreground text-xs">Featured</p><p className="text-xl font-heading text-[#00F0FF]" data-testid="companies-featured-stat">{stats.featured}</p></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card border-white/10">
+        <CardHeader><CardTitle>Companies ({companies.length})</CardTitle></CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin" /></div>
+          ) : (
+            <div className="space-y-2" data-testid="companies-list">
+              {companies.map((company) => (
+                <div key={company.id} className="rounded-lg border border-white/10 p-4" data-testid={`company-row-${company.id}`}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-medium truncate" data-testid={`company-name-${company.id}`}>{company.name}</h4>
+                        <Badge variant="outline">{company.category_id}</Badge>
+                        {!company.is_approved && <Badge className="bg-yellow-500/20 text-yellow-400">Onay Bekliyor</Badge>}
+                        {company.featured_boolean && <Badge className="bg-[#00F0FF]/20 text-[#00F0FF]">Featured</Badge>}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">{company.domain} • {company.subcategory_id}</p>
+                      <div className="flex gap-3 mt-2 text-xs text-muted-foreground">
+                        <span data-testid={`company-visits-${company.id}`}>Visits: {Math.round((company.estimated_visits || 0) / 1000)}K</span>
+                        <span data-testid={`company-score-${company.id}`}>Score: {company.intelligence_score}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!company.is_approved && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleAction(company.id, "approve", null, "Company onaylandı")}
+                          disabled={actionId === company.id + "approve"}
+                          data-testid={`approve-company-${company.id}`}
+                        >
+                          {actionId === company.id + "approve" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAction(company.id, "feature", { featured: !company.featured_boolean, reason: "manual-admin" }, company.featured_boolean ? "Featured kaldırıldı" : "Featured eklendi")}
+                        disabled={actionId === company.id + "feature"}
+                        data-testid={`feature-company-${company.id}`}
+                      >
+                        <Star className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAction(company.id, "refresh", null, "Şirket metrikleri yenilendi")}
+                        disabled={actionId === company.id + "refresh"}
+                        data-testid={`refresh-company-${company.id}`}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                      <Link to={`/companies/${company.slug}`}>
+                        <Button size="sm" variant="ghost" data-testid={`view-company-page-${company.id}`}><Eye className="w-4 h-4" /></Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleAction(company.id, "delete", null, "Company silindi")}
+                        disabled={actionId === company.id + "delete"}
+                        data-testid={`delete-company-${company.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-400" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /* ── ARTICLES TAB ────────────────────────────────── */
 function ArticlesTab({ articles, onRefresh }) {
   const [searchQuery, setSearchQuery] = useState("");
