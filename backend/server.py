@@ -3947,6 +3947,196 @@ async def reorder_bonus_sites(data: Dict[str, Any]):
         await db.bonus_sites.update_one({"id": site_id}, {"$set": {"sort_order": i + 1}})
     return {"message": "Site sıralaması güncellendi"}
 
+
+# ============== COMPANY INTELLIGENCE ==============
+
+@api_router.get("/company-categories")
+async def get_company_categories():
+    categories = await db.company_categories.find({"is_active": True}, {"_id": 0}).sort("order", 1).to_list(200)
+    return categories
+
+
+@api_router.get("/company-subcategories")
+async def get_company_subcategories(category_slug: Optional[str] = None):
+    query: Dict[str, Any] = {"is_active": True}
+    if category_slug:
+        query["category_slug"] = category_slug
+    subcategories = await db.company_subcategories.find(query, {"_id": 0}).sort("order", 1).to_list(500)
+    return subcategories
+
+
+@api_router.get("/companies")
+async def get_companies(
+    limit: int = 50,
+    category_id: Optional[str] = None,
+    subcategory_id: Optional[str] = None,
+    search: Optional[str] = None,
+    featured_only: bool = False,
+    approved_only: bool = True,
+):
+    query: Dict[str, Any] = {"is_active": True}
+    if approved_only:
+        query["is_approved"] = True
+    if category_id:
+        query["category_id"] = category_id
+    if subcategory_id:
+        query["subcategory_id"] = subcategory_id
+    if featured_only:
+        query["featured_boolean"] = True
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"domain": {"$regex": search, "$options": "i"}},
+            {"description_short": {"$regex": search, "$options": "i"}},
+        ]
+    companies = await db.companies.find(query, {"_id": 0}).sort("intelligence_score", -1).limit(limit).to_list(limit)
+    return companies
+
+
+@api_router.get("/companies/featured/list")
+async def get_featured_companies(limit: int = 12):
+    companies = await db.companies.find(
+        {"is_active": True, "is_approved": True, "featured_boolean": True},
+        {"_id": 0},
+    ).sort("intelligence_score", -1).limit(limit).to_list(limit)
+    return companies
+
+
+@api_router.get("/companies/slug/{slug}")
+async def get_company_profile(slug: str):
+    company = await db.companies.find_one({"slug": slug, "is_active": True, "is_approved": True}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company bulunamadı")
+
+    alternatives = await db.companies.find(
+        {
+            "slug": {"$ne": slug},
+            "is_active": True,
+            "is_approved": True,
+            "$or": [
+                {"subcategory_id": company.get("subcategory_id")},
+                {"category_id": company.get("category_id")},
+            ],
+        },
+        {"_id": 0, "description_long": 0},
+    ).sort("intelligence_score", -1).limit(8).to_list(8)
+
+    return {
+        "company": company,
+        "alternatives": alternatives,
+        "canonical_url": f"https://guncelgiris.ai/companies/{company.get('slug')}",
+    }
+
+
+@api_router.get("/admin/companies")
+async def admin_get_companies(request: Request, limit: int = 200, search: Optional[str] = None):
+    require_admin_request(request)
+    query: Dict[str, Any] = {"is_active": True}
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"domain": {"$regex": search, "$options": "i"}},
+            {"category_id": {"$regex": search, "$options": "i"}},
+        ]
+    companies = await db.companies.find(query, {"_id": 0}).sort("updated_at", -1).limit(limit).to_list(limit)
+    return {
+        "items": companies,
+        "stats": {
+            "total": await db.companies.count_documents({"is_active": True}),
+            "approved": await db.companies.count_documents({"is_active": True, "is_approved": True}),
+            "featured": await db.companies.count_documents({"is_active": True, "featured_boolean": True}),
+        },
+    }
+
+
+@api_router.post("/admin/companies/discovery")
+async def admin_run_company_discovery(payload: CompanyDiscoveryRequest, request: Request):
+    require_admin_request(request)
+    safe_limit = max(1, min(payload.limit, 30))
+    result = await run_company_discovery(query=payload.query, limit=safe_limit, auto_approve=payload.auto_approve)
+    return result
+
+
+@api_router.post("/admin/companies/refresh-metrics")
+async def admin_refresh_company_metrics(request: Request):
+    require_admin_request(request)
+    return await refresh_company_metrics_daily()
+
+
+@api_router.put("/admin/companies/{company_id}")
+async def admin_update_company(company_id: str, payload: CompanyAdminUpdateRequest, request: Request):
+    require_admin_request(request)
+    data = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if "name" in data:
+        data["slug"] = slugify(data["name"])
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.companies.update_one({"id": company_id}, {"$set": data})
+    updated = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Company bulunamadı")
+    return updated
+
+
+@api_router.post("/admin/companies/{company_id}/approve")
+async def admin_approve_company(company_id: str, request: Request):
+    require_admin_request(request)
+    await db.companies.update_one(
+        {"id": company_id},
+        {"$set": {"is_approved": True, "updated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    updated = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Company bulunamadı")
+    return updated
+
+
+@api_router.post("/admin/companies/{company_id}/feature")
+async def admin_feature_company(company_id: str, payload: CompanyFeatureRequest, request: Request):
+    require_admin_request(request)
+    await db.companies.update_one(
+        {"id": company_id},
+        {
+            "$set": {
+                "featured_boolean": payload.featured,
+                "featured_reason": payload.reason,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
+    updated = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Company bulunamadı")
+    return updated
+
+
+@api_router.post("/admin/companies/{company_id}/refresh")
+async def admin_refresh_company(company_id: str, request: Request):
+    require_admin_request(request)
+    company = await db.companies.find_one({"id": company_id, "is_active": True}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company bulunamadı")
+
+    metrics = await enrich_company_metrics(company["domain"])
+    score = compute_company_intelligence_score({**company, **metrics})
+    await db.companies.update_one(
+        {"id": company_id},
+        {
+            "$set": {
+                **metrics,
+                "intelligence_score": score,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        },
+    )
+    return await db.companies.find_one({"id": company_id}, {"_id": 0})
+
+
+@api_router.delete("/admin/companies/{company_id}")
+async def admin_delete_company(company_id: str, request: Request):
+    require_admin_request(request)
+    await db.companies.delete_one({"id": company_id})
+    return {"message": "Company silindi"}
+
 # ============== SEO ENDPOINTS ==============
 
 @api_router.get("/sitemap.xml")
