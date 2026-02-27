@@ -495,6 +495,9 @@ function SitesTab({ bonusSites, onRefresh }) {
                           <span className="text-neon-green text-sm">{site.bonus_amount}</span>
                           <span className="text-xs text-muted-foreground">Rating: {site.rating}</span>
                           {site.video_url && <Badge className="bg-[#00F0FF]/20 text-[#00F0FF] text-xs">Video</Badge>}
+                          {site.ai_video_status === "generating" && <Badge className="bg-yellow-500/20 text-yellow-400 text-xs">AI Üretiliyor</Badge>}
+                          {site.ai_video_status === "ready" && <Badge className="bg-neon-green/20 text-neon-green text-xs">AI Hazır</Badge>}
+                          {site.ai_video_status === "failed" && <Badge className="bg-red-500/20 text-red-400 text-xs">AI Hata</Badge>}
                           {site.features?.length > 0 && (
                             <span className="text-xs text-muted-foreground">{site.features.slice(0, 3).join(", ")}</span>
                           )}
