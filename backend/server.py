@@ -3522,6 +3522,7 @@ Allow: /api/sitemap-amp.xml
 Allow: /api/sitemap-amp-videos.xml
 Allow: /api/amp/
 Allow: /api/amp-video/
+Allow: /api/generated-videos/
 
 User-agent: Googlebot
 Allow: /api/sitemap.xml
@@ -3533,6 +3534,7 @@ Allow: /api/sitemap-amp.xml
 Allow: /api/sitemap-amp-videos.xml
 Allow: /api/amp/
 Allow: /api/amp-video/
+Allow: /api/generated-videos/
 
 Sitemap: {base_url}/api/sitemap.xml
 """
