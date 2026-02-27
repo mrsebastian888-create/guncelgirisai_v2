@@ -983,6 +983,275 @@ function ArticlesTab({ articles, onRefresh }) {
   );
 }
 
+
+/* ── TELEGRAM BOTS TAB ───────────────────────────── */
+function TelegramTab() {
+  const [stats, setStats] = useState({});
+  const [bots, setBots] = useState([]);
+  const [firmMap, setFirmMap] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [bulkCreating, setBulkCreating] = useState(false);
+  const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [broadcastTarget, setBroadcastTarget] = useState("all");
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [view, setView] = useState("bots"); // bots | firms | broadcast
+
+  const token = localStorage.getItem("admin_token");
+  const headers = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => { fetchAll(); }, []);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [statsRes, botsRes] = await Promise.all([
+        axios.get(`${API}/admin/telegram/stats`, { headers }),
+        axios.get(`${API}/admin/telegram/bots`, { headers }),
+      ]);
+      setStats(statsRes.data);
+      setBots(botsRes.data);
+    } catch { toast.error("Telegram verileri yüklenemedi"); }
+    finally { setLoading(false); }
+  };
+
+  const fetchFirmMap = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/telegram/firm-bot-map`, { headers });
+      setFirmMap(res.data);
+    } catch { toast.error("Firma haritası yüklenemedi"); }
+  };
+
+  const createSingleBot = async (firmId) => {
+    setCreating(true);
+    try {
+      const res = await axios.post(`${API}/admin/telegram/create-bot`, { firm_id: firmId }, { headers });
+      toast.success(res.data.message);
+      setTimeout(fetchAll, 3000);
+    } catch (e) { toast.error(e.response?.data?.detail || "Bot oluşturulamadı"); }
+    finally { setCreating(false); }
+  };
+
+  const createBulkBots = async () => {
+    if (!confirm("Tüm firmalar için bot oluşturulacak. Devam?")) return;
+    setBulkCreating(true);
+    try {
+      const res = await axios.post(`${API}/admin/telegram/create-bulk`, { all_firms: true, batch_size: 5, delay_seconds: 5 }, { headers });
+      toast.success(res.data.message);
+      setTimeout(fetchAll, 5000);
+    } catch (e) { toast.error(e.response?.data?.detail || "Toplu oluşturma başarısız"); }
+    finally { setBulkCreating(false); }
+  };
+
+  const deleteBot = async (botId, username) => {
+    if (!confirm(`@${username} silinecek?`)) return;
+    try {
+      await axios.delete(`${API}/admin/telegram/bot/${botId}`, { headers });
+      toast.success("Bot silindi");
+      fetchAll();
+    } catch { toast.error("Silinemedi"); }
+  };
+
+  const sendBroadcast = async () => {
+    if (!broadcastMsg.trim()) return toast.error("Mesaj gerekli");
+    setBroadcasting(true);
+    try {
+      const payload = { message: broadcastMsg, all_bots: broadcastTarget === "all" };
+      if (broadcastTarget !== "all") payload.bot_id = broadcastTarget;
+      const res = await axios.post(`${API}/admin/telegram/broadcast`, payload, { headers });
+      toast.success(res.data.message);
+      setBroadcastMsg("");
+    } catch (e) { toast.error(e.response?.data?.detail || "Broadcast başarısız"); }
+    finally { setBroadcasting(false); }
+  };
+
+  const filteredBots = bots.filter(b =>
+    !search || b.firm_name?.toLowerCase().includes(search.toLowerCase()) ||
+    b.bot_username?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const statusColor = (s) => {
+    if (s === "active") return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+    if (s === "creating") return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+    if (s === "pending") return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+    return "bg-red-500/20 text-red-400 border-red-500/30";
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#00F0FF]" /></div>;
+
+  return (
+    <div className="space-y-6" data-testid="telegram-tab">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { label: "Toplam Bot", value: stats.total_bots || 0, icon: Bot, color: "text-[#00F0FF]" },
+          { label: "Aktif", value: stats.active_bots || 0, icon: Radio, color: "text-emerald-400" },
+          { label: "Bekleyen", value: stats.pending_bots || 0, icon: Clock, color: "text-amber-400" },
+          { label: "Hatalı", value: stats.failed_bots || 0, icon: AlertCircle, color: "text-red-400" },
+          { label: "Toplam Abone", value: stats.total_subscribers || 0, icon: Users, color: "text-purple-400" },
+        ].map((s, i) => (
+          <Card key={i} className="glass-card border-white/10">
+            <CardContent className="pt-4 pb-3 px-4">
+              <div className="flex items-center gap-2 mb-1">
+                <s.icon className={`w-4 h-4 ${s.color}`} />
+                <span className="text-xs text-muted-foreground">{s.label}</span>
+              </div>
+              <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* View Switcher */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button variant={view === "bots" ? "default" : "outline"} size="sm" onClick={() => setView("bots")} data-testid="telegram-view-bots">
+          <Bot className="w-4 h-4 mr-1" />Botlar ({bots.length})
+        </Button>
+        <Button variant={view === "firms" ? "default" : "outline"} size="sm" onClick={() => { setView("firms"); if (!firmMap) fetchFirmMap(); }} data-testid="telegram-view-firms">
+          <Target className="w-4 h-4 mr-1" />Firma Haritası
+        </Button>
+        <Button variant={view === "broadcast" ? "default" : "outline"} size="sm" onClick={() => setView("broadcast")} data-testid="telegram-view-broadcast">
+          <Send className="w-4 h-4 mr-1" />Broadcast
+        </Button>
+        <div className="ml-auto flex gap-2">
+          <Button variant="outline" size="sm" onClick={fetchAll} data-testid="telegram-refresh">
+            <RefreshCw className="w-4 h-4 mr-1" />Yenile
+          </Button>
+          <Button size="sm" onClick={createBulkBots} disabled={bulkCreating} className="bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80" data-testid="telegram-bulk-create">
+            {bulkCreating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Zap className="w-4 h-4 mr-1" />}
+            Toplu Bot Oluştur
+          </Button>
+        </div>
+      </div>
+
+      {/* Bot List View */}
+      {view === "bots" && (
+        <div className="space-y-3">
+          <Input placeholder="Bot ara..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-sm" data-testid="telegram-search" />
+          {filteredBots.length === 0 ? (
+            <Card className="glass-card border-white/10">
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <Bot className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                <p>Henüz bot oluşturulmadı</p>
+                <p className="text-sm mt-1">Yukarıdaki "Toplu Bot Oluştur" butonunu kullanabilirsiniz</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-2">
+              {filteredBots.map(bot => (
+                <Card key={bot.bot_id} className="glass-card border-white/10 hover:border-[#00F0FF]/30 transition-colors" data-testid={`telegram-bot-${bot.bot_id}`}>
+                  <CardContent className="py-3 px-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Bot className="w-5 h-5 text-[#00F0FF] flex-shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">@{bot.bot_username}</div>
+                          <div className="text-xs text-muted-foreground">{bot.firm_name}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={`text-xs ${statusColor(bot.status)}`}>{bot.status}</Badge>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Users className="w-3 h-3" />{bot.subscriber_count || 0}
+                        </div>
+                        {bot.status === "active" && (
+                          <a href={`https://t.me/${bot.bot_username}`} target="_blank" rel="noreferrer">
+                            <Button variant="ghost" size="sm" className="h-7 px-2"><ExternalLink className="w-3.5 h-3.5" /></Button>
+                          </a>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-7 px-2 text-red-400 hover:text-red-300" onClick={() => deleteBot(bot.bot_id, bot.bot_username)} data-testid={`delete-bot-${bot.bot_id}`}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    {bot.error_message && (
+                      <div className="mt-2 text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">{bot.error_message}</div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Firm Map View */}
+      {view === "firms" && (
+        <div className="space-y-3">
+          {!firmMap ? (
+            <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-[#00F0FF]" /></div>
+          ) : (
+            <>
+              <div className="text-sm text-muted-foreground">
+                {firmMap.with_bot}/{firmMap.total} firma bot sahibi
+              </div>
+              <div className="grid gap-2 max-h-[500px] overflow-y-auto pr-2">
+                {firmMap.firms.map(f => (
+                  <div key={f.firm_id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-white/5 border border-white/5">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{f.firm_name}</div>
+                      <div className="text-xs text-muted-foreground">@{f.bot_username}</div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {f.has_bot ? (
+                        <Badge className={`text-xs ${statusColor(f.bot_status)}`}>{f.bot_status}</Badge>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-7 text-xs" disabled={creating} onClick={() => createSingleBot(f.firm_id)} data-testid={`create-bot-${f.firm_id}`}>
+                          {creating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3 mr-1" />}Bot Oluştur
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Broadcast View */}
+      {view === "broadcast" && (
+        <Card className="glass-card border-white/10">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2"><Send className="w-5 h-5 text-[#00F0FF]" />Broadcast Mesaj Gönder</CardTitle>
+            <CardDescription>Tüm abonelere veya belirli bir botun abonelerine mesaj gönderin</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Hedef</Label>
+              <Select value={broadcastTarget} onValueChange={setBroadcastTarget}>
+                <SelectTrigger data-testid="broadcast-target"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Botlar</SelectItem>
+                  {bots.filter(b => b.status === "active").map(b => (
+                    <SelectItem key={b.bot_id} value={b.bot_id}>@{b.bot_username} ({b.subscriber_count || 0} abone)</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Mesaj (HTML destekli)</Label>
+              <Textarea
+                value={broadcastMsg}
+                onChange={e => setBroadcastMsg(e.target.value)}
+                placeholder="<b>Yeni promosyon!</b>&#10;Hemen giriş yapın..."
+                rows={5}
+                data-testid="broadcast-message"
+              />
+            </div>
+            <Button onClick={sendBroadcast} disabled={broadcasting || !broadcastMsg.trim()} className="bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80" data-testid="broadcast-send">
+              {broadcasting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              Gönder
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+
 /* ── DOMAINS TAB ─────────────────────────────────── */
 function DomainsTab({ domains, onRefresh }) {
   const [newDomain, setNewDomain] = useState({ domain_name: "", display_name: "", focus: "bonus", meta_title: "" });
