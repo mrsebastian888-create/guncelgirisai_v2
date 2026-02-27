@@ -943,6 +943,604 @@ async def generate_ai_content(prompt: str, system_message: str = "Sen profesyone
     
     raise Exception("All AI models failed after retries")
 
+
+def get_default_company_taxonomy() -> Dict[str, List[Dict[str, Any]]]:
+    """Return default top-level company taxonomy and starter subcategories."""
+    category_names = [
+        "Betting Operators",
+        "Casino Operators",
+        "AI Tools",
+        "AI Technology Companies",
+        "Internet Services",
+        "SaaS Platforms",
+        "Marketing Tools",
+        "Crypto Services",
+        "Fintech Companies",
+        "Media & News",
+        "Payment Providers",
+    ]
+
+    sub_map = {
+        "betting-operators": ["Sportsbook", "Regional Betting", "Affiliate Betting Network"],
+        "casino-operators": ["Live Casino", "Slot Platforms", "Game Aggregators"],
+        "ai-tools": ["AI Writing", "AI Video", "AI Automation"],
+        "ai-technology-companies": ["LLM Providers", "Inference Platforms", "Agent Frameworks"],
+        "internet-services": ["Web Hosting", "Cloud Infra", "Developer Platforms"],
+        "saas-platforms": ["CRM", "Project Management", "Customer Support"],
+        "marketing-tools": ["SEO Tools", "Ad Intelligence", "Email Marketing"],
+        "crypto-services": ["Exchanges", "On-chain Analytics", "Wallet Infrastructure"],
+        "fintech-companies": ["Digital Banking", "Payments", "Lending"],
+        "media-news": ["Sports Media", "Financial News", "Tech Media"],
+        "payment-providers": ["Card Processing", "Alternative Payments", "Payment Orchestration"],
+    }
+
+    categories = []
+    subcategories = []
+    for i, name in enumerate(category_names):
+        cat_slug = slugify(name)
+        categories.append(
+            CompanyCategoryModel(name=name, slug=cat_slug, order=i + 1).model_dump()
+        )
+        for j, sub_name in enumerate(sub_map.get(cat_slug, [])):
+            subcategories.append(
+                CompanySubcategoryModel(
+                    category_slug=cat_slug,
+                    name=sub_name,
+                    slug=f"{cat_slug}-{slugify(sub_name)}",
+                    order=j + 1,
+                ).model_dump()
+            )
+
+    return {"categories": categories, "subcategories": subcategories}
+
+
+def extract_domain(url_or_domain: str) -> str:
+    """Normalize URL/domain to root domain string."""
+    if not url_or_domain:
+        return ""
+    candidate = url_or_domain.strip().lower()
+    parsed = urlparse(candidate if candidate.startswith("http") else f"https://{candidate}")
+    domain = parsed.netloc or parsed.path
+    if domain.startswith("www."):
+        domain = domain[4:]
+    return domain.split("/")[0].strip()
+
+
+def brand_name_from_domain(domain: str) -> str:
+    root = (domain or "").split(".")[0]
+    cleaned = re.sub(r"[^a-zA-Z0-9]", " ", root).strip()
+    return cleaned.title() if cleaned else domain
+
+
+def deterministic_int(domain: str, min_val: int, max_val: int) -> int:
+    """Deterministic pseudo-random integer based on domain."""
+    if min_val >= max_val:
+        return min_val
+    hashed = int(hashlib.md5(domain.encode()).hexdigest()[:8], 16)
+    return min_val + (hashed % (max_val - min_val + 1))
+
+
+def fallback_company_classification(name: str, domain: str, description: str) -> Dict[str, Any]:
+    text = f"{name} {domain} {description}".lower()
+    mapping = [
+        ("payment-providers", ["payment", "pay", "checkout", "gateway", "stripe"]),
+        ("fintech-companies", ["fintech", "bank", "finance", "lending"]),
+        ("crypto-services", ["crypto", "exchange", "wallet", "blockchain"]),
+        ("ai-tools", ["ai tool", "assistant", "automation", "prompt"]),
+        ("ai-technology-companies", ["llm", "model", "inference", "agent"]),
+        ("marketing-tools", ["seo", "marketing", "ads", "keyword"]),
+        ("saas-platforms", ["saas", "crm", "workspace", "productivity"]),
+        ("internet-services", ["hosting", "cdn", "dns", "cloud"]),
+        ("media-news", ["news", "media", "journal", "publisher"]),
+        ("betting-operators", ["bet", "sportsbook", "odds", "bahis"]),
+        ("casino-operators", ["casino", "slot", "poker", "roulette"]),
+    ]
+    category_slug = "saas-platforms"
+    for slug, words in mapping:
+        if any(word in text for word in words):
+            category_slug = slug
+            break
+
+    subcats = {
+        "payment-providers": "payment-providers-card-processing",
+        "fintech-companies": "fintech-companies-digital-banking",
+        "crypto-services": "crypto-services-exchanges",
+        "ai-tools": "ai-tools-ai-automation",
+        "ai-technology-companies": "ai-technology-companies-agent-frameworks",
+        "marketing-tools": "marketing-tools-seo-tools",
+        "saas-platforms": "saas-platforms-project-management",
+        "internet-services": "internet-services-cloud-infra",
+        "media-news": "media-news-tech-media",
+        "betting-operators": "betting-operators-sportsbook",
+        "casino-operators": "casino-operators-live-casino",
+    }
+
+    tags = list({slugify(name), slugify(category_slug), slugify(domain.split(".")[0])})
+    channels = ["Web", "B2C"]
+    if "api" in text:
+        channels.append("API")
+    if "saas" in text:
+        channels.append("SaaS")
+    if "ai" in text:
+        channels.append("AI Powered")
+
+    return {
+        "category_id": category_slug,
+        "subcategory_id": subcats.get(category_slug, "saas-platforms-project-management"),
+        "tags_json": tags[:8],
+        "channels_json": channels,
+        "founded_year": str(deterministic_int(domain, 2008, 2024)),
+        "employee_range": "51-200",
+        "revenue_range": "$5M-$20M",
+        "description_short": description[:180] if description else f"{name} için AI destekli şirket özeti.",
+    }
+
+
+async def ai_classify_company(name: str, domain: str, description: str) -> Dict[str, Any]:
+    """AI classify company into taxonomy and generate metadata."""
+    fallback = fallback_company_classification(name, domain, description)
+    if not EMERGENT_LLM_KEY:
+        return fallback
+
+    prompt = f"""
+Şirket verisini sınıflandır ve JSON döndür.
+Şirket: {name}
+Domain: {domain}
+Açıklama: {description}
+
+Ana kategori seçenekleri (slug):
+betting-operators, casino-operators, ai-tools, ai-technology-companies, internet-services,
+saas-platforms, marketing-tools, crypto-services, fintech-companies, media-news, payment-providers
+
+JSON formatı:
+{{
+  "category_id": "...",
+  "subcategory_id": "...",
+  "tags_json": ["..."],
+  "channels_json": ["Web","API","SaaS","AI Powered","B2B","B2C","Mobile App","Telegram"],
+  "founded_year": "2018",
+  "employee_range": "11-50",
+  "revenue_range": "$1M-$10M",
+  "description_short": "max 180 karakter"
+}}
+"""
+    try:
+        raw = await generate_ai_content(prompt, "Sen şirket sınıflandırma uzmanısın. Sadece JSON döndür.")
+        match = re.search(r"\{[\s\S]*\}", raw)
+        parsed = json.loads(match.group(0)) if match else json.loads(raw)
+        return {
+            "category_id": parsed.get("category_id") or fallback["category_id"],
+            "subcategory_id": parsed.get("subcategory_id") or fallback["subcategory_id"],
+            "tags_json": parsed.get("tags_json") or fallback["tags_json"],
+            "channels_json": parsed.get("channels_json") or fallback["channels_json"],
+            "founded_year": str(parsed.get("founded_year") or fallback["founded_year"]),
+            "employee_range": parsed.get("employee_range") or fallback["employee_range"],
+            "revenue_range": parsed.get("revenue_range") or fallback["revenue_range"],
+            "description_short": (parsed.get("description_short") or fallback["description_short"])[:180],
+        }
+    except Exception as e:
+        logger.warning(f"AI classification fallback for {domain}: {e}")
+        return fallback
+
+
+async def ai_generate_company_seo(company_name: str, category_slug: str, short_desc: str) -> Dict[str, Any]:
+    fallback = {
+        "seo_title": f"{company_name} Analizi 2026 | Trafik, Teknoloji ve Pazar Konumu"[:60],
+        "seo_description": (short_desc or f"{company_name} trafik metrikleri, teknoloji yığını ve rakip analizi.")[:160],
+        "seo_keywords": [slugify(company_name), category_slug, "company intelligence", "digital analysis"],
+        "seo_internal_links": ["/", "/spor-haberleri", "/deneme-bonusu"],
+    }
+    if not EMERGENT_LLM_KEY:
+        return fallback
+
+    prompt = f"""
+Şirket profil sayfası için SEO JSON üret.
+Şirket: {company_name}
+Kategori: {category_slug}
+Özet: {short_desc}
+
+JSON:
+{{
+  "seo_title": "max 60",
+  "seo_description": "max 160",
+  "seo_keywords": ["..."],
+  "seo_internal_links": ["/...", "/..."]
+}}
+"""
+    try:
+        raw = await generate_ai_content(prompt, "Sen SEO uzmanısın. Sadece JSON döndür.")
+        match = re.search(r"\{[\s\S]*\}", raw)
+        parsed = json.loads(match.group(0)) if match else json.loads(raw)
+        return {
+            "seo_title": (parsed.get("seo_title") or fallback["seo_title"])[:60],
+            "seo_description": (parsed.get("seo_description") or fallback["seo_description"])[:160],
+            "seo_keywords": parsed.get("seo_keywords") or fallback["seo_keywords"],
+            "seo_internal_links": parsed.get("seo_internal_links") or fallback["seo_internal_links"],
+        }
+    except Exception as e:
+        logger.warning(f"SEO AI fallback for {company_name}: {e}")
+        return fallback
+
+
+async def ai_generate_company_long_description(company_name: str, domain: str, category_slug: str, short_desc: str) -> str:
+    fallback = (
+        f"{company_name} ({domain}) için bu profil sayfası, trafik göstergeleri, teknoloji altyapısı,"
+        " kullanıcı davranışı metrikleri ve sektör içindeki konumunu özetler. "
+        "Platformun dijital görünürlüğü, pazar payı sinyalleri ve potansiyel büyüme alanları"
+        " analitik bir çerçevede değerlendirilir. Bu içerik, karar vericilerin şirketin güçlü"
+        " ve zayıf yönlerini hızlıca yorumlamasına yardımcı olmak amacıyla hazırlanmıştır."
+    )
+    if not EMERGENT_LLM_KEY:
+        return fallback
+
+    prompt = f"""
+{company_name} için 800-1200 kelime arası Türkçe, SEO uyumlu şirket analizi yaz.
+Domain: {domain}
+Kategori: {category_slug}
+Kısa açıklama: {short_desc}
+
+Kurallar:
+- Başlıklar (H2/H3) içersin
+- Teknik ama anlaşılır ton
+- Trafik, ürün, kanal, rekabet, fırsatlar bölümleri olsun
+- Satın alma vaadi verme, finansal veriyi "tahmini" olarak belirt
+"""
+    try:
+        return await generate_ai_content(prompt, "Sen deneyimli bir teknoloji analiz editörüsün.")
+    except Exception as e:
+        logger.warning(f"Long analysis fallback for {company_name}: {e}")
+        return fallback
+
+
+async def discover_companies_from_web(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    """Discover company candidates from available search providers with fallback."""
+    candidates: List[Dict[str, Any]] = []
+
+    async def _append_candidate(title: str, link: str, snippet: str, provider: str):
+        domain = extract_domain(link)
+        if not domain:
+            return
+        candidates.append({
+            "domain": domain,
+            "name": (title or brand_name_from_domain(domain)).strip(),
+            "description": (snippet or "").strip(),
+            "provider": provider,
+        })
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        if SERPER_API_KEY:
+            try:
+                resp = await client.post(
+                    "https://google.serper.dev/search",
+                    headers={"X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json"},
+                    json={"q": query, "num": limit},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                for item in data.get("organic", []):
+                    await _append_candidate(item.get("title", ""), item.get("link", ""), item.get("snippet", ""), "serper")
+            except Exception as e:
+                logger.warning(f"Serper discovery failed: {e}")
+
+        if BRAVE_SEARCH_API_KEY and len(candidates) < limit:
+            try:
+                resp = await client.get(
+                    "https://api.search.brave.com/res/v1/web/search",
+                    headers={"X-Subscription-Token": BRAVE_SEARCH_API_KEY, "Accept": "application/json"},
+                    params={"q": query, "count": limit},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                for item in data.get("web", {}).get("results", []):
+                    await _append_candidate(item.get("title", ""), item.get("url", ""), item.get("description", ""), "brave")
+            except Exception as e:
+                logger.warning(f"Brave discovery failed: {e}")
+
+        if BING_SEARCH_API_KEY and len(candidates) < limit:
+            try:
+                resp = await client.get(
+                    "https://api.bing.microsoft.com/v7.0/search",
+                    headers={"Ocp-Apim-Subscription-Key": BING_SEARCH_API_KEY},
+                    params={"q": query, "count": limit},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                for item in data.get("webPages", {}).get("value", []):
+                    await _append_candidate(item.get("name", ""), item.get("url", ""), item.get("snippet", ""), "bing")
+            except Exception as e:
+                logger.warning(f"Bing discovery failed: {e}")
+
+        if SERPAPI_API_KEY and len(candidates) < limit:
+            try:
+                resp = await client.get(
+                    "https://serpapi.com/search.json",
+                    params={"q": query, "num": limit, "engine": "google", "api_key": SERPAPI_API_KEY},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                for item in data.get("organic_results", []):
+                    await _append_candidate(item.get("title", ""), item.get("link", ""), item.get("snippet", ""), "serpapi")
+            except Exception as e:
+                logger.warning(f"SerpAPI discovery failed: {e}")
+
+    if not candidates:
+        fallback_domains = [
+            "openai.com", "stripe.com", "coinbase.com", "notion.so", "semrush.com",
+            "wise.com", "cloudflare.com", "hubspot.com", "serper.dev", "brave.com",
+        ]
+        candidates = [
+            {
+                "domain": d,
+                "name": brand_name_from_domain(d),
+                "description": f"{brand_name_from_domain(d)} için otomatik fallback keşif girdisi.",
+                "provider": "fallback",
+            }
+            for d in fallback_domains
+        ]
+
+    dedup: Dict[str, Dict[str, Any]] = {}
+    for candidate in candidates:
+        domain = extract_domain(candidate.get("domain", ""))
+        if not domain:
+            continue
+        if domain not in dedup:
+            dedup[domain] = candidate
+        if len(dedup) >= limit:
+            break
+
+    return list(dedup.values())
+
+
+async def enrich_company_metrics(domain: str) -> Dict[str, Any]:
+    """Enrich company with external metrics when keys exist, else deterministic fallback."""
+    fallback_visits = deterministic_int(domain, 25000, 3500000)
+    fallback_global_rank = max(1, deterministic_int(domain, 3500, 650000))
+    fallback_country_rank = max(1, deterministic_int(domain, 150, 65000))
+    fallback_category_rank = max(1, deterministic_int(domain, 20, 9000))
+    technologies = ["Cloudflare", "Google Analytics", "React", "Nginx"]
+
+    metrics = {
+        "estimated_visits": fallback_visits,
+        "global_rank": fallback_global_rank,
+        "country_rank": fallback_country_rank,
+        "category_rank": fallback_category_rank,
+        "bounce_rate": round(deterministic_int(domain, 28, 74) / 100, 2),
+        "pages_per_visit": round(deterministic_int(domain, 11, 49) / 10, 1),
+        "avg_visit_duration": f"{deterministic_int(domain, 1, 7)}m {deterministic_int(domain, 5, 55)}s",
+        "technologies_json": technologies,
+        "social_links_json": {
+            "website": f"https://{domain}",
+            "linkedin": f"https://www.linkedin.com/company/{slugify(brand_name_from_domain(domain))}",
+        },
+    }
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        if BUILTWITH_API_KEY:
+            try:
+                resp = await client.get(
+                    "https://api.builtwith.com/v20/api.json",
+                    params={"KEY": BUILTWITH_API_KEY, "LOOKUP": domain},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    found = []
+                    for result in data.get("Results", []):
+                        for t in result.get("Result", {}).get("Paths", []):
+                            for tech in t.get("Technologies", []):
+                                if tech.get("Name"):
+                                    found.append(tech["Name"])
+                    if found:
+                        metrics["technologies_json"] = list(dict.fromkeys(found))[:20]
+            except Exception as e:
+                logger.warning(f"BuiltWith enrichment failed for {domain}: {e}")
+
+        if SIMILARWEB_API_KEY:
+            # Endpoint entitlements vary by account; keep optional and fail-safe.
+            try:
+                resp = await client.get(
+                    f"https://api.similarweb.com/v1/website/{domain}/global-rank/global-rank",
+                    params={"api_key": SIMILARWEB_API_KEY},
+                )
+                if resp.status_code == 200:
+                    rank_data = resp.json()
+                    rank_val = rank_data.get("global_rank") or rank_data.get("rank")
+                    if isinstance(rank_val, int):
+                        metrics["global_rank"] = rank_val
+            except Exception as e:
+                logger.warning(f"Similarweb rank enrichment failed for {domain}: {e}")
+
+    return metrics
+
+
+def compute_company_intelligence_score(company: Dict[str, Any]) -> float:
+    visits = max(company.get("estimated_visits", 0), 1)
+    global_rank = max(company.get("global_rank", 0), 1)
+    tech_count = len(company.get("technologies_json", []))
+
+    normalized_visits = min((visits / 5_000_000) * 100, 100)
+    stack_complexity = min(tech_count * 6, 100)
+    inverse_rank = max(0, 100 - (math.log10(global_rank) * 18))
+
+    score = (0.5 * normalized_visits) + (0.2 * stack_complexity) + (0.3 * inverse_rank)
+    return round(score, 2)
+
+
+def should_auto_feature_company(company: Dict[str, Any]) -> bool:
+    return company.get("estimated_visits", 0) >= 1_000_000 or company.get("intelligence_score", 0) >= 72
+
+
+async def refresh_company_rankings_and_features() -> Dict[str, int]:
+    """Recalculate intelligence score/rankings and auto-feature top companies."""
+    companies = await db.companies.find({"is_active": True, "is_approved": True}, {"_id": 0}).to_list(1000)
+    updated = 0
+    for company in companies:
+        score = compute_company_intelligence_score(company)
+        featured = should_auto_feature_company({**company, "intelligence_score": score})
+        await db.companies.update_one(
+            {"id": company["id"]},
+            {
+                "$set": {
+                    "intelligence_score": score,
+                    "featured_boolean": featured if not company.get("featured_reason") else company.get("featured_boolean", False),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+        )
+        updated += 1
+    return {"updated": updated}
+
+
+async def refresh_company_metrics_daily() -> Dict[str, int]:
+    companies = await db.companies.find({"is_active": True}, {"_id": 0, "id": 1, "domain": 1}).to_list(1000)
+    refreshed = 0
+    for company in companies:
+        metrics = await enrich_company_metrics(company.get("domain", ""))
+        await db.companies.update_one(
+            {"id": company["id"]},
+            {
+                "$set": {
+                    **metrics,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            },
+        )
+        refreshed += 1
+    await refresh_company_rankings_and_features()
+    return {"refreshed": refreshed}
+
+
+class CompanyIntelligenceScheduler:
+    """Lightweight scheduler for company metrics and feature refresh."""
+
+    def __init__(self):
+        self.is_running = False
+        self.metrics_interval_hours = 24
+        self.feature_interval_minutes = 20
+        self.discovery_interval_minutes = 20
+        self._metrics_task: Optional[asyncio.Task] = None
+        self._feature_task: Optional[asyncio.Task] = None
+        self._discovery_task: Optional[asyncio.Task] = None
+
+    async def start(self):
+        if self.is_running:
+            return
+        self.is_running = True
+        self._metrics_task = asyncio.create_task(self._metrics_loop())
+        self._feature_task = asyncio.create_task(self._feature_loop())
+        self._discovery_task = asyncio.create_task(self._discovery_loop())
+        logger.info("Company intelligence scheduler started")
+
+    async def stop(self):
+        self.is_running = False
+        for task in [self._metrics_task, self._feature_task, self._discovery_task]:
+            if task and not task.done():
+                task.cancel()
+        logger.info("Company intelligence scheduler stopped")
+
+    async def _metrics_loop(self):
+        while self.is_running:
+            try:
+                await refresh_company_metrics_daily()
+            except Exception as e:
+                logger.error(f"Company metrics refresh loop error: {e}")
+            await asyncio.sleep(self.metrics_interval_hours * 3600)
+
+    async def _feature_loop(self):
+        while self.is_running:
+            try:
+                await refresh_company_rankings_and_features()
+            except Exception as e:
+                logger.error(f"Company feature loop error: {e}")
+            await asyncio.sleep(self.feature_interval_minutes * 60)
+
+    async def _discovery_loop(self):
+        while self.is_running:
+            try:
+                if SERPER_API_KEY or BRAVE_SEARCH_API_KEY or BING_SEARCH_API_KEY or SERPAPI_API_KEY:
+                    queries = [
+                        "Top AI tools 2026",
+                        "Best fintech platforms",
+                        "SaaS marketing tools Europe",
+                    ]
+                    for q in queries:
+                        await run_company_discovery(query=q, limit=6, auto_approve=False, source="scheduler")
+            except Exception as e:
+                logger.error(f"Company discovery loop error: {e}")
+            await asyncio.sleep(self.discovery_interval_minutes * 60)
+
+
+company_intelligence_scheduler = CompanyIntelligenceScheduler()
+
+
+async def run_company_discovery(query: str, limit: int = 10, auto_approve: bool = False, source: str = "manual") -> Dict[str, Any]:
+    """Main discovery pipeline: discover -> classify -> enrich -> SEO -> store."""
+    candidates = await discover_companies_from_web(query=query, limit=limit)
+    created = 0
+    skipped = 0
+    records: List[Dict[str, Any]] = []
+
+    for candidate in candidates:
+        domain = extract_domain(candidate.get("domain", ""))
+        if not domain:
+            skipped += 1
+            continue
+
+        existing = await db.companies.find_one({"$or": [{"domain": domain}, {"slug": slugify(brand_name_from_domain(domain))}]}, {"_id": 0})
+        if existing:
+            skipped += 1
+            continue
+
+        name = candidate.get("name") or brand_name_from_domain(domain)
+        basic_desc = candidate.get("description", "")
+        classification = await ai_classify_company(name=name, domain=domain, description=basic_desc)
+        metrics = await enrich_company_metrics(domain)
+        seo = await ai_generate_company_seo(name, classification["category_id"], classification["description_short"])
+        long_desc = await ai_generate_company_long_description(name, domain, classification["category_id"], classification["description_short"])
+
+        company_obj = CompanyIntelligenceModel(
+            name=name,
+            slug=slugify(name),
+            domain=domain,
+            category_id=classification["category_id"],
+            subcategory_id=classification["subcategory_id"],
+            description_short=classification["description_short"],
+            description_long=long_desc,
+            founded_year=classification["founded_year"],
+            employee_range=classification["employee_range"],
+            revenue_range=classification["revenue_range"],
+            global_rank=metrics["global_rank"],
+            country_rank=metrics["country_rank"],
+            category_rank=metrics["category_rank"],
+            estimated_visits=metrics["estimated_visits"],
+            bounce_rate=metrics["bounce_rate"],
+            pages_per_visit=metrics["pages_per_visit"],
+            avg_visit_duration=metrics["avg_visit_duration"],
+            technologies_json=metrics["technologies_json"],
+            channels_json=classification["channels_json"],
+            social_links_json=metrics["social_links_json"],
+            tags_json=classification["tags_json"],
+            logo_url=f"https://www.google.com/s2/favicons?domain={domain}&sz=128",
+            featured_boolean=False,
+            seo_title=seo["seo_title"],
+            seo_description=seo["seo_description"],
+            seo_keywords=seo["seo_keywords"],
+            seo_internal_links=seo["seo_internal_links"],
+            source_query=query,
+            source_provider=candidate.get("provider", source),
+            is_approved=auto_approve,
+        )
+
+        company_payload = company_obj.model_dump()
+        company_payload["intelligence_score"] = compute_company_intelligence_score(company_payload)
+        company_payload["featured_boolean"] = should_auto_feature_company(company_payload)
+
+        await db.companies.insert_one(company_payload)
+        created += 1
+        records.append({k: v for k, v in company_payload.items() if k != "description_long"})
+
+    await refresh_company_rankings_and_features()
+    return {"query": query, "created": created, "skipped": skipped, "companies": records}
+
 # ============== API ROUTES ==============
 
 @api_router.get("/")
