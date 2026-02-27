@@ -9,7 +9,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://seo-sports-platform.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://tech-intel.preview.emergentagent.com')
 
 class TestCompanyIntelligenceModule:
     """Company Intelligence Module Phase 1 Tests"""
