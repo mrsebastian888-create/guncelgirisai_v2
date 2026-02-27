@@ -1,0 +1,98 @@
+{
+  "summary": "Iteration 13: AI Video Generation (Sora 2) testing for grandpashabet-guncelgiris. Backend: 16/16 tests PASSED. Frontend: All video page components render correctly with file player for AI-generated MP4.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/firma/grandpashabet-guncelgiris/video",
+        "issue": "ai_video_status shows 'generating' even though video file exists and is being served correctly. This is a data consistency issue - the status should be 'ready'",
+        "priority": "LOW"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ai_video_generation.py",
+    "/app/test_reports/pytest/ai_video_generation_results.xml"
+  ],
+  "action_items": [
+    "Minor: Update ai_video_status to 'ready' for grandpashabet-guncelgiris since the video file exists and is serving correctly"
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_ai_video_generation.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (All UI tests passed)"
+  },
+  "test_credentials": {
+    "admin_username": "admin",
+    "admin_password": "123123.."
+  },
+  "seed_data_creation": "None - using existing grandpashabet-guncelgiris site data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "AI video generation with Sora 2 fully implemented and working. Video file exists at /api/generated-videos/grandpashabet-guncelgiris-1772150538.mp4 (6MB). FirmVideoPage correctly renders HTML5 video element for file type. Admin panel has 264 sites with AI video generation buttons. Fallback to YouTube embed works for firms without AI video.",
+  "features_verified": {
+    "admin_auth_protected_endpoint": {
+      "POST /api/firma/grandpashabet-guncelgiris/video/generate without token": "PASS - Returns 401 Unauthorized",
+      "POST /api/firma/grandpashabet-guncelgiris/video/generate with token": "PASS - Returns 202 Accepted"
+    },
+    "video_status_after_generation": {
+      "GET /api/firma/grandpashabet-guncelgiris/video": "PASS - Returns site, video data",
+      "video.video_type": "PASS - Returns 'file' for AI-generated video",
+      "video.video_url": "PASS - Returns /api/generated-videos/grandpashabet-guncelgiris-1772150538.mp4",
+      "video.ai_video_status": "WARNING - Shows 'generating' instead of 'ready' (minor data inconsistency)"
+    },
+    "generated_file_endpoint": {
+      "GET /api/generated-videos/grandpashabet-guncelgiris-1772150538.mp4": "PASS - Returns video/mp4, ~6MB",
+      "GET /api/generated-videos/nonexistent.mp4": "PASS - Returns 404"
+    },
+    "video_detail_page_frontend": {
+      "route /{slug}/video": "PASS - /grandpashabet-guncelgiris/video loads",
+      "firm-video-page container": "PASS - Renders",
+      "firm-video-file-player": "PASS - HTML5 video element present (not iframe)",
+      "video source URL": "PASS - Points to /api/generated-videos/*.mp4",
+      "firm-video-title": "PASS - Shows 'Grandpashabet AI Video İncelemesi'",
+      "firm-video-affiliate-cta": "PASS - Siteye Git button visible",
+      "firm-video-amp-link-box": "PASS - AMP link displayed"
+    },
+    "fallback_regression": {
+      "casibom-guncelgiris (no AI video)": "PASS - video_type='embed', uses YouTube fallback"
+    },
+    "amp_video_validation": {
+      "GET /api/amp-video/grandpashabet-guncelgiris": "PASS - Returns valid AMP HTML",
+      "AMP doctype and runtime": "PASS - Has <!doctype html>, cdn.ampproject.org/v0.js",
+      "AMP boilerplate": "PASS - Has amp-boilerplate style",
+      "VideoObject schema": "PASS - Contains schema.org VideoObject markup",
+      "Canonical link": "PASS - Points to /video page"
+    },
+    "sitemap_regression": {
+      "GET /api/sitemap.xml": "PASS - Contains sitemap-videos.xml and sitemap-amp-videos.xml links",
+      "GET /api/sitemap-videos.xml": "PASS - Returns valid XML with /{slug}/video URLs",
+      "GET /api/sitemap-amp-videos.xml": "PASS - Returns valid XML with /api/amp-video/{slug} URLs"
+    },
+    "admin_panel_ai_video_button": {
+      "Admin login": "PASS - Credentials admin/123123.. work",
+      "Siteler tab": "PASS - Shows 264 bonus sites",
+      "generate-ai-video buttons": "PASS - Found 264 AI video generation buttons (Wand2 icon)"
+    },
+    "firm_page_video_cta": {
+      "firm-cta-video-page button": "PASS - Present on FirmPage",
+      "href": "PASS - Points to /grandpashabet-guncelgiris/video"
+    }
+  },
+  "ai_video_generation_details": {
+    "firm": "grandpashabet-guncelgiris",
+    "model": "sora-2",
+    "video_file": "/api/generated-videos/grandpashabet-guncelgiris-1772150538.mp4",
+    "file_size_bytes": 6016429,
+    "content_type": "video/mp4",
+    "generation_status": "ready (file exists and serves correctly)"
+  }
+}
