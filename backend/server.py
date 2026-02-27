@@ -3758,6 +3758,7 @@ async def get_dashboard_stats(domain_id: Optional[str] = None):
         "auto_generated_articles": await db.articles.count_documents({**query, "is_auto_generated": True} if domain_id else {"is_auto_generated": True}),
         "total_companies": await db.companies.count_documents({"is_active": True}),
         "featured_companies": await db.companies.count_documents({"is_active": True, "featured_boolean": True}),
+        "telegram_bots": await db.telegram_bots.count_documents({}),
     }
 
 # ============== AUTH ==============
