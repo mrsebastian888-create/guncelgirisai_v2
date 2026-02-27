@@ -20,7 +20,8 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v17.0: Firma Detay Hero Taşıma + Test Stabilizasyonu (Feb 2026)
 ### v18.0: Firma Özel Video Sayfaları + Video Sitemap/AMP Sitemap (Feb 2026)
 ### v19.0: Sora 2 AI Video Üretim MVP (Tek Firma Pilot) (Feb 2026)
-### v20.0: Company Intelligence Module Faz-1 (Fallback Mod) (Feb 2026) - CURRENT
+### v20.0: Company Intelligence Module Faz-1 (Fallback Mod) (Feb 2026)
+### v21.0: AI Company Intelligence Navigation + Hero Yönlendirme (Feb 2026) - CURRENT
 
 **Değişiklikler:**
 - Sitemap Index yapısı: 4 alt sitemap (pages, firms, articles, amp)
@@ -145,6 +146,14 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - Cron benzeri scheduler eklendi: metrics refresh 24h, feature refresh 20m, discovery 20m
 - Modül dokümantasyonu: `/app/backend/modules/company-discovery/README.md`
 
+**v21.0 Değişiklikler (Bu fork):**
+- Üst menüye ana kategori olarak sabit `AI Company Intelligence` linki eklendi (`/companies`)
+- Mobil alt menüde `AI Intel` kısa yolu eklendi (`/companies`)
+- Yeni liste sayfası eklendi: `/companies` (arama + kategori filtreleri + company grid)
+- Ana hero slider’a AI Company Intelligence odaklı yeni slide eklendi (primary CTA `/companies`, secondary CTA `#ai-company-intelligence-section`)
+- Homepage Featured Companies bölümüne `Tümünü Gör` yönlendirmesi eklendi (`/companies`)
+- Route genişletmesi: `/companies` + `/companies/:slug` akışı korunarak birlikte çalışır hale getirildi
+
 ## Architecture
 ```
 /app/
@@ -167,6 +176,7 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - iteration_12: Firma video route + AMP video + video sitemapler = 100% backend + 100% frontend
 - iteration_13: Sora 2 AI video generation MVP + admin-protected generate endpoint + MP4 serving doğrulama = 100% backend + 100% frontend
 - iteration_14: Company Intelligence Faz-1 (discovery, admin controls, profile page, featured slider, sitemap) = 100% backend + 100% frontend
+- iteration_15: AI Company Intelligence üst menü + hero slider yönlendirme + /companies liste sayfası = 100% backend + 100% frontend
 
 ## Production Readiness
 - MongoDB indexes (17 index across 8 collections)
@@ -190,6 +200,7 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - [x] Firma özel video sayfalari + video sitemap + AMP video sitemap (Feb 2026)
 - [x] Sora 2 ile tek firma pilot AI video üretim akışı (Grandpashabet) (Feb 2026)
 - [x] Company Intelligence Module Faz-1 (fallback mod): şirket keşfi + company profile + featured slider + sitemap-companies (Feb 2026)
+- [x] AI Company Intelligence navigasyon sabitleme + hero slider yönlendirme + /companies liste sayfası (Feb 2026)
 
 ### P1 (Next)
 - [ ] Production admin login canli domainde kullanici dogrulamasi (adminguncelgiris.company)
