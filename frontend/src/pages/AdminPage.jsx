@@ -315,6 +315,12 @@ function SitesTab({ bonusSites, onRefresh }) {
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [generatingVideoId, setGeneratingVideoId] = useState(null);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("admin_token") || "";
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   const handleCreate = async () => {
     if (!newSite.name || !newSite.affiliate_url) return toast.error("Site adı ve URL gerekli");
@@ -383,6 +389,24 @@ function SitesTab({ bonusSites, onRefresh }) {
       onRefresh();
     } catch { toast.error("Sıralama başarısız"); }
     finally { setReordering(false); }
+  };
+
+  const handleGenerateAIVideo = async (site) => {
+    if (!site?.slug) return toast.error("Bu firmada slug eksik");
+    setGeneratingVideoId(site.id);
+    try {
+      await axios.post(
+        `${API}/firma/${site.slug}/video/generate`,
+        { model: "sora-2", duration_seconds: 12, size: "1280x720" },
+        { headers: getAuthHeaders() }
+      );
+      toast.success(`${site.name} için AI video üretimi başlatıldı`);
+      onRefresh();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "AI video üretimi başlatılamadı");
+    } finally {
+      setGeneratingVideoId(null);
+    }
   };
 
   return (
@@ -481,6 +505,16 @@ function SitesTab({ bonusSites, onRefresh }) {
                       <a href={site.affiliate_url} target="_blank" rel="noopener noreferrer">
                         <Button variant="ghost" size="sm"><ExternalLink className="w-4 h-4" /></Button>
                       </a>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleGenerateAIVideo(site)}
+                        disabled={generatingVideoId === site.id}
+                        data-testid={`generate-ai-video-${site.id}`}
+                        title="AI Video Üret"
+                      >
+                        {generatingVideoId === site.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                      </Button>
                       <Link to={`/${site.slug}/video`}>
                         <Button variant="ghost" size="sm" data-testid={`view-site-video-page-${site.id}`}><Play className="w-4 h-4" /></Button>
                       </Link>
