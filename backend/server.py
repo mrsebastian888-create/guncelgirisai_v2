@@ -4158,6 +4158,10 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
+    <loc>{base_url}/api/sitemap-companies.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+  <sitemap>
     <loc>{base_url}/api/sitemap-videos.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
