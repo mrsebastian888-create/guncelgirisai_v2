@@ -287,7 +287,7 @@ def get_git_commit() -> str:
             capture_output=True, text=True, timeout=5
         )
         return result.stdout.strip() if result.returncode == 0 else "unknown"
-    except:
+    except Exception:
         return "unknown"
 
 def get_client_ip(request: Request) -> str:
