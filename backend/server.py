@@ -4555,6 +4555,488 @@ async def get_seo_data(slug: str):
         }
     return {"type": "page", "title": "", "description": ""}
 
+
+# ============== TELEGRAM BOT MANAGEMENT ==============
+
+from telegram_bot_manager import (
+    firm_name_to_bot_username, telegram_api_call, set_bot_webhook,
+    delete_bot_webhook, get_bot_info, send_telegram_message,
+    set_bot_commands, build_start_message, build_bonus_message,
+    build_link_message, build_destek_message,
+    create_bot_via_botfather_with_session,
+)
+
+_telethon_client = None
+_telethon_lock = asyncio.Lock()
+
+async def _get_telethon_client():
+    """Get or create Telethon client for BotFather automation."""
+    global _telethon_client
+    if _telethon_client and _telethon_client.is_connected():
+        return _telethon_client
+    if not TELEGRAM_API_ID or not TELEGRAM_API_HASH:
+        raise HTTPException(status_code=400, detail="Telegram API credentials not configured")
+    from telethon import TelegramClient
+    from telegram_bot_manager import SESSION_PATH
+    _telethon_client = TelegramClient(SESSION_PATH, TELEGRAM_API_ID, TELEGRAM_API_HASH)
+    await _telethon_client.start()
+    return _telethon_client
+
+
+class TelegramBotCreateRequest(BaseModel):
+    firm_id: str
+
+class TelegramBroadcastRequest(BaseModel):
+    bot_id: Optional[str] = None
+    message: str
+    all_bots: bool = False
+
+class TelegramBotBulkRequest(BaseModel):
+    firm_ids: List[str] = []
+    all_firms: bool = False
+    batch_size: int = 5
+    delay_seconds: int = 5
+
+
+@api_router.get("/admin/telegram/bots")
+async def admin_list_telegram_bots(request: Request, search: Optional[str] = None):
+    """List all Telegram bots."""
+    require_admin_request(request)
+    query = {}
+    if search:
+        query["$or"] = [
+            {"firm_name": {"$regex": search, "$options": "i"}},
+            {"bot_username": {"$regex": search, "$options": "i"}},
+        ]
+    bots = await db.telegram_bots.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    # Enrich with subscriber counts
+    for bot in bots:
+        bot["subscriber_count"] = await db.telegram_subscribers.count_documents({"bot_id": bot["bot_id"]})
+    return bots
+
+
+@api_router.get("/admin/telegram/stats")
+async def admin_telegram_stats(request: Request):
+    """Get overall Telegram stats."""
+    require_admin_request(request)
+    total_bots = await db.telegram_bots.count_documents({})
+    active_bots = await db.telegram_bots.count_documents({"status": "active"})
+    total_subscribers = await db.telegram_subscribers.count_documents({})
+    pending_bots = await db.telegram_bots.count_documents({"status": "pending"})
+    failed_bots = await db.telegram_bots.count_documents({"status": "error"})
+    return {
+        "total_bots": total_bots,
+        "active_bots": active_bots,
+        "total_subscribers": total_subscribers,
+        "pending_bots": pending_bots,
+        "failed_bots": failed_bots,
+    }
+
+
+@api_router.post("/admin/telegram/create-bot")
+async def admin_create_telegram_bot(payload: TelegramBotCreateRequest, request: Request, background_tasks: BackgroundTasks):
+    """Create a Telegram bot for a specific firm."""
+    require_admin_request(request)
+
+    firm = await db.bonus_sites.find_one({"id": payload.firm_id}, {"_id": 0})
+    if not firm:
+        raise HTTPException(status_code=404, detail="Firma bulunamadı")
+
+    bot_username = firm_name_to_bot_username(firm["name"])
+
+    # Check if bot already exists
+    existing = await db.telegram_bots.find_one({"firm_id": payload.firm_id}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Bu firma için bot zaten var: @{existing.get('bot_username')}")
+
+    # Create bot record as pending
+    bot_record = {
+        "bot_id": str(uuid.uuid4()),
+        "firm_id": firm["id"],
+        "firm_name": firm["name"],
+        "firm_slug": firm.get("slug", ""),
+        "bot_username": bot_username,
+        "bot_token": "",
+        "status": "creating",
+        "webhook_active": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "error_message": "",
+    }
+    await db.telegram_bots.insert_one({**bot_record, "_id": None})
+    await db.telegram_bots.update_one({"bot_id": bot_record["bot_id"]}, {"$unset": {"_id": ""}})
+
+    # Run creation in background
+    background_tasks.add_task(_create_single_bot_task, bot_record["bot_id"], firm["name"], bot_username)
+
+    return {"message": f"Bot oluşturma başlatıldı: @{bot_username}", "bot_id": bot_record["bot_id"]}
+
+
+async def _create_single_bot_task(bot_id: str, firm_name: str, bot_username: str):
+    """Background task to create a single bot via BotFather."""
+    try:
+        async with _telethon_lock:
+            client = await _get_telethon_client()
+            token = await create_bot_via_botfather_with_session(client, firm_name, bot_username)
+
+        if token and token != "TAKEN":
+            # Set commands and webhook
+            await set_bot_commands(token)
+            webhook_url = f"https://guncelgiris.ai/api/telegram/webhook/{bot_id}"
+            await set_bot_webhook(token, webhook_url)
+
+            await db.telegram_bots.update_one(
+                {"bot_id": bot_id},
+                {"$set": {
+                    "bot_token": token,
+                    "status": "active",
+                    "webhook_active": True,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }}
+            )
+            logger.info(f"Bot created successfully: @{bot_username}")
+        elif token == "TAKEN":
+            await db.telegram_bots.update_one(
+                {"bot_id": bot_id},
+                {"$set": {
+                    "status": "error",
+                    "error_message": f"Username @{bot_username} already taken",
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }}
+            )
+        else:
+            await db.telegram_bots.update_one(
+                {"bot_id": bot_id},
+                {"$set": {
+                    "status": "error",
+                    "error_message": "BotFather token alınamadı",
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }}
+            )
+    except Exception as e:
+        logger.error(f"Bot creation error for {bot_username}: {e}")
+        await db.telegram_bots.update_one(
+            {"bot_id": bot_id},
+            {"$set": {
+                "status": "error",
+                "error_message": str(e)[:200],
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }}
+        )
+
+
+@api_router.post("/admin/telegram/create-bulk")
+async def admin_create_telegram_bots_bulk(payload: TelegramBotBulkRequest, request: Request, background_tasks: BackgroundTasks):
+    """Bulk create Telegram bots for multiple firms."""
+    require_admin_request(request)
+
+    if payload.all_firms:
+        firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "id": 1, "name": 1, "slug": 1}).to_list(500)
+    else:
+        firms = await db.bonus_sites.find({"id": {"$in": payload.firm_ids}}, {"_id": 0, "id": 1, "name": 1, "slug": 1}).to_list(500)
+
+    if not firms:
+        raise HTTPException(status_code=404, detail="Firma bulunamadı")
+
+    # Filter out firms that already have bots
+    existing_firm_ids = set()
+    existing_bots = await db.telegram_bots.find({}, {"_id": 0, "firm_id": 1}).to_list(500)
+    for eb in existing_bots:
+        existing_firm_ids.add(eb["firm_id"])
+
+    new_firms = [f for f in firms if f["id"] not in existing_firm_ids]
+
+    if not new_firms:
+        return {"message": "Tüm firmalar için bot zaten mevcut", "created": 0, "skipped": len(firms)}
+
+    # Create pending records
+    bot_records = []
+    for firm in new_firms:
+        bot_username = firm_name_to_bot_username(firm["name"])
+        record = {
+            "bot_id": str(uuid.uuid4()),
+            "firm_id": firm["id"],
+            "firm_name": firm["name"],
+            "firm_slug": firm.get("slug", ""),
+            "bot_username": bot_username,
+            "bot_token": "",
+            "status": "pending",
+            "webhook_active": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "error_message": "",
+        }
+        bot_records.append(record)
+
+    # Insert all records
+    for rec in bot_records:
+        await db.telegram_bots.insert_one({**rec})
+        await db.telegram_bots.update_one({"bot_id": rec["bot_id"]}, {"$unset": {"_id": ""}})
+
+    # Start background bulk creation
+    background_tasks.add_task(
+        _bulk_create_bots_task,
+        bot_records,
+        payload.batch_size,
+        payload.delay_seconds
+    )
+
+    return {
+        "message": f"{len(new_firms)} bot oluşturma kuyruğa eklendi",
+        "created": len(new_firms),
+        "skipped": len(firms) - len(new_firms),
+    }
+
+
+async def _bulk_create_bots_task(bot_records: list, batch_size: int, delay_seconds: int):
+    """Background task to create bots in batches."""
+    try:
+        async with _telethon_lock:
+            client = await _get_telethon_client()
+
+            for i, rec in enumerate(bot_records):
+                try:
+                    await db.telegram_bots.update_one(
+                        {"bot_id": rec["bot_id"]},
+                        {"$set": {"status": "creating"}}
+                    )
+
+                    token = await create_bot_via_botfather_with_session(
+                        client, rec["firm_name"], rec["bot_username"]
+                    )
+
+                    if token and token != "TAKEN":
+                        await set_bot_commands(token)
+                        webhook_url = f"https://guncelgiris.ai/api/telegram/webhook/{rec['bot_id']}"
+                        await set_bot_webhook(token, webhook_url)
+
+                        await db.telegram_bots.update_one(
+                            {"bot_id": rec["bot_id"]},
+                            {"$set": {
+                                "bot_token": token,
+                                "status": "active",
+                                "webhook_active": True,
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
+                            }}
+                        )
+                        logger.info(f"[BULK {i+1}/{len(bot_records)}] Bot created: @{rec['bot_username']}")
+                    elif token == "TAKEN":
+                        await db.telegram_bots.update_one(
+                            {"bot_id": rec["bot_id"]},
+                            {"$set": {
+                                "status": "error",
+                                "error_message": f"Username @{rec['bot_username']} already taken",
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
+                            }}
+                        )
+                    else:
+                        await db.telegram_bots.update_one(
+                            {"bot_id": rec["bot_id"]},
+                            {"$set": {
+                                "status": "error",
+                                "error_message": "Token alınamadı",
+                                "updated_at": datetime.now(timezone.utc).isoformat(),
+                            }}
+                        )
+
+                    # Rate limit: delay between creations
+                    if (i + 1) % batch_size == 0:
+                        logger.info(f"[BULK] Batch {(i+1)//batch_size} tamamlandı, {delay_seconds}s bekleniyor...")
+                        await asyncio.sleep(delay_seconds)
+                    else:
+                        await asyncio.sleep(2)
+
+                except Exception as e:
+                    logger.error(f"[BULK] Error creating {rec['bot_username']}: {e}")
+                    await db.telegram_bots.update_one(
+                        {"bot_id": rec["bot_id"]},
+                        {"$set": {
+                            "status": "error",
+                            "error_message": str(e)[:200],
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                        }}
+                    )
+                    await asyncio.sleep(2)
+
+    except Exception as e:
+        logger.error(f"[BULK] Fatal error in bulk creation: {e}")
+
+
+@api_router.delete("/admin/telegram/bot/{bot_id}")
+async def admin_delete_telegram_bot(bot_id: str, request: Request):
+    """Delete a Telegram bot record."""
+    require_admin_request(request)
+    bot = await db.telegram_bots.find_one({"bot_id": bot_id}, {"_id": 0})
+    if not bot:
+        raise HTTPException(status_code=404, detail="Bot bulunamadı")
+
+    # Remove webhook if active
+    if bot.get("bot_token"):
+        try:
+            await delete_bot_webhook(bot["bot_token"])
+        except Exception:
+            pass
+
+    await db.telegram_bots.delete_one({"bot_id": bot_id})
+    await db.telegram_subscribers.delete_many({"bot_id": bot_id})
+    return {"message": f"Bot silindi: @{bot.get('bot_username')}"}
+
+
+@api_router.post("/admin/telegram/activate-webhook/{bot_id}")
+async def admin_activate_webhook(bot_id: str, request: Request):
+    """Activate webhook for a bot."""
+    require_admin_request(request)
+    bot = await db.telegram_bots.find_one({"bot_id": bot_id}, {"_id": 0})
+    if not bot or not bot.get("bot_token"):
+        raise HTTPException(status_code=404, detail="Bot veya token bulunamadı")
+
+    webhook_url = f"https://guncelgiris.ai/api/telegram/webhook/{bot_id}"
+    result = await set_bot_webhook(bot["bot_token"], webhook_url)
+    await db.telegram_bots.update_one(
+        {"bot_id": bot_id},
+        {"$set": {"webhook_active": True, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Webhook aktif edildi", "result": result}
+
+
+@api_router.post("/admin/telegram/broadcast")
+async def admin_telegram_broadcast(payload: TelegramBroadcastRequest, request: Request, background_tasks: BackgroundTasks):
+    """Send broadcast message to all subscribers of a bot or all bots."""
+    require_admin_request(request)
+
+    if payload.all_bots:
+        bots = await db.telegram_bots.find({"status": "active"}, {"_id": 0}).to_list(500)
+    elif payload.bot_id:
+        bot = await db.telegram_bots.find_one({"bot_id": payload.bot_id, "status": "active"}, {"_id": 0})
+        bots = [bot] if bot else []
+    else:
+        raise HTTPException(status_code=400, detail="bot_id veya all_bots gerekli")
+
+    if not bots:
+        raise HTTPException(status_code=404, detail="Aktif bot bulunamadı")
+
+    total_subscribers = 0
+    for bot in bots:
+        subs = await db.telegram_subscribers.find({"bot_id": bot["bot_id"]}, {"_id": 0}).to_list(10000)
+        total_subscribers += len(subs)
+        if subs:
+            background_tasks.add_task(_broadcast_task, bot["bot_token"], subs, payload.message)
+
+    return {"message": f"Broadcast başlatıldı: {len(bots)} bot, {total_subscribers} abone"}
+
+
+async def _broadcast_task(token: str, subscribers: list, message: str):
+    """Send broadcast to subscribers."""
+    sent = 0
+    failed = 0
+    for sub in subscribers:
+        try:
+            await send_telegram_message(token, sub["chat_id"], message)
+            sent += 1
+            await asyncio.sleep(0.05)  # Rate limit
+        except Exception as e:
+            failed += 1
+            logger.error(f"Broadcast failed for {sub['chat_id']}: {e}")
+    logger.info(f"Broadcast complete: {sent} sent, {failed} failed")
+
+
+@api_router.get("/admin/telegram/firm-bot-map")
+async def admin_firm_bot_map(request: Request):
+    """Get mapping of which firms have bots and which don't."""
+    require_admin_request(request)
+    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "id": 1, "name": 1, "slug": 1}).to_list(500)
+    bots = await db.telegram_bots.find({}, {"_id": 0, "firm_id": 1, "bot_username": 1, "status": 1}).to_list(500)
+    bot_map = {b["firm_id"]: b for b in bots}
+    result = []
+    for firm in firms:
+        bot_info = bot_map.get(firm["id"])
+        result.append({
+            "firm_id": firm["id"],
+            "firm_name": firm["name"],
+            "firm_slug": firm.get("slug", ""),
+            "has_bot": bot_info is not None,
+            "bot_username": bot_info.get("bot_username") if bot_info else firm_name_to_bot_username(firm["name"]),
+            "bot_status": bot_info.get("status") if bot_info else None,
+        })
+    return {"firms": result, "total": len(firms), "with_bot": sum(1 for r in result if r["has_bot"])}
+
+
+# ── Telegram Webhook Handler (Public - no auth) ──
+
+@api_router.post("/telegram/webhook/{bot_id}")
+async def telegram_webhook_handler(bot_id: str, request: Request):
+    """Handle incoming Telegram updates for a specific bot."""
+    try:
+        update = await request.json()
+    except Exception:
+        return {"ok": True}
+
+    message = update.get("message")
+    if not message:
+        return {"ok": True}
+
+    chat_id = message.get("chat", {}).get("id")
+    text = message.get("text", "")
+    user_info = message.get("from", {})
+
+    if not chat_id:
+        return {"ok": True}
+
+    # Look up bot
+    bot = await db.telegram_bots.find_one({"bot_id": bot_id}, {"_id": 0})
+    if not bot or not bot.get("bot_token"):
+        return {"ok": True}
+
+    token = bot["bot_token"]
+    firm_id = bot["firm_id"]
+
+    # Get firm data
+    firm = await db.bonus_sites.find_one({"id": firm_id}, {"_id": 0})
+    if not firm:
+        return {"ok": True}
+
+    # Track subscriber
+    existing_sub = await db.telegram_subscribers.find_one(
+        {"bot_id": bot_id, "chat_id": chat_id}, {"_id": 0}
+    )
+    if not existing_sub:
+        await db.telegram_subscribers.insert_one({
+            "bot_id": bot_id,
+            "chat_id": chat_id,
+            "firm_id": firm_id,
+            "username": user_info.get("username", ""),
+            "first_name": user_info.get("first_name", ""),
+            "subscribed_at": datetime.now(timezone.utc).isoformat(),
+        })
+        await db.telegram_subscribers.update_one(
+            {"bot_id": bot_id, "chat_id": chat_id},
+            {"$unset": {"_id": ""}}
+        )
+
+    # Handle commands
+    cmd = text.strip().lower().split()[0] if text.strip() else ""
+
+    if cmd == "/start":
+        msg, reply_markup = build_start_message(firm)
+        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+    elif cmd == "/bonus":
+        msg, reply_markup = build_bonus_message(firm)
+        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+    elif cmd == "/link":
+        msg, reply_markup = build_link_message(firm)
+        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+    elif cmd == "/destek":
+        msg, reply_markup = build_destek_message(firm)
+        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+    elif text.strip():
+        # Default response for unknown messages
+        msg, reply_markup = build_start_message(firm)
+        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+
+    return {"ok": True}
+
+
+
 # Seed
 @api_router.post("/seed")
 async def seed_database():
