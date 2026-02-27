@@ -679,6 +679,8 @@ class CompanyDiscoveryRequest(BaseModel):
     query: str = "Top AI tools 2026"
     limit: int = 10
     auto_approve: bool = False
+    run_async: bool = True
+    deep_analysis: bool = False
 
 
 class CompanyAdminUpdateRequest(BaseModel):
