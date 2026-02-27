@@ -1364,7 +1364,7 @@ async def get_firma_video_detail(slug: str):
             "bonus_type": site.get("bonus_type", ""),
             "rating": site.get("rating", 4.5),
             "affiliate_url": site.get("affiliate_url", "#"),
-            "ai_video_status": site.get("ai_video_status", "idle"),
+            "ai_video_status": video_data.get("ai_video_status", site.get("ai_video_status", "idle")),
             "ai_video_error": site.get("ai_video_error", ""),
         },
         "video": video_data,
