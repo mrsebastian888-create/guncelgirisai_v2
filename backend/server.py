@@ -1686,6 +1686,8 @@ async def get_amp_video_page(slug: str, request: Request):
     logo_url = site.get("logo_url", "")
     affiliate_url = site.get("affiliate_url", "#")
     video_url = video_data["video_url"]
+    video_embed_url = video_data["video_embed_url"]
+    video_type = video_data.get("video_type", "embed")
     video_title = video_data["video_title"]
     video_description = video_data["video_description"]
 
@@ -1699,6 +1701,12 @@ async def get_amp_video_page(slug: str, request: Request):
         youtube_video_id = video_url.split("youtu.be/")[-1].split("?")[0].strip("/")
 
     thumbnail_url = f"https://i.ytimg.com/vi/{youtube_video_id}/hqdefault.jpg" if youtube_video_id else logo_url
+    amp_video_script = '<script async custom-element="amp-video" src="https://cdn.ampproject.org/v0/amp-video-0.1.js"></script>' if video_type == "file" else ""
+    video_preview_html = (
+        f'<amp-video width="1280" height="720" layout="responsive" src="{video_embed_url}" controls poster="{thumbnail_url}"></amp-video>'
+        if video_type == "file"
+        else f'<amp-img src="{thumbnail_url}" width="1280" height="720" layout="responsive" alt="{video_title}"></amp-img>'
+    )
 
     video_schema = {
         "@context": "https://schema.org",
@@ -1708,7 +1716,7 @@ async def get_amp_video_page(slug: str, request: Request):
         "thumbnailUrl": [thumbnail_url] if thumbnail_url else [],
         "uploadDate": datetime.now(timezone.utc).isoformat(),
         "contentUrl": video_url,
-        "embedUrl": video_data["video_embed_url"],
+        "embedUrl": video_embed_url,
         "publisher": {
             "@type": "Organization",
             "name": "guncelgiris.ai",
@@ -1734,6 +1742,7 @@ async def get_amp_video_page(slug: str, request: Request):
     <meta property="og:url" content="{canonical_url}">
     <meta property="og:image" content="{thumbnail_url}">
     <script type="application/ld+json">{video_schema_str}</script>
+    {amp_video_script}
     <style amp-boilerplate>body{{-webkit-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-moz-animation:-amp-start 8s steps(1,end) 0s 1 normal both;-ms-animation:-amp-start 8s steps(1,end) 0s 1 normal both;animation:-amp-start 8s steps(1,end) 0s 1 normal both}}@-webkit-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@-moz-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@-ms-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@-o-keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}@keyframes -amp-start{{from{{visibility:hidden}}to{{visibility:visible}}}}</style><noscript><style amp-boilerplate>body{{-webkit-animation:none;-moz-animation:none;-ms-animation:none;animation:none}}</style></noscript>
     <style amp-custom>
         *{{margin:0;padding:0;box-sizing:border-box}}
@@ -1773,7 +1782,7 @@ async def get_amp_video_page(slug: str, request: Request):
             </div>
             <div class="card">
                 <div class="thumb">
-                    <amp-img src="{thumbnail_url}" width="1280" height="720" layout="responsive" alt="{video_title}"></amp-img>
+                    {video_preview_html}
                 </div>
                 <h2 class="title">{video_title}</h2>
                 <p class="desc">{video_description}</p>
