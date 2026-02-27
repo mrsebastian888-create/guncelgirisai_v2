@@ -19,7 +19,8 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v16.0: Google Search Console SEO Optimizasyonu (Feb 2026)
 ### v17.0: Firma Detay Hero Taşıma + Test Stabilizasyonu (Feb 2026)
 ### v18.0: Firma Özel Video Sayfaları + Video Sitemap/AMP Sitemap (Feb 2026)
-### v19.0: Sora 2 AI Video Üretim MVP (Tek Firma Pilot) (Feb 2026) - CURRENT
+### v19.0: Sora 2 AI Video Üretim MVP (Tek Firma Pilot) (Feb 2026)
+### v20.0: Company Intelligence Module Faz-1 (Fallback Mod) (Feb 2026) - CURRENT
 
 **Değişiklikler:**
 - Sitemap Index yapısı: 4 alt sitemap (pages, firms, articles, amp)
@@ -132,6 +133,18 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - AMP video sayfası, dosya tabanlı video varsa `amp-video` ile oynatım destekliyor
 - Pilot firma: `grandpashabet-guncelgiris` için Sora 2 üretimi tetiklendi ve MP4 servis doğrulandı
 
+**v20.0 Değişiklikler (Bu fork):**
+- Company taxonomy eklendi: ana kategoriler + alt kategoriler (`company_categories`, `company_subcategories`)
+- Yeni `companies` veri modeli ve Company Intelligence API katmanı eklendi
+- Discovery pipeline aktif: `POST /api/admin/companies/discovery` (async queue + fallback mode)
+- Public company endpoints: `GET /api/companies`, `GET /api/companies/featured/list`, `GET /api/companies/slug/{slug}`
+- Admin company yönetimi: listele / onayla / featured / refresh / sil
+- Dinamik profil sayfası route’u eklendi: `/companies/:slug`
+- Homepage’e Featured Companies Slider eklendi (auto-rotate + 20dk auto-refresh)
+- Sitemap entegrasyonu: `/api/sitemap-companies.xml` + sitemap index + robots allow
+- Cron benzeri scheduler eklendi: metrics refresh 24h, feature refresh 20m, discovery 20m
+- Modül dokümantasyonu: `/app/backend/modules/company-discovery/README.md`
+
 ## Architecture
 ```
 /app/
@@ -153,6 +166,7 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - iteration_11: Firm hero taşıma + homepage koruma + admin login doğrulama = 100% backend + 100% frontend
 - iteration_12: Firma video route + AMP video + video sitemapler = 100% backend + 100% frontend
 - iteration_13: Sora 2 AI video generation MVP + admin-protected generate endpoint + MP4 serving doğrulama = 100% backend + 100% frontend
+- iteration_14: Company Intelligence Faz-1 (discovery, admin controls, profile page, featured slider, sitemap) = 100% backend + 100% frontend
 
 ## Production Readiness
 - MongoDB indexes (17 index across 8 collections)
@@ -175,11 +189,14 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - [x] Yeni 3-kolon hero tasariminin FirmPage'e tasinmasi ve dogrulanmasi (Feb 2026)
 - [x] Firma özel video sayfalari + video sitemap + AMP video sitemap (Feb 2026)
 - [x] Sora 2 ile tek firma pilot AI video üretim akışı (Grandpashabet) (Feb 2026)
+- [x] Company Intelligence Module Faz-1 (fallback mod): şirket keşfi + company profile + featured slider + sitemap-companies (Feb 2026)
 
 ### P1 (Next)
 - [ ] Production admin login canli domainde kullanici dogrulamasi (adminguncelgiris.company)
 - [ ] Sponsors tabanli dinamik GIF hero slider sistemi (DB + admin CRUD + oncelik + auto-refresh)
 - [ ] AI video üretimi otomatik scheduler + batch üretim + admin onay akışı (tüm firmalar)
+- [ ] External API keyleriyle gerçek discovery/enrichment aktif etme (Serper/Brave/Bing/SerpAPI/Similarweb/BuiltWith)
+- [ ] Deep analysis modu (1200+ kelime AI içerik) ve otomatik SEO internal linking tuning
 - [ ] Backend moduler refactoring (server.py bolunmesi)
 - [ ] AMP kapsam/genisleme ve validasyon
 
