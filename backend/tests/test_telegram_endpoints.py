@@ -342,8 +342,8 @@ class TestDashboardTelegramStats(TestSetup):
     """Test that telegram bots appear in dashboard stats."""
     
     def test_dashboard_includes_telegram_bots(self, auth_headers):
-        """GET /api/admin/stats should include telegram_bots count."""
-        resp = requests.get(f"{BASE_URL}/api/admin/stats", headers=auth_headers)
+        """GET /api/stats/dashboard should include telegram_bots count."""
+        resp = requests.get(f"{BASE_URL}/api/stats/dashboard", headers=auth_headers)
         assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
         
         data = resp.json()
