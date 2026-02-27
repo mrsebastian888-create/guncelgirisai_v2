@@ -26,7 +26,8 @@ from pydantic import BaseModel, Field, ConfigDict
 from collections import defaultdict
 import httpx
 import re
-from urllib.parse import quote_plus
+import math
+from urllib.parse import quote_plus, urlparse
 from passlib.context import CryptContext
 import jwt as pyjwt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -71,6 +72,12 @@ ODDS_API_KEY = get_optional_env("ODDS_API_KEY", "")
 PERIGON_API_KEY = get_optional_env("PERIGON_API_KEY", "")
 GODADDY_API_KEY = get_optional_env("GODADDY_API_KEY", "")
 GODADDY_API_SECRET = get_optional_env("GODADDY_API_SECRET", "")
+SERPER_API_KEY = get_optional_env("SERPER_API_KEY", "")
+SERPAPI_API_KEY = get_optional_env("SERPAPI_API_KEY", "")
+BRAVE_SEARCH_API_KEY = get_optional_env("BRAVE_SEARCH_API_KEY", "")
+BING_SEARCH_API_KEY = get_optional_env("BING_SEARCH_API_KEY", "")
+SIMILARWEB_API_KEY = get_optional_env("SIMILARWEB_API_KEY", "")
+BUILTWITH_API_KEY = get_optional_env("BUILTWITH_API_KEY", "")
 
 # ============== SPORTS CACHE ==============
 
