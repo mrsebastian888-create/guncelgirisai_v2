@@ -48,9 +48,19 @@ const HERO_SLIDES = [
     cta: { label: "Analizlere Git", href: "/spor-haberleri" },
     accent: "#00F0FF",
   },
+  {
+    badge: "AI Company Intelligence",
+    title: ["SIRKET", "INTELLIGENCE", "MERKEZI"],
+    desc: "One cikan sirketleri trafik, teknoloji ve skor metrikleriyle analiz edin.",
+    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1920&q=80",
+    cta: { label: "Sirketleri Incele", href: "/companies", icon: Building2 },
+    secondaryCta: { label: "One Cikan Sirketler", href: "#ai-company-intelligence-section" },
+    accent: "#00F0FF",
+  },
 ];
 
 const MAIN_CATEGORIES = [
+  { name: "AI Company Intelligence", slug: "companies", icon: Building2, color: "#00F0FF", image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&q=80", isRoute: true },
   { name: "Firma Rehberi", slug: "firma-rehberi", icon: Users, color: "#00F0FF", image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&q=80", isAnchor: true },
   { name: "Bonuslar", slug: "bonuslar", icon: Gift, color: "#00FF87", image: "https://images.pexels.com/photos/29825624/pexels-photo-29825624.jpeg?auto=compress&cs=tinysrgb&w=400" },
   { name: "Guncel Giris", slug: "guncel-giris-adresleri", icon: Globe, color: "#00F0FF", image: "https://images.unsplash.com/photo-1530900198670-847f22a849fe?w=400&q=80" },
@@ -338,24 +348,57 @@ const HomePage = () => {
               </p>
 
               <div className="flex flex-wrap gap-3">
-                <a
-                  href={HERO_SLIDES[heroSlide].cta.href}
-                  data-testid="hero-cta-btn"
-                  className="inline-flex items-center gap-2 rounded-lg px-7 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all active:scale-95 hover:scale-105"
-                  style={{ background: HERO_SLIDES[heroSlide].accent, color: "#000", boxShadow: `0 0 24px ${HERO_SLIDES[heroSlide].accent}59` }}
-                >
-                  <Gift className="w-4 h-4" />
-                  {HERO_SLIDES[heroSlide].cta.label}
-                </a>
-                <Link
-                  to="/spor-haberleri"
-                  data-testid="hero-sports-btn"
-                  className="inline-flex items-center gap-2 rounded-lg border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5 hover:scale-105"
-                  style={{ borderColor: "rgba(255,255,255,0.2)", color: "var(--foreground)" }}
-                >
-                  <Activity className="w-4 h-4" />
-                  Spor Haberleri
-                </Link>
+                {(() => {
+                  const activeSlide = HERO_SLIDES[heroSlide];
+                  const PrimaryIcon = activeSlide.cta.icon || Gift;
+                  const isInternalRoute = activeSlide.cta.href.startsWith("/") && !activeSlide.cta.href.startsWith("/#");
+                  if (isInternalRoute) {
+                    return (
+                      <Link
+                        to={activeSlide.cta.href}
+                        data-testid="hero-cta-btn"
+                        className="inline-flex items-center gap-2 rounded-lg px-7 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all active:scale-95 hover:scale-105"
+                        style={{ background: activeSlide.accent, color: "#000", boxShadow: `0 0 24px ${activeSlide.accent}59` }}
+                      >
+                        <PrimaryIcon className="w-4 h-4" />
+                        {activeSlide.cta.label}
+                      </Link>
+                    );
+                  }
+                  return (
+                    <a
+                      href={activeSlide.cta.href}
+                      data-testid="hero-cta-btn"
+                      className="inline-flex items-center gap-2 rounded-lg px-7 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all active:scale-95 hover:scale-105"
+                      style={{ background: activeSlide.accent, color: "#000", boxShadow: `0 0 24px ${activeSlide.accent}59` }}
+                    >
+                      <PrimaryIcon className="w-4 h-4" />
+                      {activeSlide.cta.label}
+                    </a>
+                  );
+                })()}
+
+                {HERO_SLIDES[heroSlide].secondaryCta ? (
+                  <a
+                    href={HERO_SLIDES[heroSlide].secondaryCta.href}
+                    data-testid="hero-secondary-cta-btn"
+                    className="inline-flex items-center gap-2 rounded-lg border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5 hover:scale-105"
+                    style={{ borderColor: "rgba(255,255,255,0.2)", color: "var(--foreground)" }}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    {HERO_SLIDES[heroSlide].secondaryCta.label}
+                  </a>
+                ) : (
+                  <Link
+                    to="/spor-haberleri"
+                    data-testid="hero-sports-btn"
+                    className="inline-flex items-center gap-2 rounded-lg border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-white/5 hover:scale-105"
+                    style={{ borderColor: "rgba(255,255,255,0.2)", color: "var(--foreground)" }}
+                  >
+                    <Activity className="w-4 h-4" />
+                    Spor Haberleri
+                  </Link>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>
@@ -399,7 +442,7 @@ const HomePage = () => {
 
       {/* ── FEATURED COMPANIES SLIDER ───────────────── */}
       {featuredCompanies.length > 0 && (
-        <section className="py-14 md:py-20 px-4 md:px-6" data-testid="featured-companies-slider-section">
+        <section id="ai-company-intelligence-section" className="py-14 md:py-20 px-4 md:px-6" data-testid="featured-companies-slider-section">
           <div className="container mx-auto max-w-6xl">
             <div className="flex items-center justify-between gap-4 mb-6">
               <div>
@@ -411,6 +454,13 @@ const HomePage = () => {
                   ONE CIKAN SIRKETLER
                 </h2>
               </div>
+              <Link
+                to="/companies"
+                className="hidden md:inline-flex items-center gap-2 rounded-lg border border-[#00F0FF]/35 text-[#00F0FF] px-4 py-2 text-xs font-heading font-bold uppercase tracking-wide hover:bg-[#00F0FF]/10 transition-colors"
+                data-testid="featured-companies-view-all-link"
+              >
+                <Building2 className="w-4 h-4" /> Tumunu Gor
+              </Link>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCompanySlide((prev) => (prev - 1 + featuredCompanies.length) % featuredCompanies.length)}
@@ -574,7 +624,11 @@ const HomePage = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
             {MAIN_CATEGORIES.map((cat) => {
-              const href = cat.isAnchor ? `/#${cat.slug}` : (cat.slug === "spor-haberleri" ? "/spor-haberleri" : `/bonus/${cat.slug}`);
+              const href = cat.isAnchor
+                ? `/#${cat.slug}`
+                : cat.isRoute
+                  ? `/${cat.slug}`
+                  : (cat.slug === "spor-haberleri" ? "/spor-haberleri" : `/bonus/${cat.slug}`);
               const TagName = cat.isAnchor ? 'a' : Link;
               const linkProps = cat.isAnchor ? { href } : { to: href };
               return (
