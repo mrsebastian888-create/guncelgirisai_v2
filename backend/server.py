@@ -1477,7 +1477,13 @@ class CompanyIntelligenceScheduler:
 company_intelligence_scheduler = CompanyIntelligenceScheduler()
 
 
-async def run_company_discovery(query: str, limit: int = 10, auto_approve: bool = False, source: str = "manual") -> Dict[str, Any]:
+async def run_company_discovery(
+    query: str,
+    limit: int = 10,
+    auto_approve: bool = False,
+    source: str = "manual",
+    deep_analysis: bool = False,
+) -> Dict[str, Any]:
     """Main discovery pipeline: discover -> classify -> enrich -> SEO -> store."""
     candidates = await discover_companies_from_web(query=query, limit=limit)
     created = 0
@@ -1497,10 +1503,32 @@ async def run_company_discovery(query: str, limit: int = 10, auto_approve: bool 
 
         name = candidate.get("name") or brand_name_from_domain(domain)
         basic_desc = candidate.get("description", "")
-        classification = await ai_classify_company(name=name, domain=domain, description=basic_desc)
+        classification = (
+            await ai_classify_company(name=name, domain=domain, description=basic_desc)
+            if deep_analysis
+            else fallback_company_classification(name, domain, basic_desc)
+        )
         metrics = await enrich_company_metrics(domain)
-        seo = await ai_generate_company_seo(name, classification["category_id"], classification["description_short"])
-        long_desc = await ai_generate_company_long_description(name, domain, classification["category_id"], classification["description_short"])
+        seo = (
+            await ai_generate_company_seo(name, classification["category_id"], classification["description_short"])
+            if deep_analysis
+            else {
+                "seo_title": f"{name} Analizi 2026 | Trafik ve Teknoloji"[:60],
+                "seo_description": classification["description_short"][:160],
+                "seo_keywords": [slugify(name), classification["category_id"], "company intelligence"],
+                "seo_internal_links": ["/", "/spor-haberleri", "/deneme-bonusu"],
+            }
+        )
+        long_desc = (
+            await ai_generate_company_long_description(name, domain, classification["category_id"], classification["description_short"])
+            if deep_analysis
+            else (
+                f"{name} ({domain}) için bu şirket profili; trafik tahmini, sıralama, kanal yapısı ve teknoloji"
+                " katmanını özetleyen otomatik bir analizdir. Veriler periyodik olarak güncellenir ve"
+                " intelligence score ile şirketin dijital performansı karşılaştırmalı olarak takip edilir."
+                " Derin içerik modu açıldığında AI tarafından 1200+ kelimelik kapsamlı rapor üretilir."
+            )
+        )
 
         company_obj = CompanyIntelligenceModel(
             name=name,
