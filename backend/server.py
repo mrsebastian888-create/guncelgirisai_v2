@@ -4451,6 +4451,7 @@ Disallow: /api/
 Allow: /api/sitemap.xml
 Allow: /api/sitemap-pages.xml
 Allow: /api/sitemap-firms.xml
+Allow: /api/sitemap-companies.xml
 Allow: /api/sitemap-videos.xml
 Allow: /api/sitemap-articles.xml
 Allow: /api/sitemap-amp.xml
@@ -4463,6 +4464,7 @@ User-agent: Googlebot
 Allow: /api/sitemap.xml
 Allow: /api/sitemap-pages.xml
 Allow: /api/sitemap-firms.xml
+Allow: /api/sitemap-companies.xml
 Allow: /api/sitemap-videos.xml
 Allow: /api/sitemap-articles.xml
 Allow: /api/sitemap-amp.xml
