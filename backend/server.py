@@ -4085,7 +4085,33 @@ async def admin_get_companies(request: Request, limit: int = 200, search: Option
 async def admin_run_company_discovery(payload: CompanyDiscoveryRequest, request: Request):
     require_admin_request(request)
     safe_limit = max(1, min(payload.limit, 30))
-    result = await run_company_discovery(query=payload.query, limit=safe_limit, auto_approve=payload.auto_approve)
+    if payload.run_async:
+        asyncio.create_task(
+            run_company_discovery(
+                query=payload.query,
+                limit=safe_limit,
+                auto_approve=payload.auto_approve,
+                source="admin-async",
+                deep_analysis=payload.deep_analysis,
+            )
+        )
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content={
+                "status": "queued",
+                "query": payload.query,
+                "limit": safe_limit,
+                "message": "Company discovery arka planda başlatıldı",
+            },
+        )
+
+    result = await run_company_discovery(
+        query=payload.query,
+        limit=safe_limit,
+        auto_approve=payload.auto_approve,
+        source="admin-sync",
+        deep_analysis=payload.deep_analysis,
+    )
     return result
 
 
