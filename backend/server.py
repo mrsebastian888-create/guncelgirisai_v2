@@ -3723,7 +3723,9 @@ async def get_dashboard_stats(domain_id: Optional[str] = None):
         "total_domains": await db.domains.count_documents({}),
         "total_articles": await db.articles.count_documents(query if domain_id else {}),
         "total_bonus_sites": await db.bonus_sites.count_documents({"is_active": True}),
-        "auto_generated_articles": await db.articles.count_documents({**query, "is_auto_generated": True} if domain_id else {"is_auto_generated": True})
+        "auto_generated_articles": await db.articles.count_documents({**query, "is_auto_generated": True} if domain_id else {"is_auto_generated": True}),
+        "total_companies": await db.companies.count_documents({"is_active": True}),
+        "featured_companies": await db.companies.count_documents({"is_active": True, "featured_boolean": True}),
     }
 
 # ============== AUTH ==============
