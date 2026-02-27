@@ -18,7 +18,8 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 ### v15.0: AMP Sayfaları (Feb 2026)
 ### v16.0: Google Search Console SEO Optimizasyonu (Feb 2026)
 ### v17.0: Firma Detay Hero Taşıma + Test Stabilizasyonu (Feb 2026)
-### v18.0: Firma Özel Video Sayfaları + Video Sitemap/AMP Sitemap (Feb 2026) - CURRENT
+### v18.0: Firma Özel Video Sayfaları + Video Sitemap/AMP Sitemap (Feb 2026)
+### v19.0: Sora 2 AI Video Üretim MVP (Tek Firma Pilot) (Feb 2026) - CURRENT
 
 **Değişiklikler:**
 - Sitemap Index yapısı: 4 alt sitemap (pages, firms, articles, amp)
@@ -123,6 +124,14 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - `sitemap.xml` index ve `robots.txt` video sitemap/AMP video yollarını kapsayacak şekilde güncellendi
 - Admin Sites tabına firma bazlı `video_url` ve `video_title` alanları eklendi
 
+**v19.0 Değişiklikler (Bu fork):**
+- Sora 2 ile firma bazlı AI video üretim endpointi eklendi: `POST /api/firma/{slug}/video/generate` (admin token zorunlu)
+- Üretilen MP4 dosyaları servis endpointi: `GET /api/generated-videos/{filename}`
+- Video durum modeli genişletildi: `ai_video_status`, `ai_video_error`, `ai_video_model`, `ai_video_generated_at`, `ai_video_url`
+- `FirmVideoPage.jsx` artık video tipine göre otomatik render yapıyor (YouTube embed veya HTML5 MP4 player)
+- AMP video sayfası, dosya tabanlı video varsa `amp-video` ile oynatım destekliyor
+- Pilot firma: `grandpashabet-guncelgiris` için Sora 2 üretimi tetiklendi ve MP4 servis doğrulandı
+
 ## Architecture
 ```
 /app/
@@ -143,6 +152,7 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - iteration_9: GoDaddy API Integration 100% backend + 100% frontend
 - iteration_11: Firm hero taşıma + homepage koruma + admin login doğrulama = 100% backend + 100% frontend
 - iteration_12: Firma video route + AMP video + video sitemapler = 100% backend + 100% frontend
+- iteration_13: Sora 2 AI video generation MVP + admin-protected generate endpoint + MP4 serving doğrulama = 100% backend + 100% frontend
 
 ## Production Readiness
 - MongoDB indexes (17 index across 8 collections)
@@ -164,11 +174,12 @@ Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI dest
 - [x] Firma detay sayfalari (FirmPage) - /firma-adi URL'leri calisiyor (Feb 2026)
 - [x] Yeni 3-kolon hero tasariminin FirmPage'e tasinmasi ve dogrulanmasi (Feb 2026)
 - [x] Firma özel video sayfalari + video sitemap + AMP video sitemap (Feb 2026)
+- [x] Sora 2 ile tek firma pilot AI video üretim akışı (Grandpashabet) (Feb 2026)
 
 ### P1 (Next)
 - [ ] Production admin login canli domainde kullanici dogrulamasi (adminguncelgiris.company)
 - [ ] Sponsors tabanli dinamik GIF hero slider sistemi (DB + admin CRUD + oncelik + auto-refresh)
-- [ ] AI video üretimi + otomatik yenileme planı (firma bazlı)
+- [ ] AI video üretimi otomatik scheduler + batch üretim + admin onay akışı (tüm firmalar)
 - [ ] Backend moduler refactoring (server.py bolunmesi)
 - [ ] AMP kapsam/genisleme ve validasyon
 
