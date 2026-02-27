@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Gift, Activity, ChevronDown, Globe, Brain } from "lucide-react";
+import { Menu, X, Gift, Activity, ChevronDown, Globe, Brain, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { API } from "@/App";
@@ -35,6 +35,7 @@ const Navbar = () => {
   };
 
   const navLinks = [
+    { label: "AI Company Intelligence", href: "/companies", icon: Building2, pinned: true },
     { 
       label: "Bonuslar", 
       icon: Gift,
@@ -47,13 +48,17 @@ const Navbar = () => {
     { label: "Firma Rehberi", href: "/#firma-rehberi", icon: Globe },
     { label: "Guncel Giris", href: "/bonus/guncel-giris-adresleri", icon: Globe },
     { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
-    { label: "AI Analiz", href: "/ai-analiz", icon: Brain },
+    { label: "AI Analiz", href: "/companies", icon: Brain },
   ];
 
-  const isActive = (href) => location.pathname === href;
+  const isActive = (href) => {
+    if (href === "/companies") return location.pathname.startsWith("/companies");
+    return location.pathname === href;
+  };
 
   const mobileLinks = [
     { label: "Firma Rehberi", href: "/#firma-rehberi" },
+    { label: "AI Company Intelligence", href: "/companies" },
     { label: "Bonuslar", href: "/bonus/deneme" },
     { label: "Deneme Bonusu", href: "/deneme-bonusu" },
     { label: "Hosgeldin Bonusu", href: "/hosgeldin-bonusu" },
@@ -111,7 +116,11 @@ const Navbar = () => {
                 variant="ghost"
                 asChild
                 className={`font-heading uppercase tracking-wide text-sm ${
-                  isActive(link.href) ? "text-neon-green" : "hover:text-neon-green"
+                  link.pinned
+                    ? "border border-[#00F0FF]/40 bg-[#00F0FF]/10 text-[#00F0FF] hover:bg-[#00F0FF]/20"
+                    : isActive(link.href)
+                      ? "text-neon-green"
+                      : "hover:text-neon-green"
                 }`}
               >
                 {link.href.startsWith('/#') ? (
