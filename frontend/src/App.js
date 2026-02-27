@@ -16,6 +16,7 @@ import MatchDetailPage from "@/pages/MatchDetailPage";
 import FirmPage from "@/pages/FirmPage";
 import FirmVideoPage from "@/pages/FirmVideoPage";
 import CompanyProfilePage from "@/pages/CompanyProfilePage";
+import CompaniesPage from "@/pages/CompaniesPage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -85,6 +86,7 @@ function AppLayout({ isLoading }) {
               <Route path="/spor-haberleri" element={<SportsNewsPage />} />
               <Route path="/makale/:slug" element={<ArticlePage />} />
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
+              <Route path="/companies" element={<CompaniesPage />} />
               <Route path="/companies/:slug" element={<CompanyProfilePage />} />
               <Route path="/:slug/video" element={<FirmVideoPage />} />
               <Route path="/:slug" element={<FirmPage />} />
