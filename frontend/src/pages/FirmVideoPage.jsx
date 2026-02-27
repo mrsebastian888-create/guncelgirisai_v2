@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-import { AlertTriangle, ExternalLink, PlayCircle, ChevronRight, Video } from "lucide-react";
+import { AlertTriangle, ExternalLink, PlayCircle, ChevronRight, Video, RefreshCw } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
@@ -72,6 +72,7 @@ export default function FirmVideoPage() {
 
   const { site, video, canonical_url, amp_url } = data;
   const bonusLabel = BONUS_TYPE_LABELS[site.bonus_type] || site.bonus_type || "Bonus";
+  const isFileVideo = video.video_type === "file";
 
   return (
     <div className="min-h-screen bg-background pt-20 pb-16" data-testid="firm-video-page">
@@ -104,18 +105,32 @@ export default function FirmVideoPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="aspect-video rounded-xl overflow-hidden border border-white/10 bg-black" data-testid="firm-video-player-wrap">
-                <iframe
-                  src={video.video_embed_url}
-                  title={video.video_title}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                  data-testid="firm-video-iframe"
-                />
+                {isFileVideo ? (
+                  <video className="w-full h-full" controls playsInline data-testid="firm-video-file-player">
+                    <source src={video.video_embed_url} type="video/mp4" />
+                  </video>
+                ) : (
+                  <iframe
+                    src={video.video_embed_url}
+                    title={video.video_title}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    data-testid="firm-video-iframe"
+                  />
+                )}
               </div>
               <div>
                 <h2 className="font-heading text-xl font-bold" data-testid="firm-video-title">{video.video_title}</h2>
                 <p className="text-sm text-muted-foreground mt-2" data-testid="firm-video-description">{video.video_description}</p>
+                {video.ai_video_status === "generating" && (
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs bg-yellow-500/10 text-yellow-400 border border-yellow-500/20" data-testid="firm-video-status-generating">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> AI video uretiliyor, birazdan yenileyin.
+                  </div>
+                )}
+                {video.ai_video_status === "failed" && (
+                  <div className="mt-3 text-xs text-red-400" data-testid="firm-video-status-failed">AI video uretimi hatasi: {video.ai_video_error || "Bilinmeyen hata"}</div>
+                )}
               </div>
             </div>
 
@@ -127,7 +142,7 @@ export default function FirmVideoPage() {
                 className="flex items-center justify-center gap-2 w-full rounded-xl px-4 py-3 font-heading font-bold uppercase text-sm bg-[#00F0FF] text-black hover:opacity-90 transition-opacity"
                 data-testid="firm-video-watch-external"
               >
-                <PlayCircle className="w-4 h-4" /> Videoyu Disarida Ac
+                <PlayCircle className="w-4 h-4" /> {isFileVideo ? "Videoyu Indir/Ac" : "Videoyu Disarida Ac"}
               </a>
 
               <a
