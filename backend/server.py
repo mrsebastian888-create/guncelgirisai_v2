@@ -282,6 +282,15 @@ async def lifespan(app: FastAPI):
             "is_active": True,
         })
         logger.info("Created 'En İyi Firmalar' category")
+
+    # Seed Company Intelligence taxonomy
+    company_categories_count = await db.company_categories.count_documents({})
+    if company_categories_count == 0:
+        taxonomy = get_default_company_taxonomy()
+        if taxonomy:
+            await db.company_categories.insert_many(taxonomy["categories"])
+            await db.company_subcategories.insert_many(taxonomy["subcategories"])
+            logger.info(f"Seeded company taxonomy: {len(taxonomy['categories'])} categories, {len(taxonomy['subcategories'])} subcategories")
     
     yield
     
