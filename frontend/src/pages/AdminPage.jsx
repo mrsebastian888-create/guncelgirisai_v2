@@ -997,15 +997,24 @@ function TelegramTab() {
   const [broadcastTarget, setBroadcastTarget] = useState("all");
   const [broadcasting, setBroadcasting] = useState(false);
   const [view, setView] = useState("bots"); // bots | firms | broadcast
+  // Auth state
+  const [authStatus, setAuthStatus] = useState(null); // null | true | false
+  const [authPhone, setAuthPhone] = useState("");
+  const [authCode, setAuthCode] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authStep, setAuthStep] = useState("phone"); // phone | code | password
+  const [authLoading, setAuthLoading] = useState(false);
 
-  const token = localStorage.getItem("admin_token");
-  const headers = { Authorization: `Bearer ${token}` };
+  const adminToken = localStorage.getItem("admin_token");
+  const headers = { Authorization: `Bearer ${adminToken}` };
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { checkAuthAndFetch(); }, []);
 
-  const fetchAll = async () => {
+  const checkAuthAndFetch = async () => {
     setLoading(true);
     try {
+      const authRes = await axios.get(`${API}/admin/telegram/auth/status`, { headers });
+      setAuthStatus(authRes.data.authenticated);
       const [statsRes, botsRes] = await Promise.all([
         axios.get(`${API}/admin/telegram/stats`, { headers }),
         axios.get(`${API}/admin/telegram/bots`, { headers }),
@@ -1014,6 +1023,17 @@ function TelegramTab() {
       setBots(botsRes.data);
     } catch { toast.error("Telegram verileri yüklenemedi"); }
     finally { setLoading(false); }
+  };
+
+  const fetchAll = async () => {
+    try {
+      const [statsRes, botsRes] = await Promise.all([
+        axios.get(`${API}/admin/telegram/stats`, { headers }),
+        axios.get(`${API}/admin/telegram/bots`, { headers }),
+      ]);
+      setStats(statsRes.data);
+      setBots(botsRes.data);
+    } catch { toast.error("Veriler yüklenemedi"); }
   };
 
   const fetchFirmMap = async () => {
