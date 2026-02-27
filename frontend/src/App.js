@@ -15,6 +15,7 @@ import LoginPage from "@/pages/LoginPage";
 import MatchDetailPage from "@/pages/MatchDetailPage";
 import FirmPage from "@/pages/FirmPage";
 import FirmVideoPage from "@/pages/FirmVideoPage";
+import CompanyProfilePage from "@/pages/CompanyProfilePage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -84,6 +85,7 @@ function AppLayout({ isLoading }) {
               <Route path="/spor-haberleri" element={<SportsNewsPage />} />
               <Route path="/makale/:slug" element={<ArticlePage />} />
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
+              <Route path="/companies/:slug" element={<CompanyProfilePage />} />
               <Route path="/:slug/video" element={<FirmVideoPage />} />
               <Route path="/:slug" element={<FirmPage />} />
 
