@@ -1098,7 +1098,90 @@ function TelegramTab() {
     return "bg-red-500/20 text-red-400 border-red-500/30";
   };
 
+  const sendAuthCode = async () => {
+    if (!authPhone.trim()) return toast.error("Telefon numarası gerekli");
+    setAuthLoading(true);
+    try {
+      await axios.post(`${API}/admin/telegram/auth/send-code`, { phone: authPhone }, { headers });
+      toast.success("Doğrulama kodu gönderildi");
+      setAuthStep("code");
+    } catch (e) { toast.error(e.response?.data?.detail || "Kod gönderilemedi"); }
+    finally { setAuthLoading(false); }
+  };
+
+  const verifyCode = async () => {
+    if (!authCode.trim()) return toast.error("Kod gerekli");
+    setAuthLoading(true);
+    try {
+      const res = await axios.post(`${API}/admin/telegram/auth/verify-code`, { phone: authPhone, code: authCode }, { headers });
+      if (res.data.needs_password) {
+        setAuthStep("password");
+        toast.info("2FA şifre gerekli");
+      } else if (res.data.authenticated) {
+        setAuthStatus(true);
+        toast.success("Telegram hesabı doğrulandı!");
+      }
+    } catch (e) { toast.error(e.response?.data?.detail || "Doğrulama başarısız"); }
+    finally { setAuthLoading(false); }
+  };
+
+  const verifyPassword = async () => {
+    if (!authPassword.trim()) return toast.error("Şifre gerekli");
+    setAuthLoading(true);
+    try {
+      const res = await axios.post(`${API}/admin/telegram/auth/verify-password`, { password: authPassword }, { headers });
+      if (res.data.authenticated) {
+        setAuthStatus(true);
+        toast.success("Telegram 2FA doğrulandı!");
+      }
+    } catch (e) { toast.error(e.response?.data?.detail || "Şifre doğrulaması başarısız"); }
+    finally { setAuthLoading(false); }
+  };
+
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#00F0FF]" /></div>;
+
+  // Auth required screen
+  if (authStatus === false) {
+    return (
+      <div className="space-y-6" data-testid="telegram-auth">
+        <Card className="glass-card border-[#00F0FF]/30 max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Bot className="w-5 h-5 text-[#00F0FF]" />Telegram Hesap Doğrulama</CardTitle>
+            <CardDescription>Bot oluşturmak için Telegram hesabınızı doğrulamanız gerekiyor</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {authStep === "phone" && (
+              <div className="space-y-3">
+                <Label>Telefon Numarası</Label>
+                <Input placeholder="+90 5XX XXX XXXX" value={authPhone} onChange={e => setAuthPhone(e.target.value)} data-testid="auth-phone" />
+                <Button onClick={sendAuthCode} disabled={authLoading} className="w-full bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80" data-testid="auth-send-code">
+                  {authLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}Kod Gönder
+                </Button>
+              </div>
+            )}
+            {authStep === "code" && (
+              <div className="space-y-3">
+                <Label>Doğrulama Kodu</Label>
+                <Input placeholder="12345" value={authCode} onChange={e => setAuthCode(e.target.value)} data-testid="auth-code" />
+                <Button onClick={verifyCode} disabled={authLoading} className="w-full bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80" data-testid="auth-verify-code">
+                  {authLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}Doğrula
+                </Button>
+              </div>
+            )}
+            {authStep === "password" && (
+              <div className="space-y-3">
+                <Label>2FA Şifresi</Label>
+                <Input type="password" placeholder="Telegram 2FA şifreniz" value={authPassword} onChange={e => setAuthPassword(e.target.value)} data-testid="auth-password" />
+                <Button onClick={verifyPassword} disabled={authLoading} className="w-full bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80" data-testid="auth-verify-password">
+                  {authLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Check className="w-4 h-4 mr-2" />}Doğrula
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="telegram-tab">
