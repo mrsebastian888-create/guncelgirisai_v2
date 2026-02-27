@@ -4242,6 +4242,35 @@ async def sitemap_firms(request: Request):
     return Response(content=xml, media_type="application/xml")
 
 
+@api_router.get("/sitemap-companies.xml")
+async def sitemap_companies(request: Request):
+    """All approved company profile pages sitemap (/companies/{slug})."""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    companies = await db.companies.find(
+        {"is_active": True, "is_approved": True},
+        {"_id": 0, "slug": 1},
+    ).to_list(3000)
+
+    urls = []
+    for company in companies:
+        slug = company.get("slug", "")
+        if not slug:
+            continue
+        urls.append(f"""  <url>
+    <loc>{base_url}/companies/{slug}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
+
 @api_router.get("/sitemap-videos.xml")
 async def sitemap_videos(request: Request):
     """Firm video pages sitemap (/{slug}/video)."""
