@@ -78,6 +78,8 @@ BRAVE_SEARCH_API_KEY = get_optional_env("BRAVE_SEARCH_API_KEY", "")
 BING_SEARCH_API_KEY = get_optional_env("BING_SEARCH_API_KEY", "")
 SIMILARWEB_API_KEY = get_optional_env("SIMILARWEB_API_KEY", "")
 BUILTWITH_API_KEY = get_optional_env("BUILTWITH_API_KEY", "")
+TELEGRAM_API_ID = int(get_optional_env("TELEGRAM_API_ID", "0"))
+TELEGRAM_API_HASH = get_optional_env("TELEGRAM_API_HASH", "")
 
 # ============== SPORTS CACHE ==============
 
