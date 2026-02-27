@@ -1953,6 +1953,7 @@ const AdminPage = () => {
               { label: "Auto Generated", value: stats.auto_generated_articles, color: "text-[#00F0FF]" },
               { label: "Companies", value: stats.total_companies || 0, color: "text-[#00F0FF]" },
               { label: "Featured Company", value: stats.featured_companies || 0, color: "text-neon-green" },
+              { label: "Telegram Bot", value: stats.telegram_bots || 0, color: "text-purple-400" },
             ].map((s, i) => (
               <Card key={i} className="glass-card border-white/10">
                 <CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">{s.label}</CardTitle></CardHeader>
