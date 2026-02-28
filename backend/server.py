@@ -4899,6 +4899,10 @@ async def _bulk_create_bots_task(bot_records: list, batch_size: int, delay_secon
 
                     if token and token != "TAKEN":
                         await set_bot_commands(token)
+                        # Set bot profile with firm data
+                        firm_data = await db.bonus_sites.find_one({"id": rec["firm_id"]}, {"_id": 0})
+                        if firm_data:
+                            await set_bot_profile(token, firm_data)
                         webhook_url = f"{TELEGRAM_WEBHOOK_BASE}/api/telegram/webhook/{rec['bot_id']}"
                         await set_bot_webhook(token, webhook_url)
 
