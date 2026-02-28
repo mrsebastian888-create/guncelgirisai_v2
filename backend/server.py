@@ -241,36 +241,49 @@ async def lifespan(app: FastAPI):
     })
     
     # Create MongoDB indexes for performance
-    try:
-        await db.domains.create_index("domain_name", unique=True)
-        await db.domains.create_index("id", unique=True)
-        await db.articles.create_index("domain_id")
-        await db.articles.create_index("slug")
-        await db.articles.create_index("is_published")
-        await db.articles.create_index([("domain_id", 1), ("is_published", 1)])
-        await db.articles.create_index([("category", 1), ("is_published", 1)])
-        await db.articles.create_index("created_at")
-        await db.bonus_sites.create_index("id", unique=True)
-        await db.bonus_sites.create_index("is_active")
-        await db.domain_sites.create_index("domain_id")
-        await db.domain_sites.create_index([("domain_id", 1), ("is_active", 1)])
-        await db.domain_performance.create_index("domain_id")
-        await db.domain_performance.create_index([("domain_id", 1), ("site_id", 1)])
-        await db.categories.create_index("slug", unique=True)
-        await db.content_queue.create_index("status")
-        await db.seo_reports.create_index("domain_id")
-        await db.companies.create_index("id", unique=True)
-        await db.companies.create_index("slug", unique=True)
-        await db.companies.create_index("domain", unique=True)
-        await db.companies.create_index("featured_boolean")
-        await db.companies.create_index("intelligence_score")
-        await db.companies.create_index("updated_at")
-        await db.company_categories.create_index("slug", unique=True)
-        await db.company_subcategories.create_index("slug", unique=True)
-        await db.company_subcategories.create_index([("category_slug", 1), ("slug", 1)], unique=True)
-        logger.info("MongoDB indexes created/verified")
-    except Exception as e:
-        logger.warning(f"Index creation warning: {e}")
+    index_defs = [
+        ("domains", "domain_name", True),
+        ("domains", "id", True),
+        ("articles", "domain_id", False),
+        ("articles", "slug", False),
+        ("articles", "is_published", False),
+        ("articles", "created_at", False),
+        ("bonus_sites", "id", True),
+        ("bonus_sites", "is_active", False),
+        ("domain_sites", "domain_id", False),
+        ("domain_performance", "domain_id", False),
+        ("content_queue", "status", False),
+        ("seo_reports", "domain_id", False),
+        ("companies", "id", True),
+        ("companies", "featured_boolean", False),
+        ("companies", "intelligence_score", False),
+        ("companies", "updated_at", False),
+    ]
+    for coll, field, uniq in index_defs:
+        try:
+            await db[coll].create_index(field, unique=uniq)
+        except Exception:
+            pass
+    # Compound + optional unique indexes (skip on error)
+    optional_indexes = [
+        ("articles", [("domain_id", 1), ("is_published", 1)], False),
+        ("articles", [("category", 1), ("is_published", 1)], False),
+        ("domain_sites", [("domain_id", 1), ("is_active", 1)], False),
+        ("domain_performance", [("domain_id", 1), ("site_id", 1)], False),
+        ("categories", "slug", True),
+        ("companies", "slug", True),
+        ("companies", "domain", True),
+        ("company_categories", "slug", True),
+        ("company_subcategories", "slug", True),
+        ("company_subcategories", [("category_slug", 1), ("slug", 1)], True),
+    ]
+    for item in optional_indexes:
+        try:
+            coll, field, uniq = item
+            await db[coll].create_index(field, unique=uniq)
+        except Exception:
+            pass
+    logger.info("MongoDB indexes created/verified")
     
     # Ensure "En İyi Firmalar" category exists
     try:
