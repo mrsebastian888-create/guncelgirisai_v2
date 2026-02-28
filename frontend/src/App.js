@@ -31,14 +31,9 @@ export const API = `${BACKEND_URL}/api`;
 // Admin sadece bu hostname'den erişilebilir
 const ADMIN_HOST = process.env.REACT_APP_ADMIN_HOST || "";
 
+// Admin her domainden /admin-login path'i ile erişilebilir
 export function isAdminDomain() {
-  const hostname = window.location.hostname;
-  if (!ADMIN_HOST) return true;
-  // Yerel geliştirme ortamında her zaman izin ver
-  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
-  // Preview ortamında izin ver
-  if (hostname.endsWith(".preview.emergentagent.com")) return true;
-  return hostname === ADMIN_HOST;
+  return true;
 }
 
 const ADMIN_PATHS = ["/admin", "/admin-login"];
