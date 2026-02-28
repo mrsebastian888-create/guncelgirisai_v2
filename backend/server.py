@@ -4895,7 +4895,7 @@ async def _bulk_create_bots_task(bot_records: list, batch_size: int, delay_secon
 
                     if token and token != "TAKEN":
                         await set_bot_commands(token)
-                        webhook_url = f"https://guncelgiris.ai/api/telegram/webhook/{rec['bot_id']}"
+                        webhook_url = f"{TELEGRAM_WEBHOOK_BASE}/api/telegram/webhook/{rec['bot_id']}"
                         await set_bot_webhook(token, webhook_url)
 
                         await db.telegram_bots.update_one(
