@@ -5095,10 +5095,6 @@ async def telegram_webhook_handler(bot_id: str, request: Request):
             "first_name": user_info.get("first_name", ""),
             "subscribed_at": datetime.now(timezone.utc).isoformat(),
         })
-        await db.telegram_subscribers.update_one(
-            {"bot_id": bot_id, "chat_id": chat_id},
-            {"$unset": {"_id": ""}}
-        )
 
     # Handle commands
     cmd = text.strip().lower().split()[0] if text.strip() else ""
