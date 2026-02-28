@@ -273,18 +273,21 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Index creation warning: {e}")
     
     # Ensure "En İyi Firmalar" category exists
-    existing_cat = await db.categories.find_one({"slug": "en-iyi-firmalar"})
-    if not existing_cat:
-        await db.categories.insert_one({
-            "id": str(uuid.uuid4()),
-            "name": "En İyi Firmalar",
-            "slug": "en-iyi-firmalar",
-            "type": "bonus",
-            "description": "Uzman editörler tarafından incelenen en iyi bahis ve bonus siteleri",
-            "order": 0,
-            "is_active": True,
-        })
-        logger.info("Created 'En İyi Firmalar' category")
+    try:
+        existing_cat = await db.categories.find_one({"slug": "en-iyi-firmalar"})
+        if not existing_cat:
+            await db.categories.insert_one({
+                "id": str(uuid.uuid4()),
+                "name": "En İyi Firmalar",
+                "slug": "en-iyi-firmalar",
+                "type": "bonus",
+                "description": "Uzman editörler tarafından incelenen en iyi bahis ve bonus siteleri",
+                "order": 0,
+                "is_active": True,
+            })
+            logger.info("Created 'En İyi Firmalar' category")
+    except Exception:
+        pass  # Already exists (race condition with multiple workers)
 
     # Seed Company Intelligence taxonomy
     company_categories_count = await db.company_categories.count_documents({})
