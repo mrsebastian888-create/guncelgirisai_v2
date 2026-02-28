@@ -431,6 +431,8 @@ async def request_middleware(request: Request, call_next):
         
         # Add headers
         response.headers["X-Request-ID"] = request_id
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
         if rl_remaining is not None:
             response.headers["X-RateLimit-Remaining"] = str(rl_remaining)
         
