@@ -99,28 +99,48 @@ def build_start_message(firm: dict) -> str:
     bonus_type = firm.get("bonus_type", "")
     affiliate = firm.get("affiliate_url", "")
     slug = firm.get("slug", "")
+    rating = firm.get("rating", "")
+    features = firm.get("features", [])
 
-    msg = f"<b>🎰 {name} Güncel Giriş 2026</b>\n\n"
+    msg = f"{'━' * 28}\n"
+    msg += f"  <b>{name}</b>\n"
+    msg += f"  Güncel Giriş Botu 2026\n"
+    msg += f"{'━' * 28}\n\n"
+
+    msg += "Hoş geldiniz! Bu bot ile <b>güncel giriş adresi</b>, "
+    msg += "<b>bonus bilgileri</b> ve <b>promosyonlara</b> anında ulaşabilirsiniz.\n\n"
+
     if bonus:
-        msg += f"🎁 <b>Bonus:</b> {bonus}"
+        msg += f"🎁 <b>Hoşgeldin Bonusu:</b> <b>{bonus}</b>"
         if bonus_type:
-            msg += f" ({bonus_type})"
-        msg += "\n\n"
-    msg += "📱 Güncel giriş adresine hemen ulaşın:\n\n"
+            type_labels = {"deneme": "Deneme Bonusu", "hosgeldin": "Hoşgeldin Bonusu", "kayip": "Kayıp Bonusu"}
+            msg += f" — {type_labels.get(bonus_type, bonus_type.title())}"
+        msg += "\n"
+
+    if rating:
+        stars = "⭐" * int(float(rating))
+        msg += f"📊 <b>Puan:</b> {rating}/5 {stars}\n"
+
+    if features:
+        msg += f"✅ <b>Özellikler:</b> {', '.join(features)}\n"
+
+    msg += "\n"
+    msg += "📌 <b>Kullanılabilir Komutlar:</b>\n\n"
+    msg += "  /bonus  →  Güncel bonus ve promosyonlar\n"
+    msg += "  /link   →  Güncel giriş adresi\n"
+    msg += "  /destek →  Canlı destek bilgisi\n\n"
+
+    msg += f"{'─' * 28}\n"
+    msg += "🔔 Yeni promosyon ve güncellemelerden\n"
+    msg += "    haberdar olmak için botu kayıtlı tutun!\n"
 
     buttons = []
     if affiliate:
-        msg += f"👉 <a href=\"{affiliate}\">Hemen Giriş Yap</a>\n\n"
         buttons.append([{"text": "🚀 Hemen Giriş Yap", "url": affiliate}])
-
-    site_url = f"https://guncelgiris.ai/{slug}" if slug else ""
-    if site_url:
-        buttons.append([{"text": "📖 Detaylı İnceleme", "url": site_url}])
-
-    msg += "💡 Komutlar:\n"
-    msg += "/bonus - Güncel bonus bilgisi\n"
-    msg += "/link - Giriş linki\n"
-    msg += "/destek - Destek bilgisi\n"
+    if slug:
+        buttons.append([{"text": "📖 Site İncelemesi", "url": f"https://guncelgiris.ai/{slug}"}])
+    if buttons:
+        buttons.append([{"text": "🌐 guncelgiris.ai", "url": "https://guncelgiris.ai"}])
 
     reply_markup = {"inline_keyboard": buttons} if buttons else None
     return msg, reply_markup
@@ -134,19 +154,33 @@ def build_bonus_message(firm: dict) -> str:
     turnover = firm.get("turnover_requirement", "")
     affiliate = firm.get("affiliate_url", "")
 
-    msg = f"<b>🎁 {name} - Güncel Bonus Bilgisi</b>\n\n"
+    msg = f"{'━' * 28}\n"
+    msg += f"  🎁 {name} — Bonus Bilgileri\n"
+    msg += f"{'━' * 28}\n\n"
+
     if bonus:
-        msg += f"💰 <b>Bonus Miktarı:</b> {bonus}\n"
+        msg += f"💰 <b>Bonus Miktarı:</b> <b>{bonus}</b>\n\n"
+
     if bonus_type:
-        msg += f"📋 <b>Bonus Türü:</b> {bonus_type.title()}\n"
+        type_labels = {"deneme": "Deneme Bonusu", "hosgeldin": "Hoşgeldin Bonusu", "kayip": "Kayıp Bonusu"}
+        label = type_labels.get(bonus_type, bonus_type.title())
+        msg += f"📋 <b>Bonus Türü:</b> {label}\n"
+
     if turnover:
         msg += f"🔄 <b>Çevrim Şartı:</b> {turnover}x\n"
+
     msg += "\n"
+    msg += "📌 <b>Bonus Alma Adımları:</b>\n\n"
+    msg += "  1️⃣  Aşağıdaki butona tıklayın\n"
+    msg += "  2️⃣  Üye olun veya giriş yapın\n"
+    msg += "  3️⃣  Bonus otomatik tanımlanır\n\n"
+
+    msg += f"{'─' * 28}\n"
+    msg += "⚡ Bonus fırsatları sınırlı süreli olabilir\n"
 
     buttons = []
     if affiliate:
-        msg += f"👉 <a href=\"{affiliate}\">Bonusu Al</a>\n"
-        buttons.append([{"text": "🎁 Bonusu Al", "url": affiliate}])
+        buttons.append([{"text": "🎁 Bonusu Al — Hemen Giriş Yap", "url": affiliate}])
 
     reply_markup = {"inline_keyboard": buttons} if buttons else None
     return msg, reply_markup
@@ -158,17 +192,25 @@ def build_link_message(firm: dict) -> str:
     affiliate = firm.get("affiliate_url", "")
     slug = firm.get("slug", "")
 
-    msg = f"<b>🔗 {name} - Güncel Giriş Linki</b>\n\n"
-    if affiliate:
-        msg += f"👉 <a href=\"{affiliate}\">Hemen Giriş Yap</a>\n\n"
-    msg += "⚡ Link her zaman günceldir.\n"
-    msg += "📌 Yeni link için tekrar /link yazabilirsiniz.\n"
+    msg = f"{'━' * 28}\n"
+    msg += f"  🔗 {name} — Güncel Giriş\n"
+    msg += f"{'━' * 28}\n\n"
+
+    msg += "Aşağıdaki butondan <b>güncel ve güvenli</b>\n"
+    msg += "giriş adresine ulaşabilirsiniz.\n\n"
+
+    msg += "✅ Link her zaman <b>günceldir</b>\n"
+    msg += "✅ SSL korumalı güvenli bağlantı\n"
+    msg += "✅ Hızlı erişim, yönlendirme yok\n\n"
+
+    msg += f"{'─' * 28}\n"
+    msg += "📌 Yeni link için tekrar /link yazabilirsiniz\n"
 
     buttons = []
     if affiliate:
         buttons.append([{"text": "🚀 Giriş Yap", "url": affiliate}])
     if slug:
-        buttons.append([{"text": "📖 Site İnceleme", "url": f"https://guncelgiris.ai/{slug}"}])
+        buttons.append([{"text": "📖 Site İncelemesi", "url": f"https://guncelgiris.ai/{slug}"}])
 
     reply_markup = {"inline_keyboard": buttons} if buttons else None
     return msg, reply_markup
@@ -177,13 +219,33 @@ def build_link_message(firm: dict) -> str:
 def build_destek_message(firm: dict) -> str:
     """Build /destek message."""
     name = firm.get("name", "Firma")
-    msg = f"<b>📞 {name} - Destek & İletişim</b>\n\n"
-    msg += "📧 Sorunlarınız için aşağıdaki adımları izleyin:\n\n"
-    msg += "1️⃣ Siteye giriş yapın\n"
-    msg += "2️⃣ Canlı destek butonuna tıklayın\n"
-    msg += "3️⃣ 7/24 canlı destek ile iletişime geçin\n\n"
+    affiliate = firm.get("affiliate_url", "")
+
+    msg = f"{'━' * 28}\n"
+    msg += f"  📞 {name} — Destek\n"
+    msg += f"{'━' * 28}\n\n"
+
+    msg += "<b>Canlı Destek Adımları:</b>\n\n"
+    msg += "  1️⃣  Siteye giriş yapın\n"
+    msg += "  2️⃣  Sağ alttaki canlı destek butonuna tıklayın\n"
+    msg += "  3️⃣  7/24 Türkçe destek alın\n\n"
+
+    msg += "<b>Sık Sorulan Konular:</b>\n\n"
+    msg += "  💳  Para yatırma / çekme\n"
+    msg += "  🎁  Bonus aktivasyonu\n"
+    msg += "  🔑  Şifre sıfırlama\n"
+    msg += "  📱  Mobil uygulama\n\n"
+
+    msg += f"{'─' * 28}\n"
     msg += "🌐 <b>Bilgi portalı:</b> guncelgiris.ai\n"
-    return msg, None
+
+    buttons = []
+    if affiliate:
+        buttons.append([{"text": "🔗 Siteye Git — Canlı Destek", "url": affiliate}])
+    buttons.append([{"text": "🌐 guncelgiris.ai", "url": "https://guncelgiris.ai"}])
+
+    reply_markup = {"inline_keyboard": buttons} if buttons else None
+    return msg, reply_markup
 
 
 # ── Telethon: BotFather Automation ──
