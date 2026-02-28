@@ -28,9 +28,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 // Always use relative API path - works on any domain
 export const API = "/api";
 
-// Admin sadece bu hostname'den erişilebilir
-const ADMIN_HOST = process.env.REACT_APP_ADMIN_HOST || "";
-
 // Admin her domainden /admin-login path'i ile erişilebilir
 export function isAdminDomain() {
   return true;
