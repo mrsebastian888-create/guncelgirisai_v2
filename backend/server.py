@@ -5067,13 +5067,18 @@ async def telegram_webhook_handler(bot_id: str, request: Request):
     except Exception:
         return {"ok": True}
 
+    logger.info(f"[TG-WEBHOOK] Received update for bot_id={bot_id}, keys={list(update.keys())}")
+
     message = update.get("message")
     if not message:
+        logger.info(f"[TG-WEBHOOK] No message field in update")
         return {"ok": True}
 
     chat_id = message.get("chat", {}).get("id")
     text = message.get("text", "")
     user_info = message.get("from", {})
+
+    logger.info(f"[TG-WEBHOOK] chat_id={chat_id}, text='{text}', from={user_info.get('first_name', '?')}")
 
     if not chat_id:
         return {"ok": True}
@@ -5081,6 +5086,7 @@ async def telegram_webhook_handler(bot_id: str, request: Request):
     # Look up bot
     bot = await db.telegram_bots.find_one({"bot_id": bot_id}, {"_id": 0})
     if not bot or not bot.get("bot_token"):
+        logger.warning(f"[TG-WEBHOOK] Bot not found or no token: {bot_id}")
         return {"ok": True}
 
     token = bot["bot_token"]
@@ -5089,6 +5095,7 @@ async def telegram_webhook_handler(bot_id: str, request: Request):
     # Get firm data
     firm = await db.bonus_sites.find_one({"id": firm_id}, {"_id": 0})
     if not firm:
+        logger.warning(f"[TG-WEBHOOK] Firm not found: {firm_id}")
         return {"ok": True}
 
     # Track subscriber
