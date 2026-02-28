@@ -4563,7 +4563,7 @@ async def get_seo_data(slug: str):
 from telegram_bot_manager import (
     firm_name_to_bot_username, telegram_api_call, set_bot_webhook,
     delete_bot_webhook, get_bot_info, send_telegram_message,
-    set_bot_commands, build_start_message, build_bonus_message,
+    set_bot_commands, set_bot_profile, build_start_message, build_bonus_message,
     build_link_message, build_destek_message,
     create_bot_via_botfather_with_session,
 )
