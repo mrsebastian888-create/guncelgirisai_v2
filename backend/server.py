@@ -5108,22 +5108,29 @@ async def telegram_webhook_handler(bot_id: str, request: Request):
     # Handle commands
     cmd = text.strip().lower().split()[0] if text.strip() else ""
 
-    if cmd == "/start":
-        msg, reply_markup = build_start_message(firm)
-        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
-    elif cmd == "/bonus":
-        msg, reply_markup = build_bonus_message(firm)
-        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
-    elif cmd == "/link":
-        msg, reply_markup = build_link_message(firm)
-        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
-    elif cmd == "/destek":
-        msg, reply_markup = build_destek_message(firm)
-        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
-    elif text.strip():
-        # Default response for unknown messages
-        msg, reply_markup = build_start_message(firm)
-        await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+    try:
+        if cmd == "/start":
+            msg, reply_markup = build_start_message(firm)
+            result = await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+            logger.info(f"[TG] /start sent to {chat_id}, ok={result.get('ok')}")
+        elif cmd == "/bonus":
+            msg, reply_markup = build_bonus_message(firm)
+            result = await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+            logger.info(f"[TG] /bonus sent to {chat_id}, ok={result.get('ok')}")
+        elif cmd == "/link":
+            msg, reply_markup = build_link_message(firm)
+            result = await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+            logger.info(f"[TG] /link sent to {chat_id}, ok={result.get('ok')}")
+        elif cmd == "/destek":
+            msg, reply_markup = build_destek_message(firm)
+            result = await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+            logger.info(f"[TG] /destek sent to {chat_id}, ok={result.get('ok')}")
+        elif text.strip():
+            msg, reply_markup = build_start_message(firm)
+            result = await send_telegram_message(token, chat_id, msg, reply_markup=reply_markup)
+            logger.info(f"[TG] default sent to {chat_id}, ok={result.get('ok')}")
+    except Exception as e:
+        logger.error(f"[TG] Error sending message to {chat_id}: {e}")
 
     return {"ok": True}
 
