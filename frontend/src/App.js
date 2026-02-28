@@ -44,8 +44,8 @@ function AppLayout({ isLoading }) {
   const adminDomain = isAdminDomain();
   const isAdminPath = ADMIN_PATHS.some((p) => location.pathname.startsWith(p));
 
-  // Admin domainde ana sayfaya gelen kullanıcıyı admin-login'e yönlendir
-  const isAdminOnlyDomain = ADMIN_HOST && window.location.hostname === ADMIN_HOST;
+  // Admin artık path-based: /admin-login her domainde çalışır
+  const isAdminOnlyDomain = false;
 
   if (isLoading) {
     return (
