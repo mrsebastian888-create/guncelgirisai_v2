@@ -4742,9 +4742,7 @@ async def admin_create_telegram_bot(payload: TelegramBotCreateRequest, request: 
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "error_message": "",
     }
-    await db.telegram_bots.insert_one(bot_record)
-    # Remove MongoDB _id from future queries
-    await db.telegram_bots.update_one({"bot_id": bot_record["bot_id"]}, {"$unset": {"_id": ""}})
+    await db.telegram_bots.insert_one(dict(bot_record))
 
     # Run creation in background
     background_tasks.add_task(_create_single_bot_task, bot_record["bot_id"], firm["name"], bot_username)
