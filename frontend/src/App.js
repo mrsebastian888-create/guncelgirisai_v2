@@ -25,8 +25,8 @@ import WelcomePopup from "@/components/WelcomePopup";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
-export const API = `${BACKEND_URL}/api`;
+// Always use relative API path - works on any domain
+export const API = "/api";
 
 // Admin sadece bu hostname'den erişilebilir
 const ADMIN_HOST = process.env.REACT_APP_ADMIN_HOST || "";
