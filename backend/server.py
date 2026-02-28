@@ -4707,6 +4707,16 @@ async def admin_create_telegram_bot(payload: TelegramBotCreateRequest, request: 
     """Create a Telegram bot for a specific firm."""
     require_admin_request(request)
 
+    # Check Telegram auth first
+    try:
+        client = await _get_telethon_client()
+        if not await client.is_user_authorized():
+            raise HTTPException(status_code=400, detail="Önce Telegram hesabınızı doğrulamanız gerekiyor")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="Önce Telegram hesabınızı doğrulamanız gerekiyor")
+
     firm = await db.bonus_sites.find_one({"id": payload.firm_id}, {"_id": 0})
     if not firm:
         raise HTTPException(status_code=404, detail="Firma bulunamadı")
