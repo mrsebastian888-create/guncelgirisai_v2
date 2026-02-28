@@ -92,6 +92,53 @@ async def set_bot_commands(token: str) -> dict:
     return await telegram_api_call(token, "setMyCommands", {"commands": commands})
 
 
+async def set_bot_profile(token: str, firm: dict) -> None:
+    """Set bot profile: description, short description, name."""
+    name = firm.get("name", "Firma")
+    bonus = firm.get("bonus_amount", "")
+    bonus_type = firm.get("bonus_type", "")
+    rating = firm.get("rating", "")
+    features = firm.get("features", [])
+
+    # Bot display name (max 64 chars)
+    display_name = f"{name} Güncel Giriş 2026"
+    if len(display_name) > 64:
+        display_name = display_name[:64]
+    await telegram_api_call(token, "setMyName", {"name": display_name})
+
+    # Short description (max 120 chars) - shown in bot search/sharing
+    short_desc = f"{name} | Güncel giriş adresi, bonus ve promosyon bilgileri"
+    if bonus:
+        short_desc += f" | {bonus}"
+    if len(short_desc) > 120:
+        short_desc = short_desc[:120]
+    await telegram_api_call(token, "setMyShortDescription", {"short_description": short_desc})
+
+    # Full description (max 512 chars) - shown on bot profile before /start
+    type_labels = {"deneme": "Deneme Bonusu", "hosgeldin": "Hoşgeldin Bonusu", "kayip": "Kayıp Bonusu"}
+    desc = f"🔗 {name} — Güncel Giriş Botu 2026\n\n"
+    if bonus:
+        label = type_labels.get(bonus_type, bonus_type.title()) if bonus_type else ""
+        desc += f"🎁 Bonus: {bonus}"
+        if label:
+            desc += f" ({label})"
+        desc += "\n"
+    if rating:
+        desc += f"⭐ Puan: {rating}/5\n"
+    if features:
+        desc += f"✅ {', '.join(features)}\n"
+    desc += "\n"
+    desc += "📌 Bu bot ile yapabilecekleriniz:\n\n"
+    desc += "• Güncel giriş adresine anında ulaşın\n"
+    desc += "• Aktif bonus ve promosyonları görüntüleyin\n"
+    desc += "• Yeni kampanyalardan anında haberdar olun\n"
+    desc += "• 7/24 canlı destek bilgisi alın\n\n"
+    desc += "🚀 Başlamak için START butonuna basın!"
+    if len(desc) > 512:
+        desc = desc[:512]
+    await telegram_api_call(token, "setMyDescription", {"description": desc})
+
+
 def build_start_message(firm: dict) -> str:
     """Build /start welcome message for a firm."""
     name = firm.get("name", "Firma")
