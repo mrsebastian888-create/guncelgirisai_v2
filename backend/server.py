@@ -4859,7 +4859,6 @@ async def admin_create_telegram_bots_bulk(payload: TelegramBotBulkRequest, reque
     # Insert all records
     for rec in bot_records:
         await db.telegram_bots.insert_one(dict(rec))
-        await db.telegram_bots.update_one({"bot_id": rec["bot_id"]}, {"$unset": {"_id": ""}})
 
     # Start background bulk creation
     background_tasks.add_task(
