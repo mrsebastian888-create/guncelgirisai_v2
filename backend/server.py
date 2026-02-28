@@ -315,6 +315,23 @@ async def lifespan(app: FastAPI):
         pass  # Already seeded (race condition with multiple workers)
 
     await company_intelligence_scheduler.start()
+
+    # Auto-seed companies if empty (ensures data persists across deploys)
+    try:
+        company_count = await db.companies.count_documents({"is_approved": True})
+        if company_count == 0:
+            logger.info("No approved companies found, auto-seeding...")
+            from server import _run_fallback_discovery
+            await _run_fallback_discovery("Top AI tools 2026", 10)
+            # Auto-approve all
+            await db.companies.update_many(
+                {"is_approved": False},
+                {"$set": {"is_approved": True, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            final = await db.companies.count_documents({"is_approved": True})
+            logger.info(f"Auto-seeded and approved {final} companies")
+    except Exception as e:
+        logger.warning(f"Auto-seed companies skipped: {e}")
     
     yield
     
