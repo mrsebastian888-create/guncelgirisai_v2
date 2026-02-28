@@ -4759,8 +4759,12 @@ async def _create_single_bot_task(bot_id: str, firm_name: str, bot_username: str
             token = await create_bot_via_botfather_with_session(client, firm_name, bot_username)
 
         if token and token != "TAKEN":
-            # Set commands and webhook
+            # Set commands, profile and webhook
             await set_bot_commands(token)
+            # Get firm data for profile
+            firm = await db.bonus_sites.find_one({"id": (await db.telegram_bots.find_one({"bot_id": bot_id}, {"_id": 0}))["firm_id"]}, {"_id": 0})
+            if firm:
+                await set_bot_profile(token, firm)
             webhook_url = f"{TELEGRAM_WEBHOOK_BASE}/api/telegram/webhook/{bot_id}"
             await set_bot_webhook(token, webhook_url)
 
