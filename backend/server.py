@@ -4055,7 +4055,7 @@ async def get_companies(
             {"description_short": {"$regex": search, "$options": "i"}},
         ]
     companies = await db.companies.find(query, {"_id": 0}).sort("intelligence_score", -1).limit(limit).to_list(limit)
-    return companies
+    return JSONResponse(content=companies, headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"})
 
 
 @api_router.get("/companies/featured/list")
