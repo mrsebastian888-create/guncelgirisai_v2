@@ -4761,7 +4761,7 @@ async def _create_single_bot_task(bot_id: str, firm_name: str, bot_username: str
         if token and token != "TAKEN":
             # Set commands and webhook
             await set_bot_commands(token)
-            webhook_url = f"https://guncelgiris.ai/api/telegram/webhook/{bot_id}"
+            webhook_url = f"{TELEGRAM_WEBHOOK_BASE}/api/telegram/webhook/{bot_id}"
             await set_bot_webhook(token, webhook_url)
 
             await db.telegram_bots.update_one(
