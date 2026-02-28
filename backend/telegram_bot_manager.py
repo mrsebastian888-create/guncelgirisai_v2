@@ -133,7 +133,10 @@ async def set_bot_profile(token: str, firm: dict) -> None:
     desc += "• Aktif bonus ve promosyonları görüntüleyin\n"
     desc += "• Yeni kampanyalardan anında haberdar olun\n"
     desc += "• 7/24 canlı destek bilgisi alın\n\n"
-    desc += "🚀 Başlamak için START butonuna basın!"
+    desc += "🚀 Başlamak için START butonuna basın!\n\n"
+    desc += "START'lamak istemezseniz PROMOCODE kazanmak için @PromocodeAI_bot'a yada\n"
+    desc += "Güncel Deneme Bonusu Rehberine göz atın!\n"
+    desc += "xlinks.art/guncelgirisai"
     if len(desc) > 512:
         desc = desc[:512]
     await telegram_api_call(token, "setMyDescription", {"description": desc})
