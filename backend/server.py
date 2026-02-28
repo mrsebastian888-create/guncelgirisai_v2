@@ -4810,6 +4810,16 @@ async def admin_create_telegram_bots_bulk(payload: TelegramBotBulkRequest, reque
     """Bulk create Telegram bots for multiple firms."""
     require_admin_request(request)
 
+    # Check Telegram auth first
+    try:
+        client = await _get_telethon_client()
+        if not await client.is_user_authorized():
+            raise HTTPException(status_code=400, detail="Önce Telegram hesabınızı doğrulamanız gerekiyor")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="Önce Telegram hesabınızı doğrulamanız gerekiyor")
+
     if payload.all_firms:
         firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "id": 1, "name": 1, "slug": 1}).to_list(500)
     else:
