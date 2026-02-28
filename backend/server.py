@@ -4978,7 +4978,7 @@ async def admin_activate_webhook(bot_id: str, request: Request):
     if not bot or not bot.get("bot_token"):
         raise HTTPException(status_code=404, detail="Bot veya token bulunamadı")
 
-    webhook_url = f"https://guncelgiris.ai/api/telegram/webhook/{bot_id}"
+    webhook_url = f"{TELEGRAM_WEBHOOK_BASE}/api/telegram/webhook/{bot_id}"
     result = await set_bot_webhook(bot["bot_token"], webhook_url)
     await db.telegram_bots.update_one(
         {"bot_id": bot_id},
