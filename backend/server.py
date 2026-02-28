@@ -290,13 +290,16 @@ async def lifespan(app: FastAPI):
         pass  # Already exists (race condition with multiple workers)
 
     # Seed Company Intelligence taxonomy
-    company_categories_count = await db.company_categories.count_documents({})
-    if company_categories_count == 0:
-        taxonomy = get_default_company_taxonomy()
-        if taxonomy:
-            await db.company_categories.insert_many(taxonomy["categories"])
-            await db.company_subcategories.insert_many(taxonomy["subcategories"])
-            logger.info(f"Seeded company taxonomy: {len(taxonomy['categories'])} categories, {len(taxonomy['subcategories'])} subcategories")
+    try:
+        company_categories_count = await db.company_categories.count_documents({})
+        if company_categories_count == 0:
+            taxonomy = get_default_company_taxonomy()
+            if taxonomy:
+                await db.company_categories.insert_many(taxonomy["categories"])
+                await db.company_subcategories.insert_many(taxonomy["subcategories"])
+                logger.info(f"Seeded company taxonomy: {len(taxonomy['categories'])} categories, {len(taxonomy['subcategories'])} subcategories")
+    except Exception:
+        pass  # Already seeded (race condition with multiple workers)
 
     await company_intelligence_scheduler.start()
     
