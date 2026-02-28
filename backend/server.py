@@ -321,15 +321,8 @@ async def lifespan(app: FastAPI):
         company_count = await db.companies.count_documents({"is_approved": True})
         if company_count == 0:
             logger.info("No approved companies found, auto-seeding...")
-            from server import _run_fallback_discovery
-            await _run_fallback_discovery("Top AI tools 2026", 10)
-            # Auto-approve all
-            await db.companies.update_many(
-                {"is_approved": False},
-                {"$set": {"is_approved": True, "updated_at": datetime.now(timezone.utc).isoformat()}}
-            )
-            final = await db.companies.count_documents({"is_approved": True})
-            logger.info(f"Auto-seeded and approved {final} companies")
+            result = await run_company_discovery(query="Top AI tools 2026", limit=10, auto_approve=True, source="auto-seed")
+            logger.info(f"Auto-seeded companies: {result}")
     except Exception as e:
         logger.warning(f"Auto-seed companies skipped: {e}")
     
