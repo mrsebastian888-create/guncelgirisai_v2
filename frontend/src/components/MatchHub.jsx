@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { API } from "@/App";
+
+const BACKEND_BASE = process.env.REACT_APP_BACKEND_URL || "";
 import {
   Activity, Clock, Trophy, ChevronRight, ChevronLeft,
   Sparkles, ExternalLink, RefreshCw, AlertCircle, Zap, Calendar
@@ -65,31 +67,25 @@ function MatchCard({ match, featured, partnerSite }) {
       </div>
 
       {/* Teams + Score */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex-1 min-w-0">
+      <div className="flex flex-col gap-1.5">
+        <div className="grid items-center" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
           <p className="font-heading font-bold text-sm truncate" style={{ color: "var(--foreground)" }}>
             {match.home_team}
           </p>
-          <p className="font-heading font-bold text-sm truncate mt-1" style={{ color: "var(--foreground)" }}>
+          <div className="text-center px-3" style={{ minWidth: "40px" }}>
+            <span className="font-heading font-black text-xl" style={{ color: hasScore ? (match.completed ? "var(--muted-foreground)" : "var(--neon-green)") : "var(--muted-foreground)" }}>
+              {hasScore ? match.home_score : ""}
+            </span>
+            <span className="font-heading font-bold text-sm mx-1" style={{ color: "var(--muted-foreground)" }}>
+              {hasScore ? "-" : "vs"}
+            </span>
+            <span className="font-heading font-black text-xl" style={{ color: hasScore ? (match.completed ? "var(--muted-foreground)" : "var(--neon-green)") : "var(--muted-foreground)" }}>
+              {hasScore ? match.away_score : ""}
+            </span>
+          </div>
+          <p className="font-heading font-bold text-sm truncate text-right" style={{ color: "var(--foreground)" }}>
             {match.away_team}
           </p>
-        </div>
-        <div className="shrink-0 text-center px-2">
-          {hasScore ? (
-            <>
-              <div className="font-heading font-black text-xl" style={{ color: match.completed ? "var(--muted-foreground)" : "var(--neon-green)" }}>
-                {match.home_score}
-              </div>
-              <div className="text-xs my-0.5" style={{ color: "var(--muted-foreground)" }}>-</div>
-              <div className="font-heading font-black text-xl" style={{ color: match.completed ? "var(--muted-foreground)" : "var(--neon-green)" }}>
-                {match.away_score}
-              </div>
-            </>
-          ) : (
-            <div className="font-heading font-bold text-2xl" style={{ color: "var(--muted-foreground)" }}>
-              vs
-            </div>
-          )}
         </div>
       </div>
 
@@ -106,7 +102,7 @@ function MatchCard({ match, featured, partnerSite }) {
         </Link>
         {partnerSite && (
           <a
-            href={`/api/go/${partnerSite.id}/${match.id}`}
+            href={`${BACKEND_BASE}/api/go/${partnerSite.id}/${match.id}`}
             target="_blank"
             rel="noopener noreferrer sponsored"
             title="Önerilen platform — sponsorlu bağlantı"

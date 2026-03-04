@@ -1,35 +1,21 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# IDE and editors
-.idea/
-.vscode/
-
 # Dependencies
 node_modules/
-/node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
 
 # Testing
 /coverage
 
-# Next.js
+# Production builds
+/build
+dist/
 /.next/
 /out/
 next-env.d.ts
 *.tsbuildinfo
 
-# Production builds
-/build
-dist/
-
-# Logs and debug files
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -39,6 +25,11 @@ dump.rdb
 # System files
 .DS_Store
 *.pem
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
 
 # Python
 __pycache__/
@@ -54,7 +45,7 @@ chainlit.md
 # Deployment
 .vercel
 
-# Archive files and large assets
+# Archives and binary
 **/*.zip
 **/*.tar.gz
 **/*.tar
@@ -66,103 +57,21 @@ chainlit.md
 # Build caches
 .cache/
 frontend/node_modules/
-frontend/node_modules/.cache/default-development/1.pack
-frontend/node_modules/.cache/default-development/5.pack
--e 
-# Environment files
+
+# Environment files (NEVER commit secrets)
 *.env
 *.env.*
-frontend/node_modules/.cache/default-development/2.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/3.pack
-frontend/node_modules/.cache/default-development/4.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/6.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/0.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/7.pack
-frontend/node_modules/.cache/default-development/8.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/9.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/1.pack_
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/4.pack_
--e 
-# Environment files
-*.env
-*.env.*
+.env
+.env.*
+backend/.env
+frontend/.env
+
+# Telegram session files
+*.session
+
+# Import/migration scripts with data
+backend/bulk_import*.py
+backend/add_missing*.py
+
+# Test reports
+test_reports/

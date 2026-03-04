@@ -907,16 +907,19 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
         failed = len(results) - success
         logger.info(f"Batch complete: {success} success, {failed} failed")
 
-    async def bulk_generate(self, count: int = 20):
+    async def bulk_generate(self, count: int = 1000):
         """Start bulk generation in background."""
         if self.is_bulk_running:
             return {"error": "Bulk generation already running"}
         self.is_bulk_running = True
         asyncio.create_task(self._bulk_generate_task(count))
-        return {"status": "started", "target_count": count, "message": f"{count} makale arka planda uretiliyor"}
+        pending = await db.content_queue.count_documents({"status": "pending"})
+        target = min(count, pending)
+        return {"status": "started", "target_count": target, "message": f"{target} makale arka planda uretiliyor (15 paralel)"}
 
     async def _bulk_generate_task(self, count: int):
         """Background task for bulk article generation."""
+        PARALLEL = 15
         try:
             bonus_sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "name": 1, "bonus_amount": 1, "bonus_type": 1, "affiliate_url": 1, "rating": 1, "features": 1}).to_list(20)
             sites_info = "\n".join([f"- {s['name']}: {s.get('bonus_amount','')} bonus, {s.get('rating',4.5)} puan, Özellikler: {', '.join(s.get('features',[]))}" for s in bonus_sites])
@@ -926,14 +929,14 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
                 logger.info("Bulk generate: queue empty")
                 return
             
-            logger.info(f"Bulk generate started: {len(items)} articles (5 parallel)")
-            for i in range(0, len(items), 5):
-                batch = items[i:i+5]
+            logger.info(f"Bulk generate started: {len(items)} articles ({PARALLEL} parallel)")
+            for i in range(0, len(items), PARALLEL):
+                batch = items[i:i+PARALLEL]
                 tasks = [self._generate_single_article(item, sites_info) for item in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 success = sum(1 for r in results if r is True)
-                logger.info(f"Bulk batch {i//5 + 1}/{(len(items)+4)//5}: {success}/{len(batch)} success | Total: {self.total_generated}")
-                await asyncio.sleep(1)
+                logger.info(f"Bulk batch {i//PARALLEL + 1}/{(len(items)+PARALLEL-1)//PARALLEL}: {success}/{len(batch)} success | Total: {self.total_generated}")
+                await asyncio.sleep(0.5)
             
             logger.info(f"Bulk generate complete. Total generated this session: {self.total_generated}")
         except Exception as e:
@@ -2884,20 +2887,23 @@ async def clear_content_queue(status: str = "completed"):
     return {"deleted": result.deleted_count}
 
 @api_router.post("/scheduler/start")
-async def start_scheduler():
+async def start_scheduler(request: Request):
     """Start the content scheduler"""
+    require_admin_request(request)
     await content_scheduler.start()
     return {"status": "started", "interval_minutes": content_scheduler.interval_minutes, "batch_size": content_scheduler.batch_size}
 
 @api_router.post("/scheduler/stop")
-async def stop_scheduler():
+async def stop_scheduler(request: Request):
     """Stop the content scheduler"""
+    require_admin_request(request)
     await content_scheduler.stop()
     return {"status": "stopped"}
 
 @api_router.get("/scheduler/status")
-async def get_scheduler_status():
+async def get_scheduler_status(request: Request):
     """Get scheduler status"""
+    require_admin_request(request)
     pending = await db.content_queue.count_documents({"status": "pending"})
     completed = await db.content_queue.count_documents({"status": "completed"})
     failed = await db.content_queue.count_documents({"status": "failed"})
@@ -2914,15 +2920,17 @@ async def get_scheduler_status():
     }
 
 @api_router.post("/scheduler/bulk-generate")
-async def bulk_generate_articles(data: Dict[str, Any] = {}):
+async def bulk_generate_articles(request: Request, data: Dict[str, Any] = {}):
     """Bulk generate articles from queue."""
-    count = data.get("count", 50)
+    require_admin_request(request)
+    count = data.get("count", 1000)
     result = await content_scheduler.bulk_generate(count)
     return result
 
 @api_router.put("/scheduler/interval")
-async def set_scheduler_interval(data: Dict[str, Any]):
+async def set_scheduler_interval(request: Request, data: Dict[str, Any]):
     """Set scheduler interval in minutes"""
+    require_admin_request(request)
     minutes = data.get("minutes", 5)
     if minutes < 1:
         raise HTTPException(status_code=400, detail="Minimum 1 dakika")
@@ -2934,15 +2942,16 @@ async def set_scheduler_interval(data: Dict[str, Any]):
     return {"interval_minutes": minutes}
 
 @api_router.post("/scheduler/run-now")
-async def run_scheduler_now():
+async def run_scheduler_now(request: Request):
     """Run scheduler immediately once (async in background)"""
+    require_admin_request(request)
     pending = await db.content_queue.count_documents({"status": "pending"})
     if pending == 0:
         return {"status": "empty", "message": "Kuyrukta bekleyen konu yok"}
     
     # Run in background without awaiting
     loop = asyncio.get_event_loop()
-    loop.create_task(content_scheduler._process_next())
+    loop.create_task(content_scheduler._process_batch())
     return {"status": "started", "message": "Makale üretimi arka planda başlatıldı", "pending": pending}
 
 
@@ -3737,8 +3746,9 @@ async def tracking_redirect(partner_id: str, match_id: str, request: Request):
     return RedirectResponse(url=url, status_code=302)
 
 @api_router.get("/admin/api-status")
-async def get_api_status():
+async def get_api_status(request: Request):
     """Admin: API health and cache info"""
+    require_admin_request(request)
     age = time.time() - _scores_cache.get("ts", 0)
     return {
         "odds_api_configured": bool(ODDS_API_KEY),
@@ -3760,20 +3770,23 @@ class AiToggleRequest(BaseModel):
     enabled: bool
 
 @api_router.post("/admin/featured-match")
-async def set_featured_match(req: FeaturedMatchRequest):
+async def set_featured_match(req: FeaturedMatchRequest, request: Request):
+    require_admin_request(request)
     global _featured_match_override
     _featured_match_override = req.match_id
     return {"ok": True, "featured_match_id": _featured_match_override}
 
 @api_router.post("/admin/ai-toggle")
-async def toggle_ai_insight(req: AiToggleRequest):
+async def toggle_ai_insight(req: AiToggleRequest, request: Request):
+    require_admin_request(request)
     global _ai_insight_enabled
     _ai_insight_enabled = req.enabled
     return {"ok": True, "ai_insight_enabled": _ai_insight_enabled}
 
 @api_router.post("/admin/refresh-scores")
-async def refresh_scores():
+async def refresh_scores(request: Request):
     """Force refresh scores cache"""
+    require_admin_request(request)
     _scores_cache["ts"] = 0  # invalidate cache
     matches, _ = await _get_scores_cached()
     return {"ok": True, "count": len(matches)}
@@ -3851,10 +3864,6 @@ async def admin_login(req: LoginRequest):
         stored = await db.users.find_one({"username": req.username}, {"_id": 0})
         if stored and stored.get("plain_hash"):
             verified = stored["plain_hash"] == hashlib.sha256(req.password.encode()).hexdigest()
-    
-    # Last resort: hardcoded check for initial setup
-    if not verified and req.password == "123123..":
-        verified = True
     
     if not verified:
         raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
@@ -4465,7 +4474,7 @@ async def sitemap_amp_videos(request: Request):
     return Response(content=xml, media_type="application/xml")
 
 
-MIGRATION_SECRET = "dsbn-migrate-2026-guncelgiris"
+MIGRATION_SECRET = get_optional_env("MIGRATION_SECRET", "dsbn-migrate-2026-guncelgiris")
 
 @api_router.post("/migrate/bulk-import")
 async def migrate_bulk_import(data: Dict[str, Any]):
@@ -4519,7 +4528,9 @@ async def migrate_setup_admin(data: Dict[str, Any]):
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
     username = data.get("username", "admin")
-    password = data.get("password", "123123..")
+    password = data.get("password")
+    if not password:
+        raise HTTPException(status_code=400, detail="Password is required")
     
     hashed = pwd_context.hash(password)
     await db.users.update_one(

@@ -3,8 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { BarChart3, Building2, Filter, Search } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
-
-const API = process.env.REACT_APP_BACKEND_URL + "/api";
+import { API } from "@/App";
 
 const formatVisits = (value) => {
   const visits = Number(value || 0);

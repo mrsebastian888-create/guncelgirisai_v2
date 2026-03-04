@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { API } from "@/App";
+
+const BACKEND_BASE = process.env.REACT_APP_BACKEND_URL || "";
 import {
   ChevronLeft, ExternalLink, Sparkles, Clock, Trophy,
   Activity, Shield, AlertCircle, Loader2, Calendar
@@ -201,7 +203,7 @@ export default function MatchDetailPage() {
                   </p>
                 </div>
                 <a
-                  href={`/api/go/${match.recommended_partner.id}/${match.id}`}
+                  href={`${BACKEND_BASE}/api/go/${match.recommended_partner.id}/${match.id}`}
                   target="_blank"
                   rel="noopener noreferrer sponsored"
   data-testid="partner-cta-btn"

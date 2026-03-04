@@ -28,10 +28,14 @@ const WelcomePopup = ({ onClose }) => {
 
   useEffect(() => {
     const ageVerified = localStorage.getItem("age_verified_v2");
-    if (ageVerified) {
-      onClose?.();
-    } else {
+    const wheelShownThisSession = sessionStorage.getItem("wheel_shown");
+    if (!ageVerified) {
       setIsVisible(true);
+    } else if (!wheelShownThisSession) {
+      setStep(2);
+      setIsVisible(true);
+    } else {
+      onClose?.();
     }
   }, []);
 
@@ -150,6 +154,7 @@ const WelcomePopup = ({ onClose }) => {
 
   const handleClose = () => {
     localStorage.setItem("age_verified_v2", "true");
+    sessionStorage.setItem("wheel_shown", "true");
     setIsVisible(false);
     onClose?.();
   };

@@ -3,8 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { AlertTriangle, ExternalLink, PlayCircle, ChevronRight, Video, RefreshCw } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
-
-const API = process.env.REACT_APP_BACKEND_URL + "/api";
+import { API } from "@/App";
 
 const BONUS_TYPE_LABELS = {
   deneme: "Deneme Bonusu",

@@ -30,12 +30,14 @@ const SportsNewsPage = () => {
       setLoading(true);
       try {
         const categoryFilter = selectedCategory !== "all" ? `&tag=${selectedCategory}` : "";
-        const [articlesRes, matchesRes, categoriesRes] = await Promise.all([
-          axios.get(`${API}/articles?category=spor${categoryFilter}&limit=20`),
+        const [newsRes, dbArticlesRes, matchesRes, categoriesRes] = await Promise.all([
+          axios.get(`${API}/news?size=20`).catch(() => ({ data: { articles: [] } })),
+          axios.get(`${API}/articles?category=spor${categoryFilter}&limit=20`).catch(() => ({ data: [] })),
           axios.get(`${API}/sports/matches?league=${selectedLeague}`),
           axios.get(`${API}/categories?type=spor`)
         ]);
-        setArticles(articlesRes.data);
+        const perigonArticles = newsRes.data?.articles || [];
+        setArticles(perigonArticles.length > 0 ? perigonArticles : dbArticlesRes.data);
         setMatches(matchesRes.data.matches || []);
         setCategories(categoriesRes.data);
       } catch (error) {
@@ -143,22 +145,26 @@ const SportsNewsPage = () => {
               {matches.slice(0, 6).map((match, index) => (
                 <div 
                   key={index}
-                  className="glass-card rounded-xl p-4 flex items-center justify-between"
+                  className="glass-card rounded-xl p-4"
                   data-testid={`match-${index}`}
                 >
-                  <div className="flex-1 text-right">
-                    <span className="font-medium text-sm">{match.home_team}</span>
-                  </div>
-                  <div className="px-4 text-center">
-                    <div className="font-heading text-2xl font-bold text-neon-green">
-                      {match.home_score ?? "-"} - {match.away_score ?? "-"}
+                  <div className="grid items-center gap-2" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+                    <div className="text-right min-w-0">
+                      <span className="font-medium text-sm block truncate">{match.home_team}</span>
                     </div>
-                    <Badge variant="outline" className="text-xs mt-1">
+                    <div className="text-center flex-shrink-0" style={{ minWidth: "70px" }}>
+                      <div className="font-heading text-2xl font-bold text-neon-green whitespace-nowrap">
+                        {match.home_score ?? "-"} - {match.away_score ?? "-"}
+                      </div>
+                    </div>
+                    <div className="text-left min-w-0">
+                      <span className="font-medium text-sm block truncate">{match.away_team}</span>
+                    </div>
+                  </div>
+                  <div className="text-center mt-2">
+                    <Badge variant="outline" className="text-xs">
                       {match.status === "FINISHED" ? "Bitti" : match.status}
                     </Badge>
-                  </div>
-                  <div className="flex-1 text-left">
-                    <span className="font-medium text-sm">{match.away_team}</span>
                   </div>
                 </div>
               ))}

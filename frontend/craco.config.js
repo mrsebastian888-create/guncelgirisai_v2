@@ -78,6 +78,15 @@ if (config.enableVisualEdits && babelMetadataPlugin) {
 }
 
 webpackConfig.devServer = (devServerConfig) => {
+  // Proxy /api requests to backend in local development
+  devServerConfig.proxy = [
+    {
+      context: ["/api"],
+      target: "http://localhost:8000",
+      changeOrigin: true,
+    },
+  ];
+
   // Apply visual edits dev server setup only if enabled
   if (config.enableVisualEdits && setupDevServer) {
     devServerConfig = setupDevServer(devServerConfig);

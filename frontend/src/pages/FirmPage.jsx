@@ -10,8 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import SEOHead from "@/components/SEOHead";
-
-const API = process.env.REACT_APP_BACKEND_URL + "/api";
+import { API } from "@/App";
 
 const BONUS_TYPE_LABELS = {
   deneme: "Deneme Bonusu",
@@ -110,7 +109,7 @@ export default function FirmPage() {
         title={`${site.name} Guncel Giris Adresi 2026 | ${site.bonus_amount} ${bonusLabel}`}
         description={`${site.name} guncel giris adresi 2026. ${site.bonus_amount} ${bonusLabel} firsati. Detayli inceleme, bonus rehberi ve guvenilirlik analizi.`}
         canonical={`https://guncelgiris.ai/${site.slug || slug}`}
-        amphtml={`https://guncelgiris.ai/api/amp/${site.slug || slug}`}
+        amphtml={`${API}/amp/${site.slug || slug}`}
         jsonLd={[breadcrumbJsonLd, firmJsonLd, reviewJsonLd]}
       />
 

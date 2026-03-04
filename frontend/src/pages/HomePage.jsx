@@ -73,6 +73,7 @@ const HomePage = () => {
   const [bonusSites, setBonusSites] = useState([]);
   const [allFirms, setAllFirms] = useState([]);
   const [articles, setArticles] = useState([]);
+  const [newsArticles, setNewsArticles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [latestArticles, setLatestArticles] = useState([]);
   const [featuredCompanies, setFeaturedCompanies] = useState([]);
@@ -131,13 +132,14 @@ const HomePage = () => {
           setBonusSites(siteData.bonus_sites || []);
           setArticles(siteData.articles || []);
         } else {
-          const [sitesRes, articlesRes, categoriesRes, latestRes, allFirmsRes, featuredRes] = await Promise.all([
+          const [sitesRes, articlesRes, categoriesRes, latestRes, allFirmsRes, featuredRes, newsRes] = await Promise.all([
             axios.get(`${API}/bonus-sites?limit=20`),
             axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
             axios.get(`${API}/categories`).catch(() => ({ data: [] })),
             axios.get(`${API}/articles/latest?limit=8`).catch(() => ({ data: [] })),
             axios.get(`${API}/bonus-sites?limit=300`).catch(() => ({ data: [] })),
             axios.get(`${API}/companies/featured/list?limit=12`).catch(() => ({ data: [] })),
+            axios.get(`${API}/news?size=6`).catch(() => ({ data: { articles: [] } })),
           ]);
           setBonusSites(sitesRes.data);
           setArticles(articlesRes.data);
@@ -145,6 +147,7 @@ const HomePage = () => {
           setLatestArticles(latestRes.data);
           setAllFirms(allFirmsRes.data);
           setFeaturedCompanies(featuredRes.data || []);
+          setNewsArticles(newsRes.data?.articles || []);
         }
       } catch (error) {
         console.error("Error:", error);
@@ -831,7 +834,7 @@ const HomePage = () => {
       )}
 
       {/* ── SPORTS NEWS ──────────────────────────── */}
-      {articles.length > 0 && (
+      {(newsArticles.length > 0 || articles.length > 0) && (
         <section className="py-14 md:py-20 px-4 md:px-6" data-testid="news-section"
           style={{ background: "rgba(0,240,255,0.02)" }}>
           <div className="container mx-auto max-w-7xl">
@@ -847,7 +850,7 @@ const HomePage = () => {
                   className="font-heading font-black uppercase leading-none"
                   style={{ fontSize: "clamp(1.8rem, 4vw, 3rem)", color: "var(--foreground)" }}
                 >
-                  SPOR HABERLERI
+                  {newsArticles.length > 0 ? "SPOR HABERLERI" : "SON MAKALELER"}
                 </h2>
               </div>
               <Link
@@ -860,8 +863,8 @@ const HomePage = () => {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {articles.slice(0, 6).map((article, i) => (
-                <NewsCard key={article.id} article={article} index={i} />
+              {(newsArticles.length > 0 ? newsArticles : articles).slice(0, 6).map((article, i) => (
+                <NewsCard key={article.id || i} article={article} index={i} />
               ))}
             </div>
           </div>

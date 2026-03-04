@@ -177,7 +177,7 @@ const ArticlePage = () => {
             </div>
 
             {/* Tags */}
-            {article.tags.length > 0 && (
+            {article.tags?.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-8">
                 {article.tags.map((tag, index) => (
                   <Badge key={index} variant="outline" className="text-sm">

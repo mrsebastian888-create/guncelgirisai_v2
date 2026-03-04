@@ -1,9 +1,46 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate, Link } from "react-router-dom";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
 import { HelmetProvider } from "react-helmet-async";
+
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error("App error:", error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+          <div className="text-center p-8">
+            <h1 className="text-4xl font-bold mb-4">Bir Hata Olustu</h1>
+            <p className="text-muted-foreground mb-6">Sayfa yuklenirken bir sorun olustu.</p>
+            <button onClick={() => window.location.reload()} className="px-6 py-3 rounded-lg font-bold" style={{ background: "hsl(var(--neon-green))", color: "#000" }}>
+              Sayfayi Yenile
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function NotFoundPage() {
+  return (
+    <div className="min-h-[70vh] flex items-center justify-center">
+      <div className="text-center p-8">
+        <h1 className="font-heading text-8xl font-black mb-4" style={{ color: "hsl(var(--neon-green))" }}>404</h1>
+        <h2 className="text-2xl font-bold mb-2">Sayfa Bulunamadi</h2>
+        <p className="text-muted-foreground mb-6">Aradiginiz sayfa mevcut degil veya kaldirilmis olabilir.</p>
+        <Link to="/" className="inline-flex px-6 py-3 rounded-lg font-bold" style={{ background: "hsl(var(--neon-green))", color: "#000" }}>
+          Ana Sayfaya Don
+        </Link>
+      </div>
+    </div>
+  );
+}
 
 // Pages
 import HomePage from "@/pages/HomePage";
@@ -25,8 +62,10 @@ import WelcomePopup from "@/components/WelcomePopup";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-// Always use relative API path - works on any domain
-export const API = "/api";
+// Use REACT_APP_BACKEND_URL in dev, relative path in production
+export const API = process.env.REACT_APP_BACKEND_URL
+  ? `${process.env.REACT_APP_BACKEND_URL}/api`
+  : "/api";
 
 // Admin her domainden /admin-login path'i ile erişilebilir
 export function isAdminDomain() {
@@ -82,6 +121,7 @@ function AppLayout({ isLoading }) {
               <Route path="/companies/:slug" element={<CompanyProfilePage />} />
               <Route path="/:slug/video" element={<FirmVideoPage />} />
               <Route path="/:slug" element={<FirmPage />} />
+              <Route path="*" element={<NotFoundPage />} />
 
               {/* Admin routes — SADECE admin subdomainde */}
               {adminDomain && <Route path="/admin-login" element={<LoginPage />} />}
@@ -102,11 +142,13 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
 
   return (
-    <HelmetProvider>
-      <BrowserRouter>
-        <AppLayout isLoading={isLoading} />
-      </BrowserRouter>
-    </HelmetProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <BrowserRouter>
+          <AppLayout isLoading={isLoading} />
+        </BrowserRouter>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 }
 

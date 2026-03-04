@@ -266,7 +266,7 @@ const BonusListItem = ({ site, rank }) => {
         </div>
 
         <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-          {site.features.slice(0, 3).map((feature, i) => (
+          {(site.features || []).slice(0, 3).map((feature, i) => (
             <Badge key={i} variant="outline" className="text-xs">
               {feature}
             </Badge>
