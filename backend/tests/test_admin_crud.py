@@ -10,7 +10,6 @@ import pytest
 import requests
 import os
 import uuid
-from datetime import datetime
 
 # Use the production URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://tech-intel.preview.emergentagent.com').rstrip('/')
@@ -99,7 +98,7 @@ class TestBonusSitesCRUD:
         found = next((s for s in sites if s["id"] == site_id), None)
         assert found is not None
         assert found["name"] == "TEST_UpdatedName"
-        print(f"✓ Verified update persisted in database")
+        print("✓ Verified update persisted in database")
         
         # Cleanup
         self.api.delete(f"{BASE_URL}/api/bonus-sites/{site_id}")
@@ -120,7 +119,7 @@ class TestBonusSitesCRUD:
         create_response = self.api.post(f"{BASE_URL}/api/bonus-sites", json=test_site)
         assert create_response.status_code == 200
         site_id = create_response.json()["id"]
-        site_name = test_site["name"]
+        test_site["name"]
         
         # Delete the site
         delete_response = self.api.delete(f"{BASE_URL}/api/bonus-sites/{site_id}")
@@ -135,7 +134,7 @@ class TestBonusSitesCRUD:
         sites = get_response.json()
         found = next((s for s in sites if s["id"] == site_id), None)
         assert found is None, "Site should have been deleted"
-        print(f"✓ Verified site no longer exists in database")
+        print("✓ Verified site no longer exists in database")
 
 
 class TestArticlesCRUD:
@@ -180,7 +179,7 @@ class TestArticlesCRUD:
         }
         response = self.api.post(f"{BASE_URL}/api/articles", json=test_article)
         assert response.status_code == 400, f"Expected 400 error but got {response.status_code}"
-        print(f"✓ POST /api/articles without title - Returns 400 as expected")
+        print("✓ POST /api/articles without title - Returns 400 as expected")
     
     def test_get_single_article(self):
         """GET /api/articles/{id} - Get single article by ID"""
@@ -212,7 +211,7 @@ class TestArticlesCRUD:
         fake_id = str(uuid.uuid4())
         get_resp = self.api.get(f"{BASE_URL}/api/articles/{fake_id}")
         assert get_resp.status_code == 404, f"Expected 404 but got {get_resp.status_code}"
-        print(f"✓ GET /api/articles/<invalid-id> - Returns 404 as expected")
+        print("✓ GET /api/articles/<invalid-id> - Returns 404 as expected")
     
     def test_update_article(self):
         """PUT /api/articles/{id} - Update article"""
@@ -250,7 +249,7 @@ class TestArticlesCRUD:
         assert verify_resp.status_code == 200
         verified = verify_resp.json()
         assert verified["title"] == "TEST_UpdatedArticleTitle"
-        print(f"✓ Verified article update persisted")
+        print("✓ Verified article update persisted")
         
         # Cleanup
         self.api.delete(f"{BASE_URL}/api/articles/{article_id}")
@@ -278,7 +277,7 @@ class TestArticlesCRUD:
         # Verify deletion
         verify_resp = self.api.get(f"{BASE_URL}/api/articles/{article_id}")
         assert verify_resp.status_code == 404
-        print(f"✓ Verified article no longer exists")
+        print("✓ Verified article no longer exists")
     
     def test_search_articles(self):
         """GET /api/articles?search=test - Search articles"""
@@ -323,7 +322,7 @@ class TestArticlesCRUD:
         
         results = filter_resp.json()
         assert all(a.get("category") == "rehber" for a in results)
-        print(f"✓ GET /api/articles?category=rehber - Category filter works")
+        print("✓ GET /api/articles?category=rehber - Category filter works")
         
         # Cleanup
         self.api.delete(f"{BASE_URL}/api/articles/{article_id}")
@@ -399,7 +398,7 @@ class TestDomainsCRUD:
         assert get_resp.status_code == 200
         verified = get_resp.json()
         assert verified["display_name"] == "Updated Display Name"
-        print(f"✓ Verified domain update persisted")
+        print("✓ Verified domain update persisted")
         
         # Cleanup
         self.api.delete(f"{BASE_URL}/api/domains/{domain_id}")
@@ -427,7 +426,7 @@ class TestDomainsCRUD:
         # Verify deletion
         verify_resp = self.api.get(f"{BASE_URL}/api/domains/{domain_id}")
         assert verify_resp.status_code == 404
-        print(f"✓ Verified domain no longer exists")
+        print("✓ Verified domain no longer exists")
     
     def test_create_duplicate_domain_fails(self):
         """POST /api/domains - Should fail for duplicate domain"""
@@ -447,7 +446,7 @@ class TestDomainsCRUD:
         test_domain["display_name"] = "Second Domain"
         create_resp2 = self.api.post(f"{BASE_URL}/api/domains", json=test_domain)
         assert create_resp2.status_code == 400, f"Expected 400 for duplicate, got {create_resp2.status_code}"
-        print(f"✓ POST /api/domains with duplicate name - Returns 400 as expected")
+        print("✓ POST /api/domains with duplicate name - Returns 400 as expected")
         
         # Cleanup
         self.api.delete(f"{BASE_URL}/api/domains/{domain_id}")
@@ -489,7 +488,7 @@ class TestAdminAPIStatus:
         assert "odds_api_configured" in data
         assert "cache_age_seconds" in data
         assert "ai_insight_enabled" in data
-        print(f"✓ GET /api/admin/api-status - API status retrieved")
+        print("✓ GET /api/admin/api-status - API status retrieved")
         print(f"  - Odds API configured: {data['odds_api_configured']}")
         print(f"  - AI insight enabled: {data['ai_insight_enabled']}")
 

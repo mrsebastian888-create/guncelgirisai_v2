@@ -152,11 +152,11 @@ class TestSportsScores:
             pytest.skip("No matches in response - may be no live/recent data")
         for match in matches[:3]:
             assert "id" in match, f"Missing 'id' in match: {match}"
-            assert "home_team" in match, f"Missing 'home_team'"
-            assert "away_team" in match, f"Missing 'away_team'"
-            assert "commence_time" in match, f"Missing 'commence_time'"
-            assert "sport_key" in match, f"Missing 'sport_key'"
-            assert "slug" in match, f"Missing 'slug'"
+            assert "home_team" in match, "Missing 'home_team'"
+            assert "away_team" in match, "Missing 'away_team'"
+            assert "commence_time" in match, "Missing 'commence_time'"
+            assert "sport_key" in match, "Missing 'sport_key'"
+            assert "slug" in match, "Missing 'slug'"
         print(f"Match fields OK for {len(matches)} matches")
 
     def test_scores_from_cache_is_bool(self):
@@ -261,7 +261,7 @@ class TestMatchDetail:
         """Invalid match ID should return 404"""
         resp = requests.get(f"{BASE_URL}/api/sports/match/invalid-nonexistent-id-12345")
         assert resp.status_code == 404
-        print(f"Invalid match correctly returns 404")
+        print("Invalid match correctly returns 404")
 
     def test_match_by_slug_200(self, first_match_slug):
         """GET /api/sports/match-by-slug/{slug} should return 200"""

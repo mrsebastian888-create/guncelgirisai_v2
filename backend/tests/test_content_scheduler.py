@@ -236,7 +236,7 @@ class TestLatestArticles:
             assert "id" in article
             assert "title" in article
             assert "is_published" in article
-            assert article["is_published"] == True, "Latest articles should be published"
+            assert article["is_published"], "Latest articles should be published"
             
             # Content should not be included
             assert "content" not in article, "Content should be excluded from latest endpoint"

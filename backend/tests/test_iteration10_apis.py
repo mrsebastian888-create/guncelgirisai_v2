@@ -54,7 +54,7 @@ class TestArticlesAPI:
         assert len(data) <= 8
         if data:
             assert "title" in data[0]
-            assert "is_published" not in data[0] or data[0].get("is_published") == True
+            assert "is_published" not in data[0] or data[0].get("is_published")
         print(f"✓ Latest articles returned {len(data)} items")
     
     def test_article_by_slug(self):
@@ -155,7 +155,7 @@ class TestAdminAuth:
         assert "token" in data
         assert "username" in data
         assert data["username"] == "admin"
-        print(f"✓ Admin login success, token received")
+        print("✓ Admin login success, token received")
     
     def test_admin_login_invalid(self):
         """Test POST /api/auth/login with invalid credentials"""

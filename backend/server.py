@@ -4,7 +4,7 @@ Production-Ready Backend with Hardening
 Version: 3.0.0
 """
 
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, status, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Request, status, BackgroundTasks
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -21,7 +21,7 @@ import subprocess
 import asyncio
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 from collections import defaultdict
 import httpx
@@ -4602,9 +4602,9 @@ async def get_seo_data(slug: str):
 
 # ============== TELEGRAM BOT MANAGEMENT ==============
 
-from telegram_bot_manager import (
-    firm_name_to_bot_username, telegram_api_call, set_bot_webhook,
-    delete_bot_webhook, get_bot_info, send_telegram_message,
+from telegram_bot_manager import (  # noqa: E402
+    firm_name_to_bot_username, set_bot_webhook,
+    delete_bot_webhook, send_telegram_message,
     set_bot_commands, set_bot_profile, build_start_message, build_bonus_message,
     build_link_message, build_destek_message,
     create_bot_via_botfather_with_session,
@@ -5113,7 +5113,7 @@ async def telegram_webhook_handler(bot_id: str, request: Request):
 
     message = update.get("message")
     if not message:
-        logger.info(f"[TG-WEBHOOK] No message field in update")
+        logger.info("[TG-WEBHOOK] No message field in update")
         return {"ok": True}
 
     chat_id = message.get("chat", {}).get("id")

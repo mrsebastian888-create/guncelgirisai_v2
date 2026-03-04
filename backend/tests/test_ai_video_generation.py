@@ -11,7 +11,6 @@ Testing Sora 2 AI video generation features:
 import pytest
 import requests
 import os
-import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 ADMIN_USERNAME = "admin"
@@ -106,7 +105,7 @@ class TestAIVideoStatusAfterGeneration:
         
         # The main agent mentioned the status is already 'ready'
         site_status = data["site"]["ai_video_status"]
-        video_status = data["video"]["ai_video_status"]
+        data["video"]["ai_video_status"]
         
         # Allow for both 'ready' (completed) or 'generating' (in progress)
         valid_statuses = ["ready", "generating", "idle"]
@@ -120,7 +119,7 @@ class TestAIVideoStatusAfterGeneration:
         data = response.json()
         
         video_url = data["video"]["video_url"]
-        video_embed_url = data["video"]["video_embed_url"]
+        data["video"]["video_embed_url"]
         video_type = data["video"]["video_type"]
         
         # If AI video is ready, URL should point to generated-videos
