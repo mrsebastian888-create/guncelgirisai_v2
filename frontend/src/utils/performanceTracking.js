@@ -86,7 +86,7 @@ export const usePerformanceTracking = (siteId) => {
         trackTimeOnPage(siteId, timeSpent);
       }
     };
-  }, [siteId]);
+  }, [siteId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCtaClick = useCallback(() => {
     trackCtaClick(siteId);

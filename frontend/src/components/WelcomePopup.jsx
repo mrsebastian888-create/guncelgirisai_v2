@@ -37,7 +37,7 @@ const WelcomePopup = ({ onClose }) => {
     } else {
       onClose?.();
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     axios.get(`${API}/bonus-sites?limit=20`).then(r => setTopSites(r.data)).catch(() => {});

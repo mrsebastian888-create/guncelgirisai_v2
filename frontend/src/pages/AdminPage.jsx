@@ -573,7 +573,7 @@ function CompaniesTab() {
 
   useEffect(() => {
     fetchCompanies();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDiscover = async () => {
     if (!query.trim()) return toast.error("Keşif sorgusu gerekli");
@@ -1008,7 +1008,7 @@ function TelegramTab() {
   const adminToken = localStorage.getItem("admin_token");
   const headers = { Authorization: `Bearer ${adminToken}` };
 
-  useEffect(() => { checkAuthAndFetch(); }, []);
+  useEffect(() => { checkAuthAndFetch(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkAuthAndFetch = async () => {
     setLoading(true);
@@ -1986,7 +1986,7 @@ const AdminPage = () => {
   const [generatedContent, setGeneratedContent] = useState("");
   const [aiTopic, setAiTopic] = useState("");
 
-  useEffect(() => { fetchData(); }, [selectedDomain]);
+  useEffect(() => { fetchData(); }, [selectedDomain]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     try {
