@@ -10,7 +10,7 @@ import {
   Search, Edit2, Save, X, Eye, ChevronDown, ChevronUp,
   Gift, Calendar, ArrowUp, ArrowDown, Layers, Image,
   Play, Pause, Clock, ListChecks, Zap, Download, Check, Building2,
-  Send, Bot, Users, Radio, MessageSquare
+  Send, Bot, Users, Radio, MessageSquare, Settings
 } from "lucide-react";
 import SeoAssistant from "@/components/SeoAssistant";
 import { Button } from "@/components/ui/button";
@@ -1964,6 +1964,63 @@ function AutoContentScheduler({ onRefresh }) {
   );
 }
 
+/* ── SETTINGS TAB ────────────────────────────────── */
+function SettingsTab() {
+  const [wheelRedirectUrl, setWheelRedirectUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fn = async () => {
+      try {
+        const res = await axios.get(`${API}/admin/settings`);
+        setWheelRedirectUrl(res.data.wheel_bonus_redirect_url || "");
+      } catch { toast.error("Ayarlar yüklenemedi"); }
+      finally { setLoading(false); }
+    };
+    fn();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await axios.put(`${API}/admin/settings`, { wheel_bonus_redirect_url: wheelRedirectUrl.trim() });
+      toast.success("Ayarlar kaydedildi");
+    } catch { toast.error("Kaydedilemedi"); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-neon-green" /></div>;
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Gift className="w-5 h-5" /> Çark – Bonusu Al butonu</CardTitle>
+          <CardDescription>Çarkı çevirip bonus kazandıktan sonra &quot;Bonusu Al&quot; butonuna basıldığında kullanıcı bu URL&apos;ye yönlendirilir. Boş bırakırsanız rastgele bir bonus sitesi açılır.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="wheel-redirect-url">Yönlendirme URL&apos;si</Label>
+            <Input
+              id="wheel-redirect-url"
+              type="url"
+              placeholder="https://..."
+              value={wheelRedirectUrl}
+              onChange={(e) => setWheelRedirectUrl(e.target.value)}
+              className="max-w-xl"
+            />
+          </div>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            Kaydet
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /* ── MAIN ADMIN PAGE ─────────────────────────────── */
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -2068,7 +2125,7 @@ const AdminPage = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="domains" className="space-y-6">
-          <TabsList className="grid grid-cols-9 w-full max-w-6xl">
+          <TabsList className="grid grid-cols-10 w-full max-w-6xl">
             <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-1.5" />Domainler</TabsTrigger>
             <TabsTrigger value="sites"><Gift className="w-4 h-4 mr-1.5" />Siteler</TabsTrigger>
             <TabsTrigger value="companies" data-testid="admin-companies-tab"><Building2 className="w-4 h-4 mr-1.5" />Companies</TabsTrigger>
@@ -2078,6 +2135,7 @@ const AdminPage = () => {
             <TabsTrigger value="articles"><FileText className="w-4 h-4 mr-1.5" />Makaleler</TabsTrigger>
             <TabsTrigger value="matches"><Activity className="w-4 h-4 mr-1.5" />Maçlar</TabsTrigger>
             <TabsTrigger value="telegram" data-testid="admin-telegram-tab"><Bot className="w-4 h-4 mr-1.5" />Telegram</TabsTrigger>
+            <TabsTrigger value="settings"><Settings className="w-4 h-4 mr-1.5" />Ayarlar</TabsTrigger>
           </TabsList>
 
           <TabsContent value="domains"><DomainsTab domains={domains} onRefresh={fetchData} /></TabsContent>
@@ -2094,6 +2152,7 @@ const AdminPage = () => {
           <TabsContent value="articles"><ArticlesTab articles={articles} onRefresh={fetchData} /></TabsContent>
           <TabsContent value="matches" className="space-y-6"><MatchesAdminTab /></TabsContent>
           <TabsContent value="telegram"><TelegramTab /></TabsContent>
+          <TabsContent value="settings"><SettingsTab /></TabsContent>
         </Tabs>
       </div>
     </div>

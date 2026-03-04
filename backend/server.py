@@ -3806,6 +3806,36 @@ async def get_dashboard_stats(domain_id: Optional[str] = None):
         "telegram_bots": await db.telegram_bots.count_documents({}),
     }
 
+# ============== SITE SETTINGS (public + admin) ==============
+SITE_SETTINGS_ID = "site"
+
+@api_router.get("/settings/public")
+async def get_public_settings():
+    """Public settings for frontend (e.g. wheel bonus redirect URL). No auth."""
+    doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
+    return {
+        "wheel_bonus_redirect_url": (doc or {}).get("wheel_bonus_redirect_url") or "",
+    }
+
+class SiteSettingsUpdate(BaseModel):
+    wheel_bonus_redirect_url: Optional[str] = ""
+
+@api_router.get("/admin/settings")
+async def get_admin_settings(request: Request):
+    """Admin: get full site settings"""
+    require_admin_request(request)
+    doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
+    return doc or {"_id": SITE_SETTINGS_ID, "wheel_bonus_redirect_url": ""}
+
+@api_router.put("/admin/settings")
+async def update_admin_settings(req: SiteSettingsUpdate, request: Request):
+    """Admin: update site settings (e.g. wheel bonus redirect URL)"""
+    require_admin_request(request)
+    update = {"$set": {"wheel_bonus_redirect_url": (req.wheel_bonus_redirect_url or "").strip()}}
+    await db.settings.update_one({"_id": SITE_SETTINGS_ID}, update, upsert=True)
+    doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
+    return doc or {"_id": SITE_SETTINGS_ID, "wheel_bonus_redirect_url": ""}
+
 # ============== AUTH ==============
 
 try:
