@@ -150,48 +150,53 @@ const Navbar = () => {
           </Button>
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          data-testid="mobile-menu-btn"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </Button>
-      </div>
-
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-x-0 top-16 bottom-0 bg-background/95 backdrop-blur-lg md:hidden z-40"
-            data-testid="mobile-menu"
+        <div className="relative md:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            data-testid="mobile-menu-btn"
           >
-            <div className="flex flex-col items-center justify-center h-full gap-6">
-              {mobileLinks.map((link, i) => (
-                <Link
-                  key={i}
-                  to={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="font-heading text-xl font-bold uppercase tracking-wide hover:text-neon-green transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <Button 
-                className="bg-neon-green text-black font-bold uppercase tracking-wide hover:bg-neon-green/90 neon-glow mt-4"
-                onClick={(e) => { setMobileMenuOpen(false); handleBonusClick(e); }}
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </Button>
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 top-full mt-2 w-[min(280px,calc(100vw-2rem))] rounded-xl border border-white/10 bg-background shadow-xl md:hidden z-50 overflow-hidden"
+                data-testid="mobile-menu"
               >
-                <Gift className="w-5 h-5 mr-2" />
-                Bonus Al
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                <nav className="flex flex-col py-2 max-h-[70vh] overflow-y-auto" aria-label="Mobil menü">
+                  {mobileLinks.map((link, i) => (
+                    <Link
+                      key={i}
+                      to={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="font-heading text-sm font-semibold uppercase tracking-wide py-3 px-4 hover:bg-white/10 hover:text-neon-green transition-colors text-foreground"
+                      data-testid={`mobile-link-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                  <div className="border-t border-white/10 p-3 mt-1">
+                    <Button
+                      className="w-full bg-neon-green text-black font-heading font-bold uppercase text-sm py-5 hover:bg-neon-green/90"
+                      onClick={(e) => { setMobileMenuOpen(false); handleBonusClick(e); }}
+                      data-testid="mobile-bonus-btn"
+                    >
+                      <Gift className="w-4 h-4 mr-2 shrink-0" />
+                      Bonus Al
+                    </Button>
+                  </div>
+                </nav>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
     </nav>
   );
 };

@@ -3811,30 +3811,35 @@ SITE_SETTINGS_ID = "site"
 
 @api_router.get("/settings/public")
 async def get_public_settings():
-    """Public settings for frontend (e.g. wheel bonus redirect URL). No auth."""
+    """Public settings for frontend (e.g. wheel bonus redirect URL, delayed popup). No auth."""
     doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
     return {
         "wheel_bonus_redirect_url": (doc or {}).get("wheel_bonus_redirect_url") or "",
+        "delayed_popup_url": (doc or {}).get("delayed_popup_url") or "",
     }
 
 class SiteSettingsUpdate(BaseModel):
     wheel_bonus_redirect_url: Optional[str] = ""
+    delayed_popup_url: Optional[str] = ""
 
 @api_router.get("/admin/settings")
 async def get_admin_settings(request: Request):
     """Admin: get full site settings"""
     require_admin_request(request)
     doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
-    return doc or {"_id": SITE_SETTINGS_ID, "wheel_bonus_redirect_url": ""}
+    return doc or {"_id": SITE_SETTINGS_ID, "wheel_bonus_redirect_url": "", "delayed_popup_url": ""}
 
 @api_router.put("/admin/settings")
 async def update_admin_settings(req: SiteSettingsUpdate, request: Request):
-    """Admin: update site settings (e.g. wheel bonus redirect URL)"""
+    """Admin: update site settings"""
     require_admin_request(request)
-    update = {"$set": {"wheel_bonus_redirect_url": (req.wheel_bonus_redirect_url or "").strip()}}
+    update = {"$set": {
+        "wheel_bonus_redirect_url": (req.wheel_bonus_redirect_url or "").strip(),
+        "delayed_popup_url": (req.delayed_popup_url or "").strip(),
+    }}
     await db.settings.update_one({"_id": SITE_SETTINGS_ID}, update, upsert=True)
     doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
-    return doc or {"_id": SITE_SETTINGS_ID, "wheel_bonus_redirect_url": ""}
+    return doc or {"_id": SITE_SETTINGS_ID, "wheel_bonus_redirect_url": "", "delayed_popup_url": ""}
 
 # ============== AUTH ==============
 

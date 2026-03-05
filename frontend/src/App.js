@@ -74,6 +74,8 @@ export function isAdminDomain() {
 
 const ADMIN_PATHS = ["/admin", "/admin-login"];
 
+const DELAYED_POPUP_KEY = "delayed_popup_done";
+
 function AppLayout({ isLoading }) {
   const [showPopup, setShowPopup] = useState(true);
   const location = useLocation();
@@ -82,6 +84,30 @@ function AppLayout({ isLoading }) {
 
   // Admin artık path-based: /admin-login her domainde çalışır
   const isAdminOnlyDomain = false;
+
+  // 30 saniye sonra ayarlanmış URL'yi yeni sekmede aç (sadece site içinde, admin değilse, session'da bir kez)
+  useEffect(() => {
+    if (isLoading || isAdminPath) return;
+    let timer = null;
+    axios.get(`${API}/settings/public`)
+      .then((res) => {
+        const url = (res.data.delayed_popup_url || "").trim();
+        if (!url || sessionStorage.getItem(DELAYED_POPUP_KEY)) return;
+        timer = setTimeout(() => {
+          sessionStorage.setItem(DELAYED_POPUP_KEY, "1");
+          window.open(url, "_blank", "noopener,noreferrer");
+        }, 30000);
+      })
+      .catch(() => {});
+    return () => { if (timer) clearTimeout(timer); };
+  }, [isLoading, isAdminPath]);
+
+  // Sayfa/route değişince en üste scroll (web + mobil)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [location.pathname]);
 
   if (isLoading) {
     return (

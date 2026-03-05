@@ -1967,14 +1967,18 @@ function AutoContentScheduler({ onRefresh }) {
 /* ── SETTINGS TAB ────────────────────────────────── */
 function SettingsTab() {
   const [wheelRedirectUrl, setWheelRedirectUrl] = useState("");
+  const [delayedPopupUrl, setDelayedPopupUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const adminToken = localStorage.getItem("admin_token");
+  const headers = adminToken ? { Authorization: `Bearer ${adminToken}` } : {};
 
   useEffect(() => {
     const fn = async () => {
       try {
-        const res = await axios.get(`${API}/admin/settings`);
+        const res = await axios.get(`${API}/admin/settings`, { headers });
         setWheelRedirectUrl(res.data.wheel_bonus_redirect_url || "");
+        setDelayedPopupUrl(res.data.delayed_popup_url || "");
       } catch { toast.error("Ayarlar yüklenemedi"); }
       finally { setLoading(false); }
     };
@@ -1984,7 +1988,10 @@ function SettingsTab() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axios.put(`${API}/admin/settings`, { wheel_bonus_redirect_url: wheelRedirectUrl.trim() });
+      await axios.put(`${API}/admin/settings`, {
+        wheel_bonus_redirect_url: wheelRedirectUrl.trim(),
+        delayed_popup_url: delayedPopupUrl.trim(),
+      }, { headers });
       toast.success("Ayarlar kaydedildi");
     } catch { toast.error("Kaydedilemedi"); }
     finally { setSaving(false); }
@@ -2008,6 +2015,30 @@ function SettingsTab() {
               placeholder="https://..."
               value={wheelRedirectUrl}
               onChange={(e) => setWheelRedirectUrl(e.target.value)}
+              className="max-w-xl"
+            />
+          </div>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            Kaydet
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5" /> 30 saniye sonra açılacak URL</CardTitle>
+          <CardDescription>Bir URL girerseniz, kullanıcı sitede 30 saniye kaldıktan sonra bu adres yeni sekmede otomatik açılır. Boş bırakırsanız bu özellik devre dışı kalır.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="delayed-popup-url">URL</Label>
+            <Input
+              id="delayed-popup-url"
+              type="url"
+              placeholder="https://..."
+              value={delayedPopupUrl}
+              onChange={(e) => setDelayedPopupUrl(e.target.value)}
               className="max-w-xl"
             />
           </div>

@@ -24,7 +24,11 @@ const WelcomePopup = ({ onClose }) => {
   const [winnerCount] = useState(Math.floor(Math.random() * 400) + 600);
   const [topSites, setTopSites] = useState([]);
   const [wheelRedirectUrl, setWheelRedirectUrl] = useState("");
-  const [countdown, setCountdown] = useState({ h: 23, m: 59, s: 59 });
+  const [countdown, setCountdown] = useState(() => ({
+    h: Math.floor(Math.random() * 24),
+    m: Math.floor(Math.random() * 60),
+    s: Math.floor(Math.random() * 60),
+  }));
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -53,7 +57,11 @@ const WelcomePopup = ({ onClose }) => {
         s--;
         if (s < 0) { s = 59; m--; }
         if (m < 0) { m = 59; h--; }
-        if (h < 0) { h = 23; m = 59; s = 59; }
+        if (h < 0) {
+          h = Math.floor(Math.random() * 24);
+          m = Math.floor(Math.random() * 60);
+          s = Math.floor(Math.random() * 60);
+        }
         return { h, m, s };
       });
     }, 1000);
