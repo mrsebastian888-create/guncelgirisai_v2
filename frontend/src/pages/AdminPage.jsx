@@ -1971,9 +1971,9 @@ function SettingsTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const adminToken = localStorage.getItem("admin_token");
-  const headers = adminToken ? { Authorization: `Bearer ${adminToken}` } : {};
 
   useEffect(() => {
+    const headers = adminToken ? { Authorization: `Bearer ${adminToken}` } : {};
     const fn = async () => {
       try {
         const res = await axios.get(`${API}/admin/settings`, { headers });
@@ -1983,15 +1983,17 @@ function SettingsTab() {
       finally { setLoading(false); }
     };
     fn();
-  }, []);
+  }, [adminToken]);
 
   const handleSave = async () => {
+    const token = localStorage.getItem("admin_token");
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
     setSaving(true);
     try {
       await axios.put(`${API}/admin/settings`, {
         wheel_bonus_redirect_url: wheelRedirectUrl.trim(),
         delayed_popup_url: delayedPopupUrl.trim(),
-      }, { headers });
+      }, { headers: authHeaders });
       toast.success("Ayarlar kaydedildi");
     } catch { toast.error("Kaydedilemedi"); }
     finally { setSaving(false); }
