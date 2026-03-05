@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { API } from "@/App";
+import SEOHead from "@/components/SEOHead";
 
 const BACKEND_BASE = process.env.REACT_APP_BACKEND_URL || "";
 import {
@@ -87,7 +88,9 @@ export default function MatchDetailPage() {
   const pageTitle = `${match.home_team} - ${match.away_team} Maç Analizi | Canlı Skor, İstatistik, Tahmin`;
   const pageDesc = `${match.home_team} - ${match.away_team} ${league.name} maçı canlı skor, AI analiz ve istatistikleri. Tarafsız bilgi ve maç tahminleri.`;
 
-  // SportsEvent schema
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://guncelgiris.ai";
+  const canonicalUrl = `${origin}/mac/${slug}`;
+
   const schemaData = {
     "@context": "https://schema.org",
     "@type": "SportsEvent",
@@ -101,9 +104,24 @@ export default function MatchDetailPage() {
     ],
   };
 
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Ana Sayfa", "item": origin },
+      { "@type": "ListItem", "position": 2, "name": "Spor Haberleri", "item": `${origin}/spor-haberleri` },
+      { "@type": "ListItem", "position": 3, "name": `${match.home_team} - ${match.away_team}` },
+    ],
+  };
+
   return (
     <>
-      {/* SEO meta tags - using useEffect to avoid react-helmet-async v2 compatibility issues */}
+      <SEOHead
+        title={pageTitle}
+        description={pageDesc}
+        canonical={canonicalUrl}
+        jsonLd={[schemaData, breadcrumbJsonLd]}
+      />
       <div className="min-h-screen py-8 px-4 md:px-6" style={{ background: "var(--background)" }}>
         <div className="container mx-auto max-w-3xl">
 
@@ -127,10 +145,14 @@ export default function MatchDetailPage() {
               <MatchStatusBadge match={match} />
             </div>
 
+            <h1 className="font-heading font-black text-xl md:text-2xl uppercase mb-4 text-center" style={{ color: "var(--foreground)" }}>
+              {match.home_team} - {match.away_team} Maç Analizi
+            </h1>
+
             <div className="flex items-center justify-between gap-4">
-              <h1 className="font-heading font-black text-2xl md:text-4xl uppercase leading-tight" style={{ color: "var(--foreground)" }}>
+              <p className="font-heading font-black text-2xl md:text-4xl uppercase leading-tight" style={{ color: "var(--foreground)" }}>
                 {match.home_team}
-              </h1>
+              </p>
               <div className="shrink-0 text-center px-4">
                 {hasScore ? (
                   <div className="font-heading font-black text-4xl md:text-6xl" style={{ color: "var(--neon-green)" }}>
@@ -140,9 +162,9 @@ export default function MatchDetailPage() {
                   <div className="font-heading font-black text-3xl" style={{ color: "var(--muted-foreground)" }}>VS</div>
                 )}
               </div>
-              <h1 className="font-heading font-black text-2xl md:text-4xl uppercase leading-tight text-right" style={{ color: "var(--foreground)" }}>
+              <p className="font-heading font-black text-2xl md:text-4xl uppercase leading-tight text-right" style={{ color: "var(--foreground)" }}>
                 {match.away_team}
-              </h1>
+              </p>
             </div>
 
             <div className="flex items-center gap-2 mt-4 text-sm" style={{ color: "var(--muted-foreground)" }}>

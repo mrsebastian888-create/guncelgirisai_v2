@@ -104,6 +104,7 @@ const ArticlePage = () => {
           description={article.seo_description || article.excerpt}
           type="article"
           image={article.image_url}
+          imageAlt={article.title}
           canonical={`${window.location.origin}/makale/${article.slug}`}
           article={{
             publishedTime: article.created_at,

@@ -79,6 +79,8 @@ export default function FirmVideoPage() {
         title={`${site.name} Video Inceleme 2026 | ${site.bonus_amount} ${bonusLabel}`}
         description={`${site.name} icin firma ozel video inceleme sayfasi. Guncel giris, bonus detaylari ve hizli erisim.`}
         canonical={canonical_url}
+        image={site?.logo_url}
+        imageAlt={`${site?.name} video inceleme`}
         amphtml={amp_url}
         jsonLd={jsonLd}
       />

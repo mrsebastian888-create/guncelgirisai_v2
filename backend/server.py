@@ -82,6 +82,9 @@ TELEGRAM_API_ID = int(get_optional_env("TELEGRAM_API_ID", "0"))
 TELEGRAM_API_HASH = get_optional_env("TELEGRAM_API_HASH", "")
 TELEGRAM_WEBHOOK_BASE = get_optional_env("TELEGRAM_WEBHOOK_BASE", "")
 
+# SEO: frontend site URL for sitemap <loc>; API base from request for sitemap index
+FRONTEND_BASE_URL = get_optional_env("FRONTEND_BASE_URL", "https://www.guncelgiris.ai").rstrip("/")
+
 # ============== SPORTS CACHE ==============
 
 _scores_cache: Dict[str, Any] = {"data": None, "ts": 0, "error_count": 0, "last_error": None}
@@ -4278,38 +4281,37 @@ async def admin_delete_company(company_id: str, request: Request):
 
 @api_router.get("/sitemap.xml")
 async def sitemap_xml(request: Request, domain: Optional[str] = None):
-    """Generate sitemap index pointing to sub-sitemaps"""
-    base_url = "https://guncelgiris.ai"
+    """Generate sitemap index pointing to sub-sitemaps (sub-sitemap URLs must be on this API host)."""
+    api_base = str(request.base_url).rstrip("/")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>{base_url}/api/sitemap-pages.xml</loc>
+    <loc>{api_base}/api/sitemap-pages.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-firms.xml</loc>
+    <loc>{api_base}/api/sitemap-firms.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-companies.xml</loc>
+    <loc>{api_base}/api/sitemap-companies.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-videos.xml</loc>
+    <loc>{api_base}/api/sitemap-videos.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-articles.xml</loc>
+    <loc>{api_base}/api/sitemap-articles.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-amp.xml</loc>
+    <loc>{api_base}/api/sitemap-amp.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-amp-videos.xml</loc>
+    <loc>{api_base}/api/sitemap-amp-videos.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
 </sitemapindex>"""
@@ -4318,16 +4320,16 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
 @api_router.get("/sitemap-pages.xml")
 async def sitemap_pages(request: Request):
     """Static pages + categories sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     categories = await db.categories.find({}, {"_id": 0, "slug": 1}).to_list(100)
-    
     urls = []
     static_pages = [
         {"loc": "/", "priority": "1.0", "changefreq": "daily"},
         {"loc": "/deneme-bonusu", "priority": "0.9", "changefreq": "daily"},
         {"loc": "/hosgeldin-bonusu", "priority": "0.9", "changefreq": "daily"},
         {"loc": "/spor-haberleri", "priority": "0.8", "changefreq": "hourly"},
+        {"loc": "/companies", "priority": "0.8", "changefreq": "daily"},
     ]
     for page in static_pages:
         urls.append(f"""  <url>
@@ -4354,7 +4356,7 @@ async def sitemap_pages(request: Request):
 @api_router.get("/sitemap-firms.xml")
 async def sitemap_firms(request: Request):
     """All 264 firm pages sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1, "name": 1}).to_list(500)
     
@@ -4380,7 +4382,7 @@ async def sitemap_firms(request: Request):
 @api_router.get("/sitemap-companies.xml")
 async def sitemap_companies(request: Request):
     """All approved company profile pages sitemap (/companies/{slug})."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     companies = await db.companies.find(
         {"is_active": True, "is_approved": True},
@@ -4409,7 +4411,7 @@ async def sitemap_companies(request: Request):
 @api_router.get("/sitemap-videos.xml")
 async def sitemap_videos(request: Request):
     """Firm video pages sitemap (/{slug}/video)."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
 
@@ -4434,7 +4436,7 @@ async def sitemap_videos(request: Request):
 @api_router.get("/sitemap-articles.xml")
 async def sitemap_articles(request: Request):
     """All published articles sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     articles = await db.articles.find(
         {"is_published": True},
         {"_id": 0, "slug": 1, "updated_at": 1, "created_at": 1}
@@ -4460,7 +4462,7 @@ async def sitemap_articles(request: Request):
 @api_router.get("/sitemap-amp.xml")
 async def sitemap_amp(request: Request):
     """AMP pages sitemap for all firms"""
-    base_url = "https://guncelgiris.ai"
+    base_url = str(request.base_url).rstrip("/")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
     
@@ -4486,7 +4488,7 @@ async def sitemap_amp(request: Request):
 @api_router.get("/sitemap-amp-videos.xml")
 async def sitemap_amp_videos(request: Request):
     """AMP video pages sitemap (/api/amp-video/{slug})."""
-    base_url = "https://guncelgiris.ai"
+    base_url = str(request.base_url).rstrip("/")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
 
@@ -4578,39 +4580,14 @@ async def migrate_setup_admin(data: Dict[str, Any]):
 
 @api_router.get("/robots.txt")
 async def robots_txt(request: Request, domain: Optional[str] = None):
-    """Generate robots.txt"""
-    base_url = "https://guncelgiris.ai"
+    """Generate robots.txt (for API domain; frontend uses static public/robots.txt)."""
+    frontend_base = FRONTEND_BASE_URL
     content = f"""User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin-login
-Disallow: /api/
-Allow: /api/sitemap.xml
-Allow: /api/sitemap-pages.xml
-Allow: /api/sitemap-firms.xml
-Allow: /api/sitemap-companies.xml
-Allow: /api/sitemap-videos.xml
-Allow: /api/sitemap-articles.xml
-Allow: /api/sitemap-amp.xml
-Allow: /api/sitemap-amp-videos.xml
-Allow: /api/amp/
-Allow: /api/amp-video/
-Allow: /api/generated-videos/
 
-User-agent: Googlebot
-Allow: /api/sitemap.xml
-Allow: /api/sitemap-pages.xml
-Allow: /api/sitemap-firms.xml
-Allow: /api/sitemap-companies.xml
-Allow: /api/sitemap-videos.xml
-Allow: /api/sitemap-articles.xml
-Allow: /api/sitemap-amp.xml
-Allow: /api/sitemap-amp-videos.xml
-Allow: /api/amp/
-Allow: /api/amp-video/
-Allow: /api/generated-videos/
-
-Sitemap: {base_url}/api/sitemap.xml
+Sitemap: {frontend_base}/sitemap.xml
 """
     return PlainTextResponse(content=content)
 

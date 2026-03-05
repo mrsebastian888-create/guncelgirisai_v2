@@ -109,6 +109,8 @@ export default function FirmPage() {
         title={`${site.name} Guncel Giris Adresi 2026 | ${site.bonus_amount} ${bonusLabel}`}
         description={`${site.name} guncel giris adresi 2026. ${site.bonus_amount} ${bonusLabel} firsati. Detayli inceleme, bonus rehberi ve guvenilirlik analizi.`}
         canonical={`https://guncelgiris.ai/${site.slug || slug}`}
+        image={site.logo_url}
+        imageAlt={`${site.name} logo`}
         amphtml={`${API}/amp/${site.slug || slug}`}
         jsonLd={[breadcrumbJsonLd, firmJsonLd, reviewJsonLd]}
       />

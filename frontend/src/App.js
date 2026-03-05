@@ -29,16 +29,23 @@ class ErrorBoundary extends React.Component {
 
 function NotFoundPage() {
   return (
-    <div className="min-h-[70vh] flex items-center justify-center">
-      <div className="text-center p-8">
-        <h1 className="font-heading text-8xl font-black mb-4" style={{ color: "hsl(var(--neon-green))" }}>404</h1>
-        <h2 className="text-2xl font-bold mb-2">Sayfa Bulunamadi</h2>
-        <p className="text-muted-foreground mb-6">Aradiginiz sayfa mevcut degil veya kaldirilmis olabilir.</p>
-        <Link to="/" className="inline-flex px-6 py-3 rounded-lg font-bold" style={{ background: "hsl(var(--neon-green))", color: "#000" }}>
-          Ana Sayfaya Don
-        </Link>
+    <>
+      <SEOHead
+        title="Sayfa Bulunamadı (404)"
+        description="Aradığınız sayfa mevcut değil veya taşınmış olabilir. Ana sayfaya dönerek bonus rehberi ve güncel giriş adreslerine ulaşabilirsiniz."
+        noindex
+      />
+      <div className="min-h-[70vh] flex items-center justify-center">
+        <div className="text-center p-8">
+          <h1 className="font-heading text-8xl font-black mb-4" style={{ color: "hsl(var(--neon-green))" }}>404</h1>
+          <h2 className="text-2xl font-bold mb-2">Sayfa Bulunamadi</h2>
+          <p className="text-muted-foreground mb-6">Aradiginiz sayfa mevcut degil veya kaldirilmis olabilir.</p>
+          <Link to="/" className="inline-flex px-6 py-3 rounded-lg font-bold" style={{ background: "hsl(var(--neon-green))", color: "#000" }}>
+            Ana Sayfaya Don
+          </Link>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -61,6 +68,7 @@ import Footer from "@/components/Footer";
 import WelcomePopup from "@/components/WelcomePopup";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import SEOHead from "@/components/SEOHead";
 
 // Use REACT_APP_BACKEND_URL in dev, relative path in production
 export const API = process.env.REACT_APP_BACKEND_URL
