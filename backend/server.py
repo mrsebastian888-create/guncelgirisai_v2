@@ -31,6 +31,7 @@ from urllib.parse import quote_plus, urlparse
 from passlib.context import CryptContext
 import jwt as pyjwt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from openai import AsyncAzureOpenAI
 
 # ============== CONFIGURATION ==============
 
@@ -59,6 +60,10 @@ DB_NAME = get_required_env("DB_NAME")
 
 # Optional environment variables
 EMERGENT_LLM_KEY = get_optional_env("EMERGENT_LLM_KEY")
+AZURE_OPENAI_KEY = get_optional_env("AZURE_OPENAI_KEY")
+AZURE_OPENAI_ENDPOINT = get_optional_env("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_DEPLOYMENT = get_optional_env("AZURE_OPENAI_DEPLOYMENT")
+AZURE_OPENAI_API_VERSION = get_optional_env("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 FOOTBALL_API_KEY = get_optional_env("FOOTBALL_DATA_API_KEY", "demo")
 CLOUDFLARE_API_TOKEN = get_optional_env("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_ACCOUNT_ID = get_optional_env("CLOUDFLARE_ACCOUNT_ID")
@@ -969,16 +974,44 @@ def calculate_performance_score(perf: dict) -> float:
     return score
 
 async def generate_ai_content(prompt: str, system_message: str = "Sen profesyonel bir Türkçe içerik yazarısın.") -> str:
-    """Generate AI content using Emergent integrations with retry"""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
-    
+    """Generate AI content using Azure OpenAI (if configured) or Emergent integrations with retry."""
+
+    # 1) Try Azure OpenAI first if environment variables are set
+    if AZURE_OPENAI_KEY and AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT:
+        try:
+            azure_client = AsyncAzureOpenAI(
+                api_key=AZURE_OPENAI_KEY,
+                azure_endpoint=AZURE_OPENAI_ENDPOINT,
+                api_version=AZURE_OPENAI_API_VERSION,
+            )
+            azure_response = await azure_client.chat.completions.create(
+                model=AZURE_OPENAI_DEPLOYMENT,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            message_content = azure_response.choices[0].message.content
+            # Newer SDKs can return list-of-parts; normalize to string
+            if isinstance(message_content, list):
+                text_parts = [p.get("text", "") for p in message_content if isinstance(p, dict) and p.get("type") == "text"]
+                return "".join(text_parts).strip()
+            return message_content
+        except Exception as e:
+            logger.warning(f"Azure OpenAI failed, falling back to Emergent LLM: {e}")
+
+    # 2) Fallback to Emergent LLM (OpenAI gpt-4o-mini / gpt-4o)
     models = [("openai", "gpt-4o-mini"), ("openai", "gpt-4o")]
     max_retries = 2
     
     for provider, model in models:
         for attempt in range(max_retries):
             try:
-                chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=str(uuid.uuid4()), system_message=system_message).with_model(provider, model)
+                chat = LlmChat(
+                    api_key=EMERGENT_LLM_KEY,
+                    session_id=str(uuid.uuid4()),
+                    system_message=system_message,
+                ).with_model(provider, model)
                 result = await chat.send_message(UserMessage(text=prompt))
                 return result
             except Exception as e:
