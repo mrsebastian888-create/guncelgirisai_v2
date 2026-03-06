@@ -1688,11 +1688,16 @@ function AutoContentScheduler({ onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [interval, setInterval_] = useState("5");
 
+  const authHeaders = () => {
+    const token = localStorage.getItem("admin_token");
+    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  };
+
   const fetchQueue = async () => {
     try {
       const [qRes, sRes] = await Promise.all([
         axios.get(`${API}/content-queue?limit=50`),
-        axios.get(`${API}/scheduler/status`),
+        axios.get(`${API}/scheduler/status`, authHeaders()),
       ]);
       setQueue(qRes.data.items || []);
       setQueueStats(qRes.data.stats || {});
@@ -1725,10 +1730,10 @@ function AutoContentScheduler({ onRefresh }) {
   const handleToggleScheduler = async () => {
     try {
       if (scheduler.is_running) {
-        await axios.post(`${API}/scheduler/stop`);
+        await axios.post(`${API}/scheduler/stop`, {}, authHeaders());
         toast.success("Zamanlayıcı durduruldu");
       } else {
-        await axios.post(`${API}/scheduler/start`);
+        await axios.post(`${API}/scheduler/start`, {}, authHeaders());
         toast.success("Zamanlayıcı başlatıldı");
       }
       fetchQueue();
@@ -1738,7 +1743,7 @@ function AutoContentScheduler({ onRefresh }) {
   const handleIntervalChange = async (val) => {
     setInterval_(val);
     try {
-      await axios.put(`${API}/scheduler/interval`, { minutes: parseInt(val) });
+      await axios.put(`${API}/scheduler/interval`, { minutes: parseInt(val) }, authHeaders());
       toast.success(`Süre ${val} dakika olarak ayarlandı`);
       fetchQueue();
     } catch { toast.error("Ayarlanamadı"); }
@@ -1747,7 +1752,7 @@ function AutoContentScheduler({ onRefresh }) {
   const handleRunNow = async () => {
     setLoading(true);
     try {
-      await axios.post(`${API}/scheduler/run-now`);
+      await axios.post(`${API}/scheduler/run-now`, {}, authHeaders());
       toast.success("Makale üretimi başlatıldı");
       setTimeout(() => { fetchQueue(); onRefresh(); }, 3000);
     } catch { toast.error("Üretilemedi"); }
