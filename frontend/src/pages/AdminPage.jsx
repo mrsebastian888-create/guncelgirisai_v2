@@ -1710,7 +1710,7 @@ function AutoContentScheduler({ onRefresh }) {
     fetchQueue();
     const pollId = window.setInterval(fetchQueue, 15000);
     return () => window.clearInterval(pollId);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBulkAdd = async () => {
     if (!bulkInput.trim()) return toast.error("Konu listesi boş");
