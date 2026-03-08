@@ -6,7 +6,7 @@ import { API } from "@/App";
 import {
   Trophy, Zap, TrendingUp, ChevronRight, ChevronLeft, Star,
   Shield, Clock, Gift, Activity, Flame, Target, Coins, Globe,
-  ExternalLink, Search, Users, Award, Crown, CheckCircle, Building2, BarChart3
+  ExternalLink, Search, Users, Award, Crown, CheckCircle, Building2, BarChart3, BookOpen
 } from "lucide-react";
 import BonusRow from "@/components/BonusRow";
 import NewsCard from "@/components/NewsCard";
@@ -76,6 +76,7 @@ const HomePage = () => {
   const [newsArticles, setNewsArticles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [latestArticles, setLatestArticles] = useState([]);
+  const [rehberArticles, setRehberArticles] = useState([]);
   const [featuredCompanies, setFeaturedCompanies] = useState([]);
   const [companySlide, setCompanySlide] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -132,11 +133,12 @@ const HomePage = () => {
           setBonusSites(siteData.bonus_sites || []);
           setArticles(siteData.articles || []);
         } else {
-          const [sitesRes, articlesRes, categoriesRes, latestRes, allFirmsRes, featuredRes, newsRes] = await Promise.all([
+          const [sitesRes, articlesRes, categoriesRes, latestRes, rehberRes, allFirmsRes, featuredRes, newsRes] = await Promise.all([
             axios.get(`${API}/bonus-sites?limit=20`),
             axios.get(`${API}/articles?limit=6`).catch(() => ({ data: [] })),
             axios.get(`${API}/categories`).catch(() => ({ data: [] })),
             axios.get(`${API}/articles/latest?limit=8`).catch(() => ({ data: [] })),
+            axios.get(`${API}/articles?category=rehber&limit=8`).catch(() => ({ data: [] })),
             axios.get(`${API}/bonus-sites?limit=300`).catch(() => ({ data: [] })),
             axios.get(`${API}/companies/featured/list?limit=12`).catch(() => ({ data: [] })),
             axios.get(`${API}/news?size=6`).catch(() => ({ data: { articles: [] } })),
@@ -145,6 +147,7 @@ const HomePage = () => {
           setArticles(articlesRes.data);
           setCategories(categoriesRes.data);
           setLatestArticles(latestRes.data);
+          setRehberArticles(rehberRes.data || []);
           setAllFirms(allFirmsRes.data);
           setFeaturedCompanies(featuredRes.data || []);
           setNewsArticles(newsRes.data?.articles || []);
@@ -291,7 +294,7 @@ const HomePage = () => {
       <SEOHead
         title="Deneme Bonusu Veren Siteler 2026 - En Guncel Bonus Rehberi"
         description="En guvenilir deneme bonusu veren siteler 2026 listesi. Yatirimsiz bonus firsatlari, hosgeldin bonuslari ve guncel bahis rehberleri. 264 firma detayli inceleme."
-        canonical="https://guncelgiris.ai"
+        canonical={typeof window !== "undefined" ? `${window.location.origin}/` : undefined}
         jsonLd={[faqJsonLd, orgJsonLd, organizationJsonLd, itemListJsonLd].filter(Boolean)}
       />
 
@@ -828,6 +831,35 @@ const HomePage = () => {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── REHBERLER (internal link for SEO) ── */}
+      {rehberArticles.length > 0 && (
+        <section className="py-10 md:py-14 px-4 md:px-6 border-t border-white/5" data-testid="rehberler-section">
+          <div className="container mx-auto max-w-4xl">
+            <div className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 mb-4 text-xs font-semibold uppercase tracking-widest"
+              style={{ borderColor: "rgba(0,255,135,0.3)", color: "var(--neon-green)", background: "rgba(0,255,135,0.07)" }}>
+              <BookOpen className="w-3 h-3" /> Rehberler
+            </div>
+            <h2 className="font-heading font-black uppercase mb-4" style={{ fontSize: "clamp(1.2rem, 2.5vw, 1.6rem)", color: "var(--foreground)" }}>
+              Bonus ve Bahis Rehberleri
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {rehberArticles.slice(0, 8).map((article, i) => (
+                <Link
+                  key={article.id || article.slug || i}
+                  to={`/makale/${article.slug}`}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border transition-colors hover:border-[var(--neon-green)] hover:bg-white/5"
+                  style={{ borderColor: "rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.02)" }}
+                  data-testid={`rehber-link-${article.slug}`}
+                >
+                  <span className="text-sm font-medium line-clamp-1">{article.title}</span>
+                  <ChevronRight className="w-4 h-4 opacity-60 flex-shrink-0" />
+                </Link>
+              ))}
             </div>
           </div>
         </section>

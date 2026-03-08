@@ -51,7 +51,7 @@ export default function CompaniesPage() {
       <SEOHead
         title="AI Company Intelligence | Şirket Analizleri ve Trafik Verileri"
         description="AI Company Intelligence merkezi: trafik, teknoloji, kanal ve skor bazlı şirket profilleri."
-        canonical="https://guncelgiris.ai/companies"
+        canonical={typeof window !== "undefined" ? `${window.location.origin}/companies` : undefined}
       />
 
       <section className="container mx-auto max-w-7xl px-4 md:px-6">

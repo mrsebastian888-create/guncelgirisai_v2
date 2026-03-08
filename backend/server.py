@@ -87,7 +87,7 @@ TELEGRAM_API_ID = int(get_optional_env("TELEGRAM_API_ID", "0"))
 TELEGRAM_API_HASH = get_optional_env("TELEGRAM_API_HASH", "")
 TELEGRAM_WEBHOOK_BASE = get_optional_env("TELEGRAM_WEBHOOK_BASE", "")
 
-# SEO: frontend site URL for sitemap <loc>; API base from request for sitemap index
+# SEO: frontend site URL for sitemap <loc>; must match canonical domain (prefer https://www.guncelgiris.ai)
 FRONTEND_BASE_URL = get_optional_env("FRONTEND_BASE_URL", "https://www.guncelgiris.ai").rstrip("/")
 
 # ============== SPORTS CACHE ==============

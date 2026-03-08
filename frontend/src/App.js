@@ -33,6 +33,7 @@ function NotFoundPage() {
       <SEOHead
         title="Sayfa Bulunamadı (404)"
         description="Aradığınız sayfa mevcut değil veya taşınmış olabilir. Ana sayfaya dönerek bonus rehberi ve güncel giriş adreslerine ulaşabilirsiniz."
+        canonical={typeof window !== "undefined" ? `${window.location.origin}/` : undefined}
         noindex
       />
       <div className="min-h-[70vh] flex items-center justify-center">
