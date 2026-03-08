@@ -7,16 +7,15 @@ Kullanım: backend klasöründen: python scripts/export_sitemap_urls.py
 import asyncio
 import os
 import sys
-from pathlib import Path
 from datetime import datetime, timezone
-
-# backend kökü
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BACKEND_DIR))
-os.chdir(BACKEND_DIR)
+from pathlib import Path
 
 from dotenv import load_dotenv
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BACKEND_DIR / ".env")
+sys.path.insert(0, str(BACKEND_DIR))
+os.chdir(BACKEND_DIR)
 
 MONGO_URL = os.environ.get("MONGO_URL", "")
 DB_NAME = os.environ.get("DB_NAME", "test_database")
