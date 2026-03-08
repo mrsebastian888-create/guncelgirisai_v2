@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { API } from "@/App";
-import { Gift, Star, Shield, Check, ExternalLink, TrendingUp } from "lucide-react";
+import { Gift, Star, Shield, Check, ExternalLink, TrendingUp, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BonusCard from "@/components/BonusCard";
@@ -216,6 +216,36 @@ const BonusGuidePage = ({ type: propType }) => {
                 <span>Canlı destek üzerinden bonusu talep edin</span>
               </li>
             </ul>
+
+            <h3 className="font-heading text-xl font-bold mb-4 mt-10 uppercase flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-neon-green" />
+              İlgili Rehberler
+            </h3>
+            <div className="flex flex-wrap gap-3" data-testid="rehberler-links">
+              {bonusType === "deneme" && (
+                <>
+                  <Link to="/makale/deneme-bonusu-nedir" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Deneme Bonusu Nedir</Link>
+                  <Link to="/makale/deneme-bonusu-nasil-kullanilir" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Nasıl Kullanılır</Link>
+                  <Link to="/makale/cevrim-sarti-nedir" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Çevrim Şartı Nedir</Link>
+                  <Link to="/makale/guvenilir-bonus-siteleri" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Güvenilir Siteler</Link>
+                </>
+              )}
+              {bonusType === "hosgeldin" && (
+                <>
+                  <Link to="/makale/hosgeldin-bonusu-nedir" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Hoşgeldin Bonusu Nedir</Link>
+                  <Link to="/makale/cevrim-sarti-nedir" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Çevrim Şartı Nedir</Link>
+                  <Link to="/makale/bonus-cekim-sartlari" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Bonus Çekim Şartları</Link>
+                  <Link to="/makale/casino-hosgeldin-bonusu" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Casino Hoşgeldin</Link>
+                </>
+              )}
+              {(bonusType === "yatirim" || bonusType === "kayip") && (
+                <>
+                  <Link to="/makale/cevrim-sarti-nedir" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Çevrim Şartı Nedir</Link>
+                  <Link to="/makale/bonus-cekim-sartlari" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Bonus Çekim Şartları</Link>
+                  <Link to="/makale/guvenilir-bonus-siteleri" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-green/10 border border-neon-green/30 text-neon-green hover:bg-neon-green/20 text-sm font-medium transition-colors">Güvenilir Siteler</Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </section>

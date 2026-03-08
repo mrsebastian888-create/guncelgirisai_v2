@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Gift, Activity, Mail, MapPin } from "lucide-react";
+import { Gift, Activity, Mail, MapPin, BookOpen } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -7,7 +7,7 @@ const Footer = () => {
   return (
     <footer className="bg-card/50 border-t border-white/5 py-16 pb-20 md:pb-16 px-6" data-testid="footer">
       <div className="container mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-12 mb-12">
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
@@ -22,6 +22,32 @@ const Footer = () => {
               Türkiye'nin en güncel bonus rehberi ve spor haber platformu. 
               Güvenilir siteler, detaylı analizler.
             </p>
+            <h4 className="font-heading text-lg font-bold uppercase mb-4 mt-6 flex items-center gap-2 md:hidden">
+              <BookOpen className="w-5 h-5 text-neon-green" />
+              Rehberler
+            </h4>
+            <ul className="space-y-3 mb-6 md:mb-0 md:hidden">
+              <li><Link to="/makale/deneme-bonusu-nedir" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Deneme Bonusu Nedir</Link></li>
+              <li><Link to="/makale/hosgeldin-bonusu-nedir" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Hoşgeldin Bonusu Nedir</Link></li>
+              <li><Link to="/makale/cevrim-sarti-nedir" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Çevrim Şartı Nedir</Link></li>
+              <li><Link to="/makale/guvenilir-bonus-siteleri" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Güvenilir Bonus Siteleri</Link></li>
+              <li><Link to="/makale/bonus-cekim-sartlari" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Bonus Çekim Şartları</Link></li>
+            </ul>
+          </div>
+
+          {/* Rehberler (guide articles) */}
+          <div className="hidden md:block">
+            <h4 className="font-heading text-lg font-bold uppercase mb-4 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-neon-green" />
+              Rehberler
+            </h4>
+            <ul className="space-y-3">
+              <li><Link to="/makale/deneme-bonusu-nedir" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Deneme Bonusu Nedir</Link></li>
+              <li><Link to="/makale/hosgeldin-bonusu-nedir" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Hoşgeldin Bonusu Nedir</Link></li>
+              <li><Link to="/makale/cevrim-sarti-nedir" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Çevrim Şartı Nedir</Link></li>
+              <li><Link to="/makale/guvenilir-bonus-siteleri" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Güvenilir Bonus Siteleri</Link></li>
+              <li><Link to="/makale/bonus-cekim-sartlari" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">Bonus Çekim Şartları</Link></li>
+            </ul>
           </div>
 
           {/* Bonus Links */}

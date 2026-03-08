@@ -646,6 +646,10 @@ class Article(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     content_updated_at: Optional[str] = None
+    # SEO expansion: pillar | support | faq | comparison | glossary | freshness | trust
+    page_type: Optional[str] = None
+    last_updated: Optional[str] = None
+    update_note: Optional[str] = None
 
 class Category(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -769,6 +773,9 @@ class ContentQueueItem(BaseModel):
     error: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     completed_at: Optional[str] = None
+    # SEO pillar/support pages: when set, article uses this slug and category=rehber
+    target_slug: Optional[str] = None
+    page_type: Optional[str] = None  # pillar | support | faq | comparison
 
 # ============== CONTENT SCHEDULER ==============
 
@@ -848,6 +855,7 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
         item_id = item["id"]
         company = item.get("company", "")
         topic = item.get("topic", "")
+        target_slug = item.get("target_slug")
         subject = f"{company} {topic}".strip() if company and topic else (company or topic)
         
         await db.content_queue.update_one({"id": item_id}, {"$set": {"status": "processing"}})
@@ -859,23 +867,28 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
             title_clean = subject.title()
             seo_title = f"{title_clean} - Detaylı Rehber 2026"[:60]
             seo_desc = f"{title_clean} hakkında kapsamlı ve güncel uzman rehberi. En iyi fırsatlar, karşılaştırmalar ve stratejiler."[:160]
-            
-            article = Article(
-                title=title_clean,
-                slug=slugify(subject),
-                excerpt=f"{title_clean} hakkında uzman görüşleri, karşılaştırmalar ve güncel rehber.",
-                content=content,
-                category="en-iyi-firmalar",
-                tags=[slugify(t) for t in subject.split()[:5]],
-                seo_title=seo_title,
-                seo_description=seo_desc,
-                is_ai_generated=True,
-                is_auto_generated=True,
-                is_published=True,
-                author="Uzman Editör",
-                content_hash=hashlib.md5(content.encode()).hexdigest(),
-                content_updated_at=datetime.now(timezone.utc).isoformat(),
-            )
+            article_slug = target_slug if target_slug else slugify(subject)
+            article_category = "rehber" if target_slug else "en-iyi-firmalar"
+            now_iso = datetime.now(timezone.utc).isoformat()
+            article_kw = {
+                "title": title_clean,
+                "slug": article_slug,
+                "excerpt": f"{title_clean} hakkında uzman görüşleri, karşılaştırmalar ve güncel rehber.",
+                "content": content,
+                "category": article_category,
+                "tags": [slugify(t) for t in subject.split()[:5]],
+                "seo_title": seo_title,
+                "seo_description": seo_desc,
+                "is_ai_generated": True,
+                "is_auto_generated": True,
+                "is_published": True,
+                "author": "Uzman Editör",
+                "content_hash": hashlib.md5(content.encode()).hexdigest(),
+                "content_updated_at": now_iso,
+                "page_type": item.get("page_type"),
+                "last_updated": now_iso,
+            }
+            article = Article(**article_kw)
             
             await db.articles.insert_one(article.model_dump())
             await db.content_queue.update_one({"id": item_id}, {"$set": {
@@ -2870,27 +2883,34 @@ async def add_to_content_queue(data: Dict[str, Any]):
     # Parse bulk input - each line is a topic
     lines = [line.strip() for line in items_text.strip().split("\n") if line.strip()]
     
+    page_type = data.get("page_type")  # optional: pillar | support | faq | comparison
     added = []
     for line in lines:
-        # Check if line has company|topic format
+        # Formats: "topic", "company|topic", or "company|topic|target_slug"
         if "|" in line:
-            parts = line.split("|", 1)
+            parts = line.split("|", 2)
             comp = parts[0].strip()
             topic = parts[1].strip()
+            target_slug = parts[2].strip() if len(parts) > 2 and parts[2].strip() else None
         else:
             comp = company
             topic = line
+            target_slug = None
         
-        # Check for duplicates
-        existing = await db.content_queue.find_one({
-            "company": comp, "topic": topic, "status": {"$in": ["pending", "processing"]}
-        })
+        # Check for duplicates (by topic+company or by target_slug if SEO page)
+        dup_query = {"status": {"$in": ["pending", "processing"]}}
+        if target_slug:
+            dup_query["target_slug"] = target_slug
+        else:
+            dup_query["company"] = comp
+            dup_query["topic"] = topic
+        existing = await db.content_queue.find_one(dup_query)
         if existing:
             continue
         
-        item = ContentQueueItem(company=comp, topic=topic)
+        item = ContentQueueItem(company=comp, topic=topic, target_slug=target_slug, page_type=page_type)
         await db.content_queue.insert_one(item.model_dump())
-        added.append({"id": item.id, "company": comp, "topic": topic})
+        added.append({"id": item.id, "company": comp, "topic": topic, "target_slug": target_slug})
     
     return {"added": len(added), "items": added}
 
