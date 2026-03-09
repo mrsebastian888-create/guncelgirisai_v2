@@ -12,6 +12,7 @@ import BonusRow from "@/components/BonusRow";
 import NewsCard from "@/components/NewsCard";
 import MatchHub from "@/components/MatchHub";
 import SEOHead from "@/components/SEOHead";
+import { SITE_LOGO_URL } from "@/constants/site";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
@@ -212,7 +213,7 @@ const HomePage = () => {
     "@type": "Organization",
     "name": "guncelgiris.ai",
     "url": "https://guncelgiris.ai",
-    "logo": "https://guncelgiris.ai/logo.png",
+    "logo": SITE_LOGO_URL,
     "description": "Turkiye ve Avrupa'nin en guvenilir bahis ve bonus siteleri rehberi.",
     "sameAs": [],
     "contactPoint": {

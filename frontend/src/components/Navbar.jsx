@@ -11,6 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SITE_LOGO_URL } from "@/constants/site";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -73,12 +74,10 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5 h-16" data-testid="navbar">
       <div className="container mx-auto h-full px-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group" data-testid="nav-logo">
-          <div className="w-10 h-10 rounded-lg bg-neon-green flex items-center justify-center">
-            <span className="font-heading text-black text-xl font-black">DS</span>
-          </div>
+          <img src={SITE_LOGO_URL} alt="Guncelgiris.ai" className="w-10 h-10 rounded-lg object-contain" />
           <div className="hidden sm:block">
             <span className="font-heading text-lg font-bold tracking-tight uppercase group-hover:text-neon-green transition-colors">
-              DSBN
+              Guncelgiris.ai
             </span>
           </div>
         </Link>

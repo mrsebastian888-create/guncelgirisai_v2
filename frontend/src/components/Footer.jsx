@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Gift, Activity, Mail, MapPin, BookOpen } from "lucide-react";
+import { SITE_LOGO_URL } from "@/constants/site";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -11,11 +12,9 @@ const Footer = () => {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-lg bg-neon-green flex items-center justify-center">
-                <span className="font-heading text-black text-xl font-black">DS</span>
-              </div>
+              <img src={SITE_LOGO_URL} alt="Guncelgiris.ai" className="w-10 h-10 rounded-lg object-contain" />
               <span className="font-heading text-lg font-bold tracking-tight uppercase">
-                DSBN
+                Guncelgiris.ai
               </span>
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed">
