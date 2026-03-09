@@ -4383,6 +4383,7 @@ async def sitemap_pages(request: Request):
         {"loc": "/hosgeldin-bonusu", "priority": "0.9", "changefreq": "daily"},
         {"loc": "/spor-haberleri", "priority": "0.8", "changefreq": "hourly"},
         {"loc": "/companies", "priority": "0.8", "changefreq": "daily"},
+        {"loc": "/saglayicilar", "priority": "0.7", "changefreq": "weekly"},
     ]
     for page in static_pages:
         urls.append(f"""  <url>
@@ -5162,6 +5163,33 @@ async def admin_firm_bot_map(request: Request):
             "bot_status": bot_info.get("status") if bot_info else None,
         })
     return {"firms": result, "total": len(firms), "with_bot": sum(1 for r in result if r["has_bot"])}
+
+
+@api_router.get("/telegram/firm/{slug}")
+async def public_firm_telegram_bot(slug: str):
+    """Public endpoint: get Telegram bot info for a firm by slug."""
+    firm = await db.bonus_sites.find_one(
+        {"slug": slug, "is_active": True},
+        {"_id": 0, "id": 1, "name": 1, "slug": 1},
+    )
+    if not firm:
+        raise HTTPException(status_code=404, detail="Firma bulunamadı")
+
+    bot = await db.telegram_bots.find_one(
+        {"firm_id": firm["id"], "status": "active"},
+        {"_id": 0, "bot_username": 1},
+    )
+    if not bot:
+        return {"has_bot": False}
+
+    deep_link = f"https://t.me/{bot['bot_username']}"
+    return {
+        "has_bot": True,
+        "bot_username": bot["bot_username"],
+        "deep_link": deep_link,
+        "firm_slug": firm.get("slug", ""),
+        "firm_name": firm["name"],
+    }
 
 
 # ── Telegram Webhook Handler (Public - no auth) ──

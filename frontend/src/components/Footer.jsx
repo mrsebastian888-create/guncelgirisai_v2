@@ -118,7 +118,12 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Mail className="w-4 h-4" />
-                info@dsbn.com
+                <a
+                  href="mailto:support@guncelgiris.ai"
+                  className="hover:text-neon-green transition-colors"
+                >
+                  support@guncelgiris.ai
+                </a>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <MapPin className="w-4 h-4" />
@@ -137,8 +142,11 @@ const Footer = () => {
             <Link to="/" className="text-muted-foreground hover:text-foreground text-sm">
               Gizlilik Politikası
             </Link>
-            <Link to="/" className="text-muted-foreground hover:text-foreground text-sm">
-              Kullanım Şartları
+            <Link
+              to="/iletisim"
+              className="text-muted-foreground hover:text-foreground text-sm"
+            >
+              Bize Ulaşın
             </Link>
           </div>
         </div>

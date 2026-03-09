@@ -218,7 +218,8 @@ const HomePage = () => {
     "contactPoint": {
       "@type": "ContactPoint",
       "contactType": "customer support",
-      "availableLanguage": "Turkish"
+      "availableLanguage": "Turkish",
+      "email": "support@guncelgiris.ai"
     }
   };
 

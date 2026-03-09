@@ -5,7 +5,7 @@ import axios from "axios";
 import {
   Star, ExternalLink, Shield, Gift, Clock, ChevronRight,
   Award, Zap, Globe, CreditCard, Smartphone, HeadphonesIcon,
-  CheckCircle2, AlertTriangle, TrendingUp, FileText, Users
+  CheckCircle2, AlertTriangle, TrendingUp, FileText, Users, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +33,7 @@ const FEATURE_ICONS = {
 export default function FirmPage() {
   const { slug } = useParams();
   const [data, setData] = useState(null);
+  const [telegramBot, setTelegramBot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -40,8 +41,12 @@ export default function FirmPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await axios.get(`${API}/firma/${slug}`);
-        setData(res.data);
+        const [firmRes, tgRes] = await Promise.all([
+          axios.get(`${API}/firma/${slug}`),
+          axios.get(`${API}/telegram/firm/${slug}`).catch(() => ({ data: { has_bot: false } })),
+        ]);
+        setData(firmRes.data);
+        setTelegramBot(tgRes.data);
       } catch (e) {
         setError(e.response?.status === 404 ? "Firma bulunamadi" : "Bir hata olustu");
       } finally {
@@ -215,6 +220,19 @@ export default function FirmPage() {
                   <ExternalLink className="w-4 h-4" />
                   Siteye Git
                 </a>
+                {telegramBot?.has_bot && (
+                  <a
+                    href={telegramBot.deep_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="firm-cta-telegram-bot"
+                    className="inline-flex items-center gap-2 rounded-xl border px-6 py-3.5 font-heading font-bold uppercase tracking-wide text-sm transition-all hover:bg-[#26A4E3]/10"
+                    style={{ borderColor: "rgba(37, 164, 227, 0.4)", color: "#26A4E3" }}
+                  >
+                    <Send className="w-4 h-4" />
+                    Telegram Botu
+                  </a>
+                )}
                 <Link
                   to="/"
                   data-testid="firm-cta-all-sites"

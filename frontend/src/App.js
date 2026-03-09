@@ -62,6 +62,9 @@ import FirmPage from "@/pages/FirmPage";
 import FirmVideoPage from "@/pages/FirmVideoPage";
 import CompanyProfilePage from "@/pages/CompanyProfilePage";
 import CompaniesPage from "@/pages/CompaniesPage";
+import ProvidersPage from "@/pages/ProvidersPage";
+import ProviderDetailPage from "@/pages/ProviderDetailPage";
+import ContactPage from "@/pages/ContactPage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -154,6 +157,9 @@ function AppLayout({ isLoading }) {
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
               <Route path="/companies" element={<CompaniesPage />} />
               <Route path="/companies/:slug" element={<CompanyProfilePage />} />
+              <Route path="/saglayicilar" element={<ProvidersPage />} />
+              <Route path="/saglayicilar/:slug" element={<ProviderDetailPage />} />
+              <Route path="/iletisim" element={<ContactPage />} />
               <Route path="/:slug/video" element={<FirmVideoPage />} />
               <Route path="/:slug" element={<FirmPage />} />
               <Route path="*" element={<NotFoundPage />} />

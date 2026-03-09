@@ -48,6 +48,7 @@ const Navbar = () => {
     { label: "Firma Rehberi", href: "/#firma-rehberi", icon: Globe },
     { label: "Guncel Giris", href: "/bonus/guncel-giris-adresleri", icon: Globe },
     { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
+    { label: "Sağlayıcılar", href: "/saglayicilar", icon: Globe },
     { label: "AI Analiz", href: "/companies", icon: Brain },
   ];
 
@@ -64,6 +65,7 @@ const Navbar = () => {
     { label: "Hosgeldin Bonusu", href: "/hosgeldin-bonusu" },
     { label: "Guncel Giris Adresleri", href: "/bonus/guncel-giris-adresleri" },
     { label: "Spor Haberleri", href: "/spor-haberleri" },
+    { label: "Sağlayıcılar", href: "/saglayicilar" },
     { label: "AI Analiz Araci", href: "/ai-analiz" },
   ];
 
