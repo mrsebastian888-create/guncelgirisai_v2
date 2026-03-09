@@ -121,6 +121,16 @@ function AppLayout({ isLoading }) {
     document.body.scrollTop = 0;
   }, [location.pathname]);
 
+  // Google Analytics: SPA route değişiminde sayfa görüntülemesi gönder
+  useEffect(() => {
+    if (typeof window.gtag === "function") {
+      window.gtag("config", "G-SZH5PN3PF6", {
+        page_path: location.pathname + location.search,
+        page_title: document.title,
+      });
+    }
+  }, [location.pathname, location.search]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
