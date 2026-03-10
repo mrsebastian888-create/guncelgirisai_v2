@@ -1,0 +1,185 @@
+<analysis>**original_problem_statement:**
+The user has requested to upgrade the existing production website  by implementing a new GG2026 SEO framework. This task is not about creating a new project but enhancing the existing platform's architecture for large-scale SEO growth without breaking existing routes.
+
+**PRODUCT REQUIREMENTS (Phase 1):**
+
+*   **Step 1: Implement Company Folder Architecture:**
+    *   Create a nested URL structure under each company slug (e.g., , ).
+    *   Target slugs include: , , , , , , , , , .
+
+*   **Step 2: Create Core Clusters:**
+    *   Create a Company Guide and a Bonus Guide cluster on the new company sub-pages, with internal linking between them.
+
+*   **Step 3: Create Main Hub Pages:**
+    *   Implement hub pages for various bonus types: , , , , , .
+
+*   **Step 4: Add Payment Hub Pages:**
+    *   Implement hub pages for payment methods: , , etc.
+
+*   **Step 5: Update Navigation Menu:**
+    *   Restructure the main navigation to include BONUSES and COMPANY GUIDE dropdowns with links to the new pages.
+
+*   **Step 6: Prepare Technical SEO Base:**
+    *   Implement placeholders for dynamic titles, meta descriptions, canonical URLs, breadcrumbs, and create the sitemap structure for the new pages.
+
+The user explicitly requested to stop after completing Phase 1.
+
+**User's preferred language**: English (Application content is in Turkish)
+
+**what currently exists?**
+The application is a full-stack React/FastAPI/MongoDB platform. The previous session's work on a Telegram Bot Management system and debugging production instability was put on hold.
+
+In this session, **Phase 1 of the GG2026 SEO framework has been fully implemented**. This includes:
+*   **Backend:** New FastAPI endpoints to serve data for the company sub-pages, bonus hubs, and payment hubs. A new sitemap () has been created and linked to the main sitemap index.
+*   **Frontend:** New React components have been created for the company sub-pages (), bonus hubs (), and payment hubs (). The application's routing () and navigation components (, , ) have been updated to reflect the new URL structure and menu hierarchy.
+*   **SEO:** The new pages include placeholders for dynamic titles, meta descriptions, canonicals, and breadcrumbs as requested.
+
+**Last working item**:
+*   **Last item agent was working:** Completing and testing the implementation of Phase 1 of the GG2026 SEO framework.
+*   **Status:** USER VERIFICATION PENDING
+*   **Agent Testing Done:** Y (Agent used  to test all new backend endpoints,  to verify frontend rendering, and  which reported 100% success across all new pages and navigation.)
+*   **Which testing method agent to use?** NA (Awaiting user feedback.)
+*   **User Testing Done:** N
+
+**All Pending/In progress Issue list**:
+*   Issue 1: Production Custom Domain () Instability (P0)
+*   Issue 2: Telegram BotFather Rate Limits Will Block Bulk Creation (P1)
+*   Issue 3: Blocked on 3rd party API keys for Company Intelligence (P1)
+*   Issue 4: Invalid AMP pages on live site (P2)
+
+**Issues Detail:**
+*   **Issue 1: Production Custom Domain () Instability**
+    *   **Attempted fixes:** (From previous session) Extensive debugging across GoDaddy, Cloudflare, Vercel, and Railway. The root cause was identified as the domain being incorrectly linked to an old Emergent project (). A temporary DNS A record points to a preview server IP.
+    *   **Next debug checklist:**
+        1.  **Crucially, explain to the user that this is a temporary fix and the root problem can only be solved by Emergent's support team.**
+        2.  Guide the user to contact Emergent support and explicitly request to move the domain from the old project to the new project .
+        3.  Once support confirms the move, the GoDaddy DNS record must be updated to point to the official production IP.
+    *   **Why fix this issue and what will be achieved with the fix?** This is the highest priority blocker. The application is unusable and unstable in production, preventing any real-world use or verification of deployed features.
+    *   **Status:** BLOCKED (on user contacting Emergent support).
+    *   **Is recurring issue?** Y
+    *   **Should Test frontend/backend/both after fix?** Both.
+    *   **Blocked on other issue:** Blocks all production-related tasks.
+
+*   **Issue 2: Telegram BotFather Rate Limits Will Block Bulk Creation**
+    *   **Attempted fixes:** None. The issue was identified in the previous session.
+    *   **Next debug checklist:** Implement a solution to manage and rotate through multiple Telegram user accounts to bypass the ~20 bot creation limit per account.
+    *   **Why fix this issue and what will be achieved with the fix?** The user's goal of creating 267 bots is currently impossible.
+    *   **Status:** NOT STARTED
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Both.
+    *   **Blocked on other issue:** None.
+
+*   **Issue 3: Blocked on 3rd party API keys for Company Intelligence**
+    *   **Attempted fixes:** None.
+    *   **Next debug checklist:** Wait for the user to provide API keys for Serper, Brave, Bing, etc.
+    *   **Why fix this issue and what will be achieved with the fix?** The Company Intelligence feature runs on mock data.
+    *   **Status:** BLOCKED (on user).
+    *   **Is recurring issue?** Y
+    *   **Should Test frontend/backend/both after fix?** Backend.
+    *   **Blocked on other issue:** None.
+
+*   **Issue 4: Invalid AMP pages on live site**
+    *   **Attempted fixes:** Code fix exists but could not be deployed/verified on a stable production environment.
+    *   **Next debug checklist:** Re-evaluate after the production domain instability (Issue 1) is resolved.
+    *   **Status:** BLOCKED
+    *   **Is recurring issue?** Y
+    *   **Should Test frontend/backend/both after fix?** Backend.
+    *   **Blocked on other issue:** Issue 1.
+
+**In progress Task List**:
+None. The only task for this session was completed.
+
+**Upcoming and Future Tasks**
+*   **Upcoming Tasks:**
+    *   **P0: Fix Production Instability:** Guide the user to contact Emergent support to resolve the  domain issue. (Issue 1)
+    *   **P1: Implement Telegram Rate Limit Solution:** Build the multi-account rotation for bulk bot creation. (Issue 2)
+    *   **P1: Implement Featured Companies Hero Slider:** Build the slider on the homepage.
+    *   **P1: Complete AI Video Generation POC:** Finish Sora 2 integration.
+*   **Future Tasks:**
+    *   **P2: Integrate Company Intelligence APIs:** Once keys are provided. (Issue 3)
+    *   **P2: Verify AMP Page Fix:** Once production is stable. (Issue 4)
+    *   **P2: Implement Company Intelligence Score:** Develop the scoring model.
+    *   **P2: Build full Admin Panel for Company Management:** Create UI to approve/edit companies.
+    *   **P2: Backend Refactoring:** Break down the monolithic  into a modular FastAPI structure.
+
+**Completed work in this session**
+*   **Implemented Phase 1 of GG2026 SEO Framework:**
+    *   Created new backend endpoints for company sub-pages, bonus hubs, and payment hubs in .
+    *   Added a new sitemap for SEO pages () and updated the main sitemap index.
+    *   Created new frontend pages: , , and .
+    *   Updated React Router in  with all new routes, ensuring they are placed before the catch-all  route.
+    *   Updated the navigation structure in , , and .
+    *   All changes were successfully verified by the testing agent.
+
+**Earlier issues found/mentioned but not fixed**
+*   All issues listed in the All Pending/In progress Issue list section were carried over from the previous session and were not addressed, as the user's priority shifted to the SEO framework implementation.
+
+**Known issue recurrence from previous fork**
+*   **AMP pages invalid on the live site:** Remains unresolved as the production environment is not stable. Status: BLOCKED.
+*   **Production admin login fails:** This is a symptom of the core production instability. Status: BLOCKED.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+*   **Frontend:** React, React Router (for dynamic and nested routing), component-based UI.
+*   **Backend:** FastAPI (API endpoint creation).
+*   **SEO:** URL routing design, sitemap generation, and on-page SEO elements (titles, meta, canonicals, breadcrumbs).
+
+**key DB schema**
+*   No changes were made to the database schema. The new pages query the existing  collection.
+
+**changes in tech stack**
+*   None in this session.
+
+**All files of reference**
+*   
+*   
+*   
+*   
+*   
+*   
+*   
+*   
+
+**Areas that need refactoring**:
+*    is increasingly monolithic. The new SEO endpoints were added to it, reinforcing the need to break it into separate FastAPI routers for better maintainability.
+
+**key api endpoints**
+*   
+*   
+*   
+*   
+
+**Critical Info for New Agent**
+1.  **Phase 1 Complete:** The user's primary request for this session, implementing the GG2026 SEO framework (Phase 1), is complete and has passed automated testing. Your first action should be to present this to the user for verification.
+2.  **Production is Broken:** The critical production instability at  (Issue 1) was NOT addressed in this session and remains the #1 blocker for the entire project. You must guide the user to contact Emergent support to get the domain moved to the correct project. No deployment can be considered successful until this is fixed.
+3.  **Priorities Shifted:** All tasks and issues from the previous session (Telegram bots, etc.) were deferred. After the user verifies the current work, you will need to re-align on priorities, with the production instability being the most urgent.
+
+**documents and test reports created in this job**
+*    (Updated to reflect completion of Phase 1)
+*    (Generated by  with 100% success rate for the new SEO features)
+
+**Last 10 User Messages and any pending HUMAN messages**
+*   The only user message was a detailed directive to implement Phase 1 of the GG2026 SEO framework, which involved creating a new URL architecture, new hub pages, updating navigation, and adding a technical SEO base. The agent successfully completed this task. (Status: Completed)
+
+**Project Health Check:**
+*   **Broken:** The production environment at  remains critically unstable due to the incorrect domain linkage in Emergent's infrastructure.
+*   **Mocked:** The Company Intelligence Module is still using placeholder data pending user-provided API keys.
+
+**3rd Party Integrations**
+*   **Telethon & python-telegram-bot:** Configured for the Telegram bot system (work is on hold).
+*   **OpenAI GPT-4o / gpt-4o-mini:** In use. Uses Emergent LLM Key.
+*   **Sora 2, Serper, Brave Search, Similarweb, BuiltWith:** Planned, but all are blocked pending API keys from the user.
+
+**Testing status**
+*   **Testing agent used after significant changes:** YES. The  was used to validate the entire Phase 1 SEO implementation and reported 100% success.
+*   **Troubleshoot agent used after agent stuck in loop:** NO
+*   **Test files created:** None. Testing was performed via the testing agent.
+*   **Known regressions:** None introduced in this session. The main regression is the unstable production environment from the previous session.
+
+**Credentials to test flow:**
+*   **Admin Login:**  / 
+
+**What agent forgot to execute**
+*   The agent correctly focused on and completed the user's explicit and high-priority request for this session. It rightly deferred all previously pending tasks.</analysis>
