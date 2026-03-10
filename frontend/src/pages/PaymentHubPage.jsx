@@ -168,11 +168,17 @@ export default function PaymentHubPage() {
                 </div>
                 {company_links[i] && (
                   <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/5">
-                    <Link to={company_links[i].odeme_url} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-[#00F0FF] hover:bg-[#00F0FF]/10 transition-colors">
+                    <Link to={company_links[i].odeme_url} data-testid={`payment-hub-link-odeme-${i}`}
+                      className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-[#00F0FF] hover:bg-[#00F0FF]/10 transition-colors">
                       Odeme Yontemleri
                     </Link>
-                    <Link to={company_links[i].guncel_giris_url} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-neon-green hover:bg-neon-green/10 transition-colors">
+                    <Link to={company_links[i].guncel_giris_url} data-testid={`payment-hub-link-giris-${i}`}
+                      className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-neon-green hover:bg-neon-green/10 transition-colors">
                       Guncel Giris
+                    </Link>
+                    <Link to={company_links[i].deneme_bonusu_url} data-testid={`payment-hub-link-bonus-${i}`}
+                      className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-yellow-400 hover:bg-yellow-400/10 transition-colors">
+                      Deneme Bonusu
                     </Link>
                     <a href={site.affiliate_url} target="_blank" rel="noopener noreferrer"
                       className="sm:hidden text-[11px] px-2 py-1 rounded-md bg-[#00F0FF]/20 text-[#00F0FF] font-bold">

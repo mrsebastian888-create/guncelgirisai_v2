@@ -4633,6 +4633,177 @@ PAYMENT_HUB_PAGES = {
 }
 
 
+# ── Phase 2: Template Section Generators ────────────────────────────────
+
+def build_company_guide_sections(name: str, page_type: str, bonus_amount: str, base_slug: str):
+    """Build template sections for Company Guide pages (access-related)."""
+    return {
+        "overview": {
+            "title": f"{name} Hakkinda",
+            "content": f"{name}, Turkiye'nin en populer ve guvenilir online bahis platformlarindan biridir. Lisansli altyapisi, genis oyun yelpazesi ve kullanici dostu arayuzu ile one cikmaktadir."
+        },
+        "access_instructions": {
+            "title": f"{name} Giris Nasil Yapilir?",
+            "steps": [
+                f"Guncel {name} giris adresini bu sayfadan kontrol edin.",
+                "Tarayiciniza adresi yazin veya 'Siteye Git' butonuna tiklayin.",
+                "Kullanici adiniz ve sifrenizle giris yapin.",
+                "Hesabiniz yoksa 'Kayit Ol' butonundan uye olun."
+            ]
+        },
+        "address_change": {
+            "title": "Adres Degisikligi Neden Olur?",
+            "content": f"{name} gibi platformlar, erisim engellemeleri nedeniyle zaman zaman alan adi degisikligi yapmaktadir. Bu durum tamamen normal olup, siteye erisimi saglamak icin yeni adresler olusturulmaktadir. Bu sayfayi takip ederek her zaman en guncel adrese ulasabilirsiniz."
+        },
+        "mobile_login": {
+            "title": f"{name} Mobil Giris",
+            "content": f"{name} mobil uyumlu altyapisi sayesinde telefonunuzdan veya tabletinizden kolayca giris yapabilirsiniz. Ayni giris adresini mobil tarayicinizda kullanmaniz yeterlidir. Ozel mobil uygulama indirmenize gerek yoktur."
+        },
+        "safety_notes": {
+            "title": "Guvenlik Notlari",
+            "items": [
+                "Her zaman SSL sertifikali (https://) adresleri kullanin.",
+                "Giris bilgilerinizi kimseyle paylasmain.",
+                "Resmi olmayan kaynaklardan indirme yapmayin.",
+                "Guncel adresi yalnizca guvenilir kaynaklardan (bu sayfa gibi) takip edin.",
+                "Sifrenizi duzenli olarak degistirin."
+            ]
+        },
+    }
+
+
+def build_bonus_guide_sections(name: str, page_type: str, bonus_amount: str, base_slug: str, turnover: str):
+    """Build template sections for Bonus Guide pages (bonus-related)."""
+    return {
+        "overview": {
+            "title": f"{name} Hakkinda",
+            "content": f"{name}, genis bonus secenekleri ve avantajli promosyonlariyla taninan guvenilir bir platformdur. Yeni uyelere ozel firsatlar sunarak kullanicilarina risksiz deneyim imkani saglamaktadir."
+        },
+        "bonus_availability": {
+            "title": f"{name} Bonus Durumu",
+            "content": f"{name} su anda aktif bonus kampanyalari sunmaktadir.",
+            "amount": bonus_amount,
+            "status": "aktif",
+        },
+        "bonus_types": {
+            "title": "Bonus Turleri",
+            "items": [
+                {"type": "Deneme Bonusu", "description": f"{name} uyelik sonrasi yatirim sartsiz deneme bonusu vermektedir."},
+                {"type": "Hosgeldin Bonusu", "description": f"Ilk yatiriminiza ozel {name} hosgeldin bonusu firsati."},
+                {"type": "Yatirim Bonusu", "description": "Her yatiriminizda ekstra bonus kazanma imkani."},
+                {"type": "Kayip Bonusu", "description": "Haftalik kayiplariniza karsi telafi bonusu."},
+            ]
+        },
+        "wagering": {
+            "title": "Cevrim Sartlari",
+            "content": f"{name} bonuslarini cekim yapabilmek icin belirli cevrim sartlarini tamamlamaniz gerekmektedir.",
+            "multiplier": turnover,
+            "details": [
+                f"Bonus miktarinin {turnover} kati kadar bahis yapmaniz gerekir.",
+                "Cevrim suresi genelde 7 gun ile sinirlidir.",
+                "Minimum bahis orani 1.50 ve uzeri olmalidir.",
+                "Canli bahisler %100, casino oyunlari %10 oraninda cevrimi karsilar."
+            ]
+        },
+        "pros_cons": {
+            "title": "Avantajlar ve Dezavantajlar",
+            "pros": [
+                f"{bonus_amount} degerinde bonus firsati",
+                "Hizli uyelik ve bonus tanimlama sureci",
+                "7/24 canli destek ile yardim imkani",
+                "Genis oyun ve bahis secenekleri",
+                "Mobil uyumlu arayuz"
+            ],
+            "cons": [
+                f"Cevrim sarti ({turnover}) uygulanmaktadir",
+                "Bonus sadece yeni uyeler icin gecerlidir",
+                "Belirli oyunlarda bonus kullanilamayabilir"
+            ]
+        },
+        "who_suits": {
+            "title": "Kimler Icin Uygun?",
+            "content": f"{name} bonuslari ozellikle platformu denemek isteyen yeni kullanicilar, dusuk riskle bahis deneyimi arayanlar ve farkli oyun seceneklerini kesfetmek isteyenler icin idealdir."
+        },
+    }
+
+
+def build_faq(name: str, page_type: str, bonus_amount: str, cluster: str, turnover: str):
+    """Build FAQ items per page type."""
+    base_faq = {
+        "guncel-giris": [
+            {"question": f"{name} guncel giris adresi nedir?", "answer": f"{name} guncel giris adresi duzenli olarak guncellenmektedir. Bu sayfadan en son calisan adrese ulasabilirsiniz."},
+            {"question": f"{name} giris yaparken sorun yasiyorum ne yapmaliyim?", "answer": "DNS ayarlarinizi degistirmeyi deneyin veya VPN kullanin. Sorun devam ederse canli destek ile iletisime gecin."},
+            {"question": f"{name} adresi neden degisiyor?", "answer": "Erisim engellemeleri nedeniyle siteler zaman zaman alan adi degisikligi yapmaktadir. Bu sayfayi takip ederek her zaman guncel adrese ulasabilirsiniz."},
+            {"question": f"{name} guvenilir mi?", "answer": f"{name} lisansli altyapisi ve SSL sertifikasi ile guvenli bir sekilde hizmet vermektedir."},
+        ],
+        "guncel-adresi": [
+            {"question": f"{name} guncel adresi nasil ogrenilir?", "answer": f"Bu sayfa uzerinden {name} guncel adresini her zaman takip edebilirsiniz."},
+            {"question": f"{name} eski adresim calismyor ne yapmaliyim?", "answer": "Eski adresler zaman zaman kapanabilir. Bu sayfadaki guncel adresi kullanarak siteye erisebilirsiniz."},
+            {"question": "Adres degisikliginde bilgilerim kaybolur mu?", "answer": "Hayir, adres degisikligi yalnizca alan adiyla ilgilidir. Hesap bilgileriniz ve bakiyeniz aynen korunur."},
+        ],
+        "yeni-giris-adresi": [
+            {"question": f"{name} yeni giris adresi ne zaman guncellenir?", "answer": "Erisim sorunu yasandiginda yeni adres hemen olusturulur ve bu sayfada paylasilir."},
+            {"question": f"Yeni adres uzerinden {name} hesabima girebilir miyim?", "answer": "Evet, mevcut kullanici adiniz ve sifrenizle yeni adres uzerinden giris yapabilirsiniz."},
+            {"question": f"{name} alternatif giris yontemleri nelerdir?", "answer": "VPN kullanimi, DNS degisikligi veya mobil tarayici uzerinden giris deneyebilirsiniz."},
+        ],
+        "mobil-giris": [
+            {"question": f"{name} mobil giris nasil yapilir?", "answer": f"Telefonunuzun tarayicisina {name} guncel adresini yazarak mobil giris yapabilirsiniz."},
+            {"question": f"{name} mobil uygulamasi var mi?", "answer": f"{name} mobil uyumlu web sitesi uzerinden tum islemleri yapabilirsiniz. Ayrica mobil uygulama secenegi de mevcuttur."},
+            {"question": "Mobil giris guvenli mi?", "answer": "Evet, mobil giris masaustu giris ile ayni guvenlik altyapisini kullanmaktadir."},
+        ],
+        "deneme-bonusu": [
+            {"question": f"{name} deneme bonusu ne kadar?", "answer": f"{name} su anda {bonus_amount} degerinde deneme bonusu sunmaktadir."},
+            {"question": f"{name} deneme bonusu nasil alinir?", "answer": "Siteye uye olduktan sonra canli destek uzerinden deneme bonusu talebinde bulunabilirsiniz."},
+            {"question": f"{name} deneme bonusu cevrim sarti var mi?", "answer": f"Evet, {turnover} cevrim sarti uygulanmaktadir. Detaylar icin bonus sartlari sayfasini inceleyiniz."},
+            {"question": "Deneme bonusu ile kazanilan para cekilebilir mi?", "answer": "Cevrim sartini tamamladiktan sonra kazancinizi cekebilirsiniz."},
+        ],
+        "deneme-bonusu-2026": [
+            {"question": f"{name} 2026 deneme bonusu guncel mi?", "answer": f"Evet, {name} 2026 yili icin {bonus_amount} deneme bonusu aktif olarak sunmaktadir."},
+            {"question": "2026 bonus sartlari degisti mi?", "answer": f"Guncel cevrim sarti {turnover} olarak belirlenmistir. Detaylar icin bonus sartlari sayfasini kontrol ediniz."},
+            {"question": f"2026 yilinda {name} guvenilir mi?", "answer": f"{name} lisansli altyapisi ile 2026 yilinda da guvenilir hizmet vermeye devam etmektedir."},
+        ],
+        "hosgeldin-bonusu": [
+            {"question": f"{name} hosgeldin bonusu ne kadar?", "answer": f"{name} yeni uyelere {bonus_amount} degerinde hosgeldin bonusu sunmaktadir."},
+            {"question": "Hosgeldin bonusu nasil alinir?", "answer": "Siteye ilk kez uye olup ilk yatiriminizi yaptiktan sonra hosgeldin bonusu otomatik olarak tanimlanir."},
+            {"question": "Hosgeldin bonusu ile deneme bonusu farki nedir?", "answer": "Hosgeldin bonusu ilk yatirim sonrasi, deneme bonusu ise yatirim sartsiz verilmektedir."},
+        ],
+        "yatirimsiz-deneme-bonusu": [
+            {"question": f"{name} yatirimsiz deneme bonusu var mi?", "answer": f"Evet, {name} yeni uyelere yatirim yapmadan deneme bonusu firsati sunmaktadir."},
+            {"question": "Yatirimsiz bonus ile ne yapilabilir?", "answer": "Canli bahis, casino ve slot oyunlarinda bonus bakiyenizi kullanabilirsiniz."},
+            {"question": "Para yatirmadan bonus almak mumkun mu?", "answer": "Evet, yatirim yapmadan sadece uye olarak deneme bonusu alabilirsiniz."},
+        ],
+        "bonus-sartlari": [
+            {"question": f"{name} bonus cevrim sarti ne kadar?", "answer": f"{name} bonuslarinda {turnover} cevrim sarti uygulanmaktadir."},
+            {"question": "Cevrim sarti nasil hesaplanir?", "answer": f"Bonus miktarinin {turnover} kati kadar bahis yapmaniz gerekmektedir. Ornegin 100 TL bonus aldiysiniz, {turnover.replace('x', '')}00 TL bahis yapmaniz gerekir."},
+            {"question": "Hangi oyunlar cevrimi karsilar?", "answer": "Canli bahisler %100, casino oyunlari %10, slot oyunlari %100 oraninda cevrimi karsilamaktadir."},
+        ],
+        "odeme-yontemleri": [
+            {"question": f"{name} hangi odeme yontemlerini kabul ediyor?", "answer": f"{name} Papara, banka havale, kripto para, kredi karti ve daha bircok odeme yontemiyle islem yapmaniza olanak saglar."},
+            {"question": "Minimum yatirim tutari ne kadar?", "answer": "Minimum yatirim tutari odeme yontemine gore degiskenlik gostermekte olup genelde 50 TL ve uzeridir."},
+            {"question": "Para cekme islemi ne kadar surer?", "answer": "Para cekme islemleri genellikle 15 dakika ile 24 saat arasinda tamamlanmaktadir."},
+        ],
+    }
+    return base_faq.get(page_type, [])
+
+
+def build_hub_links_for_company(cluster: str, base_slug: str, name: str):
+    """Build links from company sub-page to relevant hub pages."""
+    links = []
+    if cluster == "company-guide":
+        # Access pages link to bonus hubs
+        links.append({"title": "Deneme Bonusu Veren Siteler", "url": "/deneme-bonusu-veren-siteler", "type": "bonus"})
+        links.append({"title": "Hosgeldin Bonusu Veren Siteler", "url": "/hosgeldin-bonusu", "type": "bonus"})
+        links.append({"title": "Bonus Veren Siteler", "url": "/bonus-veren-siteler", "type": "bonus"})
+        links.append({"title": "Odeme Yontemleri", "url": "/odeme-yontemleri", "type": "payment"})
+    else:
+        # Bonus pages link to access hubs + payment
+        links.append({"title": "Deneme Bonusu Veren Siteler", "url": "/deneme-bonusu-veren-siteler", "type": "bonus"})
+        links.append({"title": "Guncel Deneme Bonusu", "url": "/guncel-deneme-bonusu", "type": "bonus"})
+        links.append({"title": "Yatirimsiz Deneme Bonusu", "url": "/yatirimsiz-deneme-bonusu", "type": "bonus"})
+        links.append({"title": "Odeme Yontemleri", "url": "/odeme-yontemleri", "type": "payment"})
+    return links
+
+
 def extract_base_slug(full_slug: str) -> str:
     """Extract base company name slug from full slug like 'onwin-guncelgiris' -> 'onwin'"""
     if full_slug.endswith("-guncelgiris"):
@@ -4720,10 +4891,39 @@ async def get_firma_sub_page(base_slug: str, page_type: str):
         {"name": h1, "url": f"/{base}/{page_type}"},
     ]
 
+    # Phase 2: Template sections, FAQ, hub links, last_updated
+    turnover = f"{site.get('turnover_requirement', 10)}x"
+    if cluster == "company-guide":
+        template_sections = build_company_guide_sections(name, page_type, bonus_amount, base)
+    else:
+        template_sections = build_bonus_guide_sections(name, page_type, bonus_amount, base, turnover)
+
+    faq = build_faq(name, page_type, bonus_amount, cluster, turnover)
+    hub_links = build_hub_links_for_company(cluster, base, name)
+    last_updated = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Cross-cluster direct links (bonus ↔ access for same company)
+    cross_cluster_links = []
+    if cluster == "bonus-guide":
+        for pt in ["guncel-giris", "yeni-giris-adresi", "mobil-giris"]:
+            pt_meta = PAGE_TYPE_META[pt]
+            cross_cluster_links.append({
+                "page_type": pt, "url": f"/{base}/{pt}",
+                "label": pt_meta["h1_template"].format(name=name), "cluster": "company-guide",
+            })
+    else:
+        for pt in ["deneme-bonusu", "hosgeldin-bonusu", "bonus-sartlari"]:
+            pt_meta = PAGE_TYPE_META[pt]
+            cross_cluster_links.append({
+                "page_type": pt, "url": f"/{base}/{pt}",
+                "label": pt_meta["h1_template"].format(name=name), "cluster": "bonus-guide",
+            })
+
     return {
         "site": site,
         "page_type": page_type,
         "cluster": cluster,
+        "template": "bonus-guide" if cluster == "bonus-guide" else "company-guide",
         "seo": {
             "title": title,
             "description": description,
@@ -4731,11 +4931,16 @@ async def get_firma_sub_page(base_slug: str, page_type: str):
             "canonical": f"https://guncelgiris.ai/{base}/{page_type}",
         },
         "breadcrumb": breadcrumb,
+        "sections": template_sections,
+        "faq": faq,
+        "hub_links": hub_links,
+        "cross_cluster_links": cross_cluster_links,
         "internal_links": {
             "company_guide": company_guide_links,
             "bonus_guide": bonus_guide_links,
         },
         "similar_same_page": similar_same_page,
+        "last_updated": last_updated,
     }
 
 
@@ -4752,7 +4957,7 @@ async def get_bonus_hub_page(hub_slug: str):
 
     sites = await db.bonus_sites.find(query, {"_id": 0}).sort("sort_order", 1).limit(50).to_list(50)
 
-    # Build company sub-page links for interlinking
+    # Build company sub-page links for interlinking (enhanced Phase 2)
     company_links = []
     for s in sites[:20]:
         base = extract_base_slug(s.get("slug", ""))
@@ -4765,6 +4970,9 @@ async def get_bonus_hub_page(hub_slug: str):
                 "rating": s.get("rating", 4.5),
                 "guncel_giris_url": f"/{base}/guncel-giris",
                 "deneme_bonusu_url": f"/{base}/deneme-bonusu",
+                "hosgeldin_bonusu_url": f"/{base}/hosgeldin-bonusu",
+                "odeme_url": f"/{base}/odeme-yontemleri",
+                "bonus_sartlari_url": f"/{base}/bonus-sartlari",
                 "affiliate_url": s.get("affiliate_url", ""),
             })
 
@@ -4823,6 +5031,7 @@ async def get_payment_hub_page(hub_slug: str):
                 "rating": s.get("rating", 4.5),
                 "odeme_url": f"/{base}/odeme-yontemleri",
                 "guncel_giris_url": f"/{base}/guncel-giris",
+                "deneme_bonusu_url": f"/{base}/deneme-bonusu",
                 "affiliate_url": s.get("affiliate_url", ""),
             })
 
