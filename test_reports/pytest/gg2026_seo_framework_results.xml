@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="20" time="6.215" timestamp="2026-03-10T01:33:50.166830+00:00" hostname="agent-env-6340ecb7-1c32-4729-ae9e-0baf05a9afe6"><testcase classname="backend.tests.test_gg2026_seo_framework.TestHealthCheck" name="test_api_health" time="0.210"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_gg2026_seo_framework.py:48: in test_api_health
+    data = response.json()
+           ^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_gg2026_seo_framework.TestCompanySubPageAPI" name="test_company_subpage_guncel_giris" time="0.260" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestCompanySubPageAPI" name="test_company_subpage_deneme_bonusu" time="0.279" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestCompanySubPageAPI" name="test_all_page_types_valid" time="1.382" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestCompanySubPageAPI" name="test_invalid_page_type_returns_404" time="0.260" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestCompanySubPageAPI" name="test_invalid_company_returns_404" time="0.148" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestCompanySubPageAPI" name="test_similar_firms_included" time="0.252" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestBonusHubAPI" name="test_bonus_hub_deneme_bonusu_veren_siteler" time="0.138" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestBonusHubAPI" name="test_all_bonus_hub_pages" time="0.520" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestBonusHubAPI" name="test_invalid_bonus_hub_returns_404" time="0.111" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestPaymentHubAPI" name="test_payment_hub_odeme_yontemleri" time="0.130" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestPaymentHubAPI" name="test_all_payment_hub_pages" time="1.029" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestPaymentHubAPI" name="test_invalid_payment_hub_returns_404" time="0.112" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestSitemapSEOPages" name="test_sitemap_seo_pages_returns_xml" time="0.156" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestSitemapSEOPages" name="test_sitemap_seo_pages_contains_hub_pages" time="0.214" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestSitemapSEOPages" name="test_sitemap_seo_pages_contains_company_subpages" time="0.188" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestSitemapIndex" name="test_sitemap_index_includes_seo_pages" time="0.110" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestExistingRoutesStillWork" name="test_homepage_loads" time="0.118" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestExistingRoutesStillWork" name="test_deneme_bonusu_api" time="0.108" /><testcase classname="backend.tests.test_gg2026_seo_framework.TestExistingRoutesStillWork" name="test_firm_page_api" time="0.242"><failure message="AssertionError: Expected 200, got 404&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_gg2026_seo_framework.py:393: in test_firm_page_api
+    assert firm_response.status_code == 200, f"Expected 200, got {firm_response.status_code}"
+E   AssertionError: Expected 200, got 404
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase></testsuite></testsuites>

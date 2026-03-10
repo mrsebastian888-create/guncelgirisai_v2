@@ -4268,6 +4268,10 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     <loc>{base_url}/api/sitemap-amp-videos.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-seo-pages.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
 </sitemapindex>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -4463,6 +4467,443 @@ async def sitemap_amp_videos(request: Request):
 {chr(10).join(urls)}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
+
+
+# ============== GG2026 SEO FRAMEWORK ==============
+
+# Valid company sub-page types
+COMPANY_PAGE_TYPES = [
+    "guncel-giris", "guncel-adresi", "yeni-giris-adresi", "mobil-giris",
+    "deneme-bonusu", "deneme-bonusu-2026", "hosgeldin-bonusu",
+    "yatirimsiz-deneme-bonusu", "bonus-sartlari", "odeme-yontemleri"
+]
+
+# Page type metadata for SEO
+PAGE_TYPE_META = {
+    "guncel-giris": {
+        "title_suffix": "Guncel Giris Adresi 2026",
+        "description_template": "{name} guncel giris adresi 2026. Yeni ve calisan giris linki ile siteye hemen eris.",
+        "h1_template": "{name} Guncel Giris",
+        "cluster": "company-guide",
+    },
+    "guncel-adresi": {
+        "title_suffix": "Guncel Adresi 2026",
+        "description_template": "{name} guncel adresi. Engelsiz erisim icin en son guncellenen adres bilgisi.",
+        "h1_template": "{name} Guncel Adresi",
+        "cluster": "company-guide",
+    },
+    "yeni-giris-adresi": {
+        "title_suffix": "Yeni Giris Adresi 2026",
+        "description_template": "{name} yeni giris adresi 2026. Guncel link ve alternatif erisim yontemleri.",
+        "h1_template": "{name} Yeni Giris Adresi",
+        "cluster": "company-guide",
+    },
+    "mobil-giris": {
+        "title_suffix": "Mobil Giris 2026",
+        "description_template": "{name} mobil giris adresi. Telefondan ve tabletten kolay erisim.",
+        "h1_template": "{name} Mobil Giris",
+        "cluster": "company-guide",
+    },
+    "deneme-bonusu": {
+        "title_suffix": "Deneme Bonusu 2026",
+        "description_template": "{name} deneme bonusu 2026. {bonus_amount} degerinde yatirim sartsiz deneme bonusu firsati.",
+        "h1_template": "{name} Deneme Bonusu",
+        "cluster": "bonus-guide",
+    },
+    "deneme-bonusu-2026": {
+        "title_suffix": "Deneme Bonusu 2026 Guncel",
+        "description_template": "{name} 2026 yili guncel deneme bonusu. En son bonus firsatlari ve kosullari.",
+        "h1_template": "{name} Deneme Bonusu 2026",
+        "cluster": "bonus-guide",
+    },
+    "hosgeldin-bonusu": {
+        "title_suffix": "Hosgeldin Bonusu 2026",
+        "description_template": "{name} hosgeldin bonusu. Ilk uyeliginize ozel {bonus_amount} bonus firsati.",
+        "h1_template": "{name} Hosgeldin Bonusu",
+        "cluster": "bonus-guide",
+    },
+    "yatirimsiz-deneme-bonusu": {
+        "title_suffix": "Yatirimsiz Deneme Bonusu 2026",
+        "description_template": "{name} yatirimsiz deneme bonusu. Para yatirmadan bonus kazanma firsati.",
+        "h1_template": "{name} Yatirimsiz Deneme Bonusu",
+        "cluster": "bonus-guide",
+    },
+    "bonus-sartlari": {
+        "title_suffix": "Bonus Sartlari ve Kurallari",
+        "description_template": "{name} bonus sartlari. Cevrim kosullari, minimum yatirim ve cekim limitleri.",
+        "h1_template": "{name} Bonus Sartlari",
+        "cluster": "bonus-guide",
+    },
+    "odeme-yontemleri": {
+        "title_suffix": "Odeme Yontemleri 2026",
+        "description_template": "{name} odeme yontemleri. Papara, havale, kripto ve diger para yatirma-cekme secenekleri.",
+        "h1_template": "{name} Odeme Yontemleri",
+        "cluster": "company-guide",
+    },
+}
+
+# Hub page definitions
+BONUS_HUB_PAGES = {
+    "deneme-bonusu-veren-siteler": {
+        "title": "Deneme Bonusu Veren Siteler 2026",
+        "description": "2026 yilinin en guncel deneme bonusu veren guvenilir bahis siteleri listesi. Yatirimsiz bonus firsatlarini kacirmayin.",
+        "h1": "Deneme Bonusu Veren Siteler",
+        "filter_type": "deneme",
+        "cluster": "bonus-guide",
+    },
+    "guncel-deneme-bonusu": {
+        "title": "Guncel Deneme Bonusu 2026",
+        "description": "Guncel deneme bonusu veren siteler. En son guncellenen bonus listesi ve firsatlar.",
+        "h1": "Guncel Deneme Bonusu",
+        "filter_type": "deneme",
+        "cluster": "bonus-guide",
+    },
+    "yatirimsiz-deneme-bonusu": {
+        "title": "Yatirimsiz Deneme Bonusu Veren Siteler 2026",
+        "description": "Yatirimsiz deneme bonusu veren siteler 2026. Para yatirmadan bonus al, risksiz oyna.",
+        "h1": "Yatirimsiz Deneme Bonusu",
+        "filter_type": "deneme",
+        "cluster": "bonus-guide",
+    },
+    "hosgeldin-bonusu": {
+        "title": "Hosgeldin Bonusu Veren Siteler 2026",
+        "description": "En yuksek hosgeldin bonusu veren bahis siteleri. Ilk uyeliginize ozel firsatlar.",
+        "h1": "Hosgeldin Bonusu Veren Siteler",
+        "filter_type": "hosgeldin",
+        "cluster": "bonus-guide",
+    },
+    "bonus-veren-siteler": {
+        "title": "Bonus Veren Siteler 2026 - Tum Bonus Firsatlari",
+        "description": "2026 yilinda bonus veren tum guvenilir bahis siteleri. Deneme, hosgeldin ve yatirim bonuslari.",
+        "h1": "Bonus Veren Siteler",
+        "filter_type": None,
+        "cluster": "bonus-guide",
+    },
+}
+
+PAYMENT_HUB_PAGES = {
+    "odeme-yontemleri": {
+        "title": "Bahis Siteleri Odeme Yontemleri 2026",
+        "description": "Bahis sitelerinde kullanilan odeme yontemleri. Papara, havale, kripto ve daha fazlasi.",
+        "h1": "Odeme Yontemleri",
+        "payment_method": None,
+    },
+    "mobil-odeme-ile-bahis": {
+        "title": "Mobil Odeme ile Bahis 2026",
+        "description": "Mobil odeme ile bahis yapilan siteler. Telefon faturasi ve mobil cuzdan ile para yatirma.",
+        "h1": "Mobil Odeme ile Bahis",
+        "payment_method": "mobil",
+    },
+    "kredi-karti-ile-bahis": {
+        "title": "Kredi Karti ile Bahis 2026",
+        "description": "Kredi karti ile para yatirilan bahis siteleri. Visa ve Mastercard kabul eden platformlar.",
+        "h1": "Kredi Karti ile Bahis",
+        "payment_method": "kredi-karti",
+    },
+    "papel-ile-bahis": {
+        "title": "Papara ile Bahis 2026",
+        "description": "Papara ile para yatirilan bahis siteleri. Hizli ve guvenli Papara odeme secenekleri.",
+        "h1": "Papara ile Bahis",
+        "payment_method": "papara",
+    },
+    "havale-ile-bahis": {
+        "title": "Havale ile Bahis 2026",
+        "description": "Banka havale ile para yatirilan bahis siteleri. EFT ve havale kabul eden platformlar.",
+        "h1": "Havale ile Bahis",
+        "payment_method": "havale",
+    },
+    "kripto-ile-bahis": {
+        "title": "Kripto ile Bahis 2026",
+        "description": "Kripto para ile bahis yapilan siteler. Bitcoin, USDT ve diger kripto odeme secenekleri.",
+        "h1": "Kripto ile Bahis",
+        "payment_method": "kripto",
+    },
+    "bddk-onayli-odeme-yontemleri": {
+        "title": "BDDK Onayli Odeme Yontemleri 2026",
+        "description": "BDDK onayli odeme yontemleri ile guvenli bahis. Lisansli odeme kuruluslari.",
+        "h1": "BDDK Onayli Odeme Yontemleri",
+        "payment_method": "bddk",
+    },
+    "guvenli-odeme-yontemleri": {
+        "title": "Guvenli Odeme Yontemleri 2026",
+        "description": "En guvenli odeme yontemleri ile bahis. SSL sertifikali ve lisansli platformlar.",
+        "h1": "Guvenli Odeme Yontemleri",
+        "payment_method": "guvenli",
+    },
+}
+
+
+def extract_base_slug(full_slug: str) -> str:
+    """Extract base company name slug from full slug like 'onwin-guncelgiris' -> 'onwin'"""
+    if full_slug.endswith("-guncelgiris"):
+        return full_slug[:-len("-guncelgiris")]
+    return full_slug
+
+
+async def resolve_site_by_base_slug(base_slug: str) -> Dict[str, Any]:
+    """Resolve firm by base slug (company name only, without -guncelgiris suffix)."""
+    # Try exact slug with -guncelgiris suffix
+    site = await db.bonus_sites.find_one({"slug": f"{base_slug}-guncelgiris"}, {"_id": 0})
+    if site:
+        return site
+    # Try exact slug as-is
+    site = await db.bonus_sites.find_one({"slug": base_slug}, {"_id": 0})
+    if site:
+        return site
+    # Try name match
+    site = await db.bonus_sites.find_one(
+        {"name": {"$regex": f"^{re.escape(base_slug).replace('-', '[ -]?')}$", "$options": "i"}},
+        {"_id": 0}
+    )
+    if site:
+        return site
+    raise HTTPException(status_code=404, detail="Firma bulunamadi")
+
+
+@api_router.get("/firma-sub/{base_slug}/{page_type}")
+async def get_firma_sub_page(base_slug: str, page_type: str):
+    """Get company sub-page data for GG2026 SEO folder architecture."""
+    if page_type not in COMPANY_PAGE_TYPES:
+        raise HTTPException(status_code=404, detail="Gecersiz sayfa tipi")
+
+    site = await resolve_site_by_base_slug(base_slug)
+    meta = PAGE_TYPE_META[page_type]
+
+    name = site.get("name", "")
+    bonus_amount = site.get("bonus_amount", "")
+    base = extract_base_slug(site.get("slug", base_slug))
+
+    title = f"{name} {meta['title_suffix']}"
+    description = meta["description_template"].format(name=name, bonus_amount=bonus_amount)
+    h1 = meta["h1_template"].format(name=name)
+
+    # Build internal links to other sub-pages (for cluster interlinking)
+    internal_links = []
+    for pt in COMPANY_PAGE_TYPES:
+        if pt != page_type:
+            pt_meta = PAGE_TYPE_META[pt]
+            internal_links.append({
+                "page_type": pt,
+                "url": f"/{base}/{pt}",
+                "label": pt_meta["h1_template"].format(name=name),
+                "cluster": pt_meta["cluster"],
+            })
+
+    # Cross-cluster links (bonus guide ↔ company guide)
+    cluster = meta["cluster"]
+    company_guide_links = [lnk for lnk in internal_links if lnk["cluster"] == "company-guide"][:3]
+    bonus_guide_links = [lnk for lnk in internal_links if lnk["cluster"] == "bonus-guide"][:3]
+
+    # Similar firms for interlinking
+    similar = await db.bonus_sites.find(
+        {"category": site.get("category", "Turkiye"), "name": {"$ne": name}, "is_active": True},
+        {"_id": 0, "name": 1, "slug": 1, "bonus_amount": 1, "logo_url": 1, "rating": 1}
+    ).sort("rating", -1).limit(6).to_list(6)
+
+    # Build similar firms' same page-type links
+    similar_same_page = []
+    for s in similar:
+        s_base = extract_base_slug(s.get("slug", ""))
+        if s_base:
+            similar_same_page.append({
+                "name": s["name"],
+                "url": f"/{s_base}/{page_type}",
+                "logo_url": s.get("logo_url", ""),
+                "bonus_amount": s.get("bonus_amount", ""),
+                "rating": s.get("rating", 4.5),
+            })
+
+    # Breadcrumb
+    breadcrumb = [
+        {"name": "Ana Sayfa", "url": "/"},
+        {"name": name, "url": f"/{base}"},
+        {"name": h1, "url": f"/{base}/{page_type}"},
+    ]
+
+    return {
+        "site": site,
+        "page_type": page_type,
+        "cluster": cluster,
+        "seo": {
+            "title": title,
+            "description": description,
+            "h1": h1,
+            "canonical": f"https://guncelgiris.ai/{base}/{page_type}",
+        },
+        "breadcrumb": breadcrumb,
+        "internal_links": {
+            "company_guide": company_guide_links,
+            "bonus_guide": bonus_guide_links,
+        },
+        "similar_same_page": similar_same_page,
+    }
+
+
+@api_router.get("/hub/bonus/{hub_slug}")
+async def get_bonus_hub_page(hub_slug: str):
+    """Get bonus hub page data for GG2026 SEO."""
+    hub = BONUS_HUB_PAGES.get(hub_slug)
+    if not hub:
+        raise HTTPException(status_code=404, detail="Hub sayfasi bulunamadi")
+
+    query = {"is_active": True}
+    if hub["filter_type"]:
+        query["bonus_type"] = hub["filter_type"]
+
+    sites = await db.bonus_sites.find(query, {"_id": 0}).sort("sort_order", 1).limit(50).to_list(50)
+
+    # Build company sub-page links for interlinking
+    company_links = []
+    for s in sites[:20]:
+        base = extract_base_slug(s.get("slug", ""))
+        if base:
+            company_links.append({
+                "name": s["name"],
+                "base_slug": base,
+                "bonus_amount": s.get("bonus_amount", ""),
+                "logo_url": s.get("logo_url", ""),
+                "rating": s.get("rating", 4.5),
+                "guncel_giris_url": f"/{base}/guncel-giris",
+                "deneme_bonusu_url": f"/{base}/deneme-bonusu",
+                "affiliate_url": s.get("affiliate_url", ""),
+            })
+
+    # Cross-cluster links to payment hubs
+    payment_hub_links = [
+        {"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in PAYMENT_HUB_PAGES.items()
+    ]
+
+    # Links to other bonus hubs
+    other_bonus_hubs = [
+        {"slug": k, "title": v["h1"], "url": f"/{k}"}
+        for k, v in BONUS_HUB_PAGES.items() if k != hub_slug
+    ]
+
+    breadcrumb = [
+        {"name": "Ana Sayfa", "url": "/"},
+        {"name": hub["h1"], "url": f"/{hub_slug}"},
+    ]
+
+    return {
+        "hub_slug": hub_slug,
+        "seo": {
+            "title": hub["title"],
+            "description": hub["description"],
+            "h1": hub["h1"],
+            "canonical": f"https://guncelgiris.ai/{hub_slug}",
+        },
+        "breadcrumb": breadcrumb,
+        "sites": sites,
+        "company_links": company_links,
+        "related_hubs": {
+            "bonus": other_bonus_hubs,
+            "payment": payment_hub_links,
+        },
+    }
+
+
+@api_router.get("/hub/payment/{hub_slug}")
+async def get_payment_hub_page(hub_slug: str):
+    """Get payment hub page data for GG2026 SEO."""
+    hub = PAYMENT_HUB_PAGES.get(hub_slug)
+    if not hub:
+        raise HTTPException(status_code=404, detail="Hub sayfasi bulunamadi")
+
+    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).sort("sort_order", 1).limit(50).to_list(50)
+
+    company_links = []
+    for s in sites[:20]:
+        base = extract_base_slug(s.get("slug", ""))
+        if base:
+            company_links.append({
+                "name": s["name"],
+                "base_slug": base,
+                "bonus_amount": s.get("bonus_amount", ""),
+                "logo_url": s.get("logo_url", ""),
+                "rating": s.get("rating", 4.5),
+                "odeme_url": f"/{base}/odeme-yontemleri",
+                "guncel_giris_url": f"/{base}/guncel-giris",
+                "affiliate_url": s.get("affiliate_url", ""),
+            })
+
+    # Cross-cluster links
+    bonus_hub_links = [
+        {"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in BONUS_HUB_PAGES.items()
+    ]
+    other_payment_hubs = [
+        {"slug": k, "title": v["h1"], "url": f"/{k}"}
+        for k, v in PAYMENT_HUB_PAGES.items() if k != hub_slug
+    ]
+
+    breadcrumb = [
+        {"name": "Ana Sayfa", "url": "/"},
+        {"name": hub["h1"], "url": f"/{hub_slug}"},
+    ]
+
+    return {
+        "hub_slug": hub_slug,
+        "seo": {
+            "title": hub["title"],
+            "description": hub["description"],
+            "h1": hub["h1"],
+            "canonical": f"https://guncelgiris.ai/{hub_slug}",
+        },
+        "breadcrumb": breadcrumb,
+        "sites": sites,
+        "company_links": company_links,
+        "related_hubs": {
+            "bonus": bonus_hub_links,
+            "payment": other_payment_hubs,
+        },
+    }
+
+
+@api_router.get("/sitemap-seo-pages.xml")
+async def sitemap_seo_pages(request: Request):
+    """GG2026 SEO hub pages and company sub-pages sitemap."""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    urls = []
+
+    # Bonus hub pages
+    for slug in BONUS_HUB_PAGES:
+        urls.append(f"""  <url>
+    <loc>{base_url}/{slug}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>""")
+
+    # Payment hub pages
+    for slug in PAYMENT_HUB_PAGES:
+        urls.append(f"""  <url>
+    <loc>{base_url}/{slug}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>""")
+
+    # Company sub-pages
+    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
+    for firm in firms:
+        full_slug = firm.get("slug", "")
+        if not full_slug:
+            continue
+        base = extract_base_slug(full_slug)
+        for pt in COMPANY_PAGE_TYPES:
+            urls.append(f"""  <url>
+    <loc>{base_url}/{base}/{pt}</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
 
 
 MIGRATION_SECRET = "dsbn-migrate-2026-guncelgiris"
@@ -5102,7 +5543,7 @@ async def telegram_webhook_handler(bot_id: str, request: Request):
 
     message = update.get("message")
     if not message:
-        logger.info(f"[TG-WEBHOOK] No message field in update")
+        logger.info("[TG-WEBHOOK] No message field in update")
         return {"ok": True}
 
     chat_id = message.get("chat", {}).get("id")

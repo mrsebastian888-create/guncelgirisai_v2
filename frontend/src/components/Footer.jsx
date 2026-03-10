@@ -33,52 +33,57 @@ const Footer = () => {
             <ul className="space-y-3">
               <li>
                 <Link to="/deneme-bonusu" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">
+                  Deneme Bonusu
+                </Link>
+              </li>
+              <li>
+                <Link to="/deneme-bonusu-veren-siteler" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">
                   Deneme Bonusu Veren Siteler
                 </Link>
               </li>
               <li>
                 <Link to="/hosgeldin-bonusu" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">
-                  Hoşgeldin Bonusları
+                  Hosgeldin Bonusu
                 </Link>
               </li>
               <li>
-                <Link to="/bonus/yatirim" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">
-                  Yatırım Bonusları
+                <Link to="/yatirimsiz-deneme-bonusu" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">
+                  Yatirimsiz Deneme Bonusu
                 </Link>
               </li>
               <li>
-                <Link to="/bonus/kayip" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">
-                  Kayıp Bonusları
+                <Link to="/bonus-veren-siteler" className="text-muted-foreground hover:text-neon-green transition-colors text-sm">
+                  Tum Bonus Veren Siteler
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Sports Links */}
+          {/* Payment Links */}
           <div>
             <h4 className="font-heading text-lg font-bold uppercase mb-4 flex items-center gap-2">
               <Activity className="w-5 h-5 text-[#00F0FF]" />
-              Spor Haberleri
+              Odeme Yontemleri
             </h4>
             <ul className="space-y-3">
               <li>
-                <Link to="/spor-haberleri?category=super-lig" className="text-muted-foreground hover:text-[#00F0FF] transition-colors text-sm">
-                  Süper Lig
+                <Link to="/odeme-yontemleri" className="text-muted-foreground hover:text-[#00F0FF] transition-colors text-sm">
+                  Tum Odeme Yontemleri
                 </Link>
               </li>
               <li>
-                <Link to="/spor-haberleri?category=premier-lig" className="text-muted-foreground hover:text-[#00F0FF] transition-colors text-sm">
-                  Premier Lig
+                <Link to="/papel-ile-bahis" className="text-muted-foreground hover:text-[#00F0FF] transition-colors text-sm">
+                  Papara ile Bahis
                 </Link>
               </li>
               <li>
-                <Link to="/spor-haberleri?category=sampiyonlar-ligi" className="text-muted-foreground hover:text-[#00F0FF] transition-colors text-sm">
-                  Şampiyonlar Ligi
+                <Link to="/kripto-ile-bahis" className="text-muted-foreground hover:text-[#00F0FF] transition-colors text-sm">
+                  Kripto ile Bahis
                 </Link>
               </li>
               <li>
-                <Link to="/spor-haberleri" className="text-muted-foreground hover:text-[#00F0FF] transition-colors text-sm">
-                  Tüm Haberler
+                <Link to="/guvenli-odeme-yontemleri" className="text-muted-foreground hover:text-[#00F0FF] transition-colors text-sm">
+                  Guvenli Odeme Yontemleri
                 </Link>
               </li>
             </ul>

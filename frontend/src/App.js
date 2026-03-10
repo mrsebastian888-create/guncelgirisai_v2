@@ -17,6 +17,9 @@ import FirmPage from "@/pages/FirmPage";
 import FirmVideoPage from "@/pages/FirmVideoPage";
 import CompanyProfilePage from "@/pages/CompanyProfilePage";
 import CompaniesPage from "@/pages/CompaniesPage";
+import CompanySubPage from "@/pages/CompanySubPage";
+import BonusHubPage from "@/pages/BonusHubPage";
+import PaymentHubPage from "@/pages/PaymentHubPage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -80,6 +83,26 @@ function AppLayout({ isLoading }) {
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
               <Route path="/companies" element={<CompaniesPage />} />
               <Route path="/companies/:slug" element={<CompanyProfilePage />} />
+
+              {/* GG2026 SEO: Bonus Hub Pages */}
+              <Route path="/deneme-bonusu-veren-siteler" element={<BonusHubPage />} />
+              <Route path="/guncel-deneme-bonusu" element={<BonusHubPage />} />
+              <Route path="/yatirimsiz-deneme-bonusu" element={<BonusHubPage />} />
+              <Route path="/bonus-veren-siteler" element={<BonusHubPage />} />
+
+              {/* GG2026 SEO: Payment Hub Pages */}
+              <Route path="/odeme-yontemleri" element={<PaymentHubPage />} />
+              <Route path="/mobil-odeme-ile-bahis" element={<PaymentHubPage />} />
+              <Route path="/kredi-karti-ile-bahis" element={<PaymentHubPage />} />
+              <Route path="/papel-ile-bahis" element={<PaymentHubPage />} />
+              <Route path="/havale-ile-bahis" element={<PaymentHubPage />} />
+              <Route path="/kripto-ile-bahis" element={<PaymentHubPage />} />
+              <Route path="/bddk-onayli-odeme-yontemleri" element={<PaymentHubPage />} />
+              <Route path="/guvenli-odeme-yontemleri" element={<PaymentHubPage />} />
+
+              {/* GG2026 SEO: Company Sub-Pages (must be before /:slug catch-all) */}
+              <Route path="/:companySlug/:pageType" element={<CompanySubPage />} />
+
               <Route path="/:slug/video" element={<FirmVideoPage />} />
               <Route path="/:slug" element={<FirmPage />} />
 
