@@ -1,4 +1,4 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v23.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v24.0
 
 ## Original Problem Statement
 Spor icerikleri ve deneme bonusu rehberlerini birlestiren, SEO uyumlu, AI destekli, multi-tenant icerik platformu. guncelgiris.ai sitesinin GG2026 SEO framework ile buyuk olcekli SEO buyumesine hazirlanmasi.
@@ -6,63 +6,60 @@ Spor icerikleri ve deneme bonusu rehberlerini birlestiren, SEO uyumlu, AI destek
 ## What's Been Implemented
 
 ### v1-v22: Previous versions (see CHANGELOG.md for full history)
-### v23.0: GG2026 SEO Framework - Phase 1 (Mar 2026) - CURRENT
+### v23.0: GG2026 SEO Framework - Phase 1 (Mar 2026)
+- Company folder architecture: Her firma icin 10 alt sayfa tipi
+- Two core clusters: Company Guide ve Bonus Guide
+- 5 Bonus hub + 8 Payment hub pages
+- Navigation menu guncelleme
+- Technical SEO: Dynamic titles, meta descriptions, canonical URLs, breadcrumbs
+- Sitemap scaffolding
 
-**Degisiklikler:**
-- Company folder architecture: Her firma icin 10 alt sayfa tipi (guncel-giris, deneme-bonusu, odeme-yontemleri vb.)
-- Two core clusters: Company Guide (Firma Rehberi) ve Bonus Guide (Bonus Rehberi) kume yapisi
-- Internal linking: Kumeler arasi cift yonlu baglanti sistemi
-- 5 Bonus hub pages: /deneme-bonusu-veren-siteler, /guncel-deneme-bonusu, /yatirimsiz-deneme-bonusu, /hosgeldin-bonusu (var), /bonus-veren-siteler
-- 8 Payment hub pages: /odeme-yontemleri, /mobil-odeme-ile-bahis, /kredi-karti-ile-bahis, /papel-ile-bahis, /havale-ile-bahis, /kripto-ile-bahis, /bddk-onayli-odeme-yontemleri, /guvenli-odeme-yontemleri
-- Navigation menu guncelleme: Bonuslar, Firma Rehberi, Odeme dropdown menuleri
-- Technical SEO: Dynamic titles, meta descriptions, canonical URLs, JSON-LD breadcrumbs
-- Sitemap scaffolding: sitemap-seo-pages.xml eklendi (tum hub ve alt sayfalari icerir)
+### v24.0: GG2026 SEO Framework - Phase 2 (Mar 2026) - CURRENT
+**Page Template System:**
+- CompanyGuideTemplate: overview, access instructions, address change, mobile login, safety notes, cross-cluster links, hub links, FAQ, last updated
+- BonusGuideTemplate: overview, bonus availability, bonus types, wagering requirements, pros/cons, who it suits, cross-cluster links, hub links, FAQ, last updated
+- Internal linking system: hub→company, bonus→access, access→bonus, payment hub→company payment
+- Schema support: BreadcrumbList, FAQPage, Article JSON-LD
 
-**Yeni API Endpoints:**
-- `GET /api/firma-sub/{base_slug}/{page_type}` - Company sub-page data with SEO, breadcrumb, cluster links
-- `GET /api/hub/bonus/{hub_slug}` - Bonus hub page data with sites, company links, related hubs
-- `GET /api/hub/payment/{hub_slug}` - Payment hub page data with sites, company links, cross-cluster links
-- `GET /api/sitemap-seo-pages.xml` - New SEO pages sitemap
+**New Backend Functions:**
+- `build_company_guide_sections()` - Template sections for access pages
+- `build_bonus_guide_sections()` - Template sections for bonus pages
+- `build_faq()` - FAQ generation per page type
+- `build_hub_links_for_company()` - Hub cross-references
 
-**Yeni Frontend Sayfalar:**
-- CompanySubPage.jsx - /:companySlug/:pageType route
-- BonusHubPage.jsx - Bonus hub sayfalari
-- PaymentHubPage.jsx - Odeme hub sayfalari
+**Enhanced API Response:**
+- `GET /api/firma-sub/{slug}/{page_type}` now returns: template, sections, faq, hub_links, cross_cluster_links, last_updated
+- `GET /api/hub/bonus/{slug}` now returns: hosgeldin_bonusu_url, odeme_url, bonus_sartlari_url per company
+- `GET /api/hub/payment/{slug}` now returns: deneme_bonusu_url per company
 
-**URL Yapisi:**
-```
-/{company}/guncel-giris          # Firma guncel giris
-/{company}/deneme-bonusu         # Firma deneme bonusu
-/{company}/hosgeldin-bonusu      # Firma hosgeldin bonusu
-/{company}/odeme-yontemleri      # Firma odeme yontemleri
-/deneme-bonusu-veren-siteler     # Hub: Deneme bonusu veren siteler
-/guncel-deneme-bonusu            # Hub: Guncel deneme bonusu
-/odeme-yontemleri                # Hub: Odeme yontemleri
-/kripto-ile-bahis                # Hub: Kripto ile bahis
-...
-```
+**New Frontend Components:**
+- `CompanyGuideTemplate.jsx` - 8 section template for access pages
+- `BonusGuideTemplate.jsx` - 9 section template for bonus pages
 
 ## Architecture
 ```
 /app/
 ├── backend/
-│   ├── server.py              // GG2026 SEO framework endpoints added
-│   ├── telegram_bot_manager.py
-│   └── modules/
+│   ├── server.py              // Phase 2 template generators + enhanced endpoints
+│   └── tests/
+│       └── test_gg2026_phase2_templates.py
 ├── frontend/src/
-│   ├── App.js                 // Updated routes (hub pages + company sub-pages)
-│   ├── pages/
-│   │   ├── CompanySubPage.jsx  // NEW: Company folder sub-pages
-│   │   ├── BonusHubPage.jsx    // NEW: Bonus hub pages
-│   │   ├── PaymentHubPage.jsx  // NEW: Payment hub pages
-│   │   ├── HomePage.jsx
-│   │   ├── FirmPage.jsx
-│   │   ├── BonusGuidePage.jsx
-│   │   └── AdminPage.jsx
-│   └── components/
-│       ├── Navbar.jsx          // Updated navigation dropdowns
-│       ├── Footer.jsx          // Updated footer links
-│       └── MobileBottomNav.jsx // Updated mobile nav
+│   ├── App.js
+│   ├── components/
+│   │   ├── templates/
+│   │   │   ├── CompanyGuideTemplate.jsx  // NEW Phase 2
+│   │   │   └── BonusGuideTemplate.jsx    // NEW Phase 2
+│   │   ├── Navbar.jsx
+│   │   ├── Footer.jsx
+│   │   └── MobileBottomNav.jsx
+│   └── pages/
+│       ├── CompanySubPage.jsx   // Updated: uses templates + schemas
+│       ├── BonusHubPage.jsx     // Updated: enhanced internal linking
+│       ├── PaymentHubPage.jsx   // Updated: enhanced internal linking
+│       ├── HomePage.jsx
+│       ├── FirmPage.jsx
+│       ├── BonusGuidePage.jsx
+│       └── AdminPage.jsx
 ```
 
 ## Prioritized Backlog
@@ -71,7 +68,7 @@ Spor icerikleri ve deneme bonusu rehberlerini birlestiren, SEO uyumlu, AI destek
 - Production domain (guncelgiris.ai) instability - BLOCKED on Emergent support
 
 ### P1 - High Priority
-- GG2026 Phase 2: Content enrichment (AI-generated SEO content for sub-pages)
+- GG2026 Phase 3: Content enrichment (AI-generated SEO content for sub-pages)
 - Telegram BotFather rate limit solution (multi-account rotation)
 - Company Intelligence API keys integration
 
