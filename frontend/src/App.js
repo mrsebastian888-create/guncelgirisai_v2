@@ -61,7 +61,12 @@ import MatchDetailPage from "@/pages/MatchDetailPage";
 import FirmPage from "@/pages/FirmPage";
 import FirmVideoPage from "@/pages/FirmVideoPage";
 import SlugResolver from "@/pages/SlugResolver";
+import BonusHubPage from "@/pages/BonusHubPage";
+import PaymentHubPage from "@/pages/PaymentHubPage";
 import CompanyProfilePage from "@/pages/CompanyProfilePage";
+import CompanySubPage from "@/pages/CompanySubPage";
+import CompanyArticlesListPage from "@/pages/CompanyArticlesListPage";
+import CompanyArticlePage from "@/pages/CompanyArticlePage";
 import CompaniesPage from "@/pages/CompaniesPage";
 import ProvidersPage from "@/pages/ProvidersPage";
 import ProviderDetailPage from "@/pages/ProviderDetailPage";
@@ -167,12 +172,15 @@ function AppLayout({ isLoading }) {
               <Route path="/makale/:slug" element={<ArticlePage />} />
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
               <Route path="/companies" element={<CompaniesPage />} />
+              <Route path="/companies/:companySlug/makaleler" element={<CompanyArticlesListPage />} />
+              <Route path="/companies/:companySlug/makale/:articleSlug" element={<CompanyArticlePage />} />
+              <Route path="/companies/:companySlug/:pageType" element={<CompanySubPage />} />
               <Route path="/companies/:slug" element={<CompanyProfilePage />} />
               <Route path="/saglayicilar" element={<ProvidersPage />} />
               <Route path="/saglayicilar/:slug" element={<ProviderDetailPage />} />
               <Route path="/iletisim" element={<ContactPage />} />
               <Route path="/:slug/video" element={<FirmVideoPage />} />
-              <Route path="/:slug" element={<FirmPage />} />
+              <Route path="/:slug" element={<SlugResolver />} />
               <Route path="*" element={<NotFoundPage />} />
 
               {/* Admin routes — SADECE admin subdomainde */}

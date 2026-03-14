@@ -2208,6 +2208,178 @@ async def get_firma_video_detail(slug: str):
     }
 
 
+# ─── GG2026: resolve slug, hub, programmatic, firma-sub, company-articles ───
+
+BONUS_HUB_SLUGS = [
+    "deneme-bonusu-veren-siteler", "guncel-deneme-bonusu",
+    "yatirimsiz-deneme-bonusu", "bonus-veren-siteler",
+]
+PAYMENT_HUB_SLUGS = [
+    "odeme-yontemleri", "mobil-odeme-ile-bahis", "kredi-karti-ile-bahis",
+    "papel-ile-bahis", "havale-ile-bahis", "kripto-ile-bahis",
+    "bddk-onayli-odeme-yontemleri", "guvenli-odeme-yontemleri",
+]
+VALID_FIRMA_SUB_PAGE_TYPES = [
+    "guncel-giris", "guncel-adresi", "yeni-giris-adresi", "mobil-giris",
+    "deneme-bonusu", "deneme-bonusu-2026", "hosgeldin-bonusu",
+    "yatirimsiz-deneme-bonusu", "bonus-sartlari", "odeme-yontemleri",
+]
+
+
+@api_router.get("/resolve-slug/{slug}")
+async def resolve_slug(slug: str):
+    """Return page type for top-level slug: programmatic | bonus_hub | payment_hub | firm."""
+    slug = (slug or "").strip().strip("/")
+    if not slug:
+        raise HTTPException(status_code=404, detail="Slug gerekli")
+    try:
+        from agents.programmatic_engine import ProgrammaticEngine
+        engine = ProgrammaticEngine(db)
+        if await engine.get_page(slug):
+            return {"type": "programmatic"}
+    except Exception:
+        pass
+    if slug in BONUS_HUB_SLUGS:
+        return {"type": "bonus_hub"}
+    if slug in PAYMENT_HUB_SLUGS:
+        return {"type": "payment_hub"}
+    firm = await db.bonus_sites.find_one({"slug": slug, "is_active": True}, {"_id": 1})
+    if firm:
+        return {"type": "firm"}
+    raise HTTPException(status_code=404, detail="Sayfa bulunamadi")
+
+
+async def _build_hub_response(slug: str, hub_type: str, title_key: str, base_url: str) -> Dict[str, Any]:
+    """Build hub page response with seo, breadcrumb, sites, company_links, related_hubs."""
+    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).sort("sort_order", 1).limit(30).to_list(30)
+    title = title_key if hub_type == "bonus" else slug.replace("-", " ").title()
+    seo = {"title": f"{title} 2026 | Guncel Giris", "description": f"{title} listesi. Guvenilir siteler.", "h1": title}
+    breadcrumb = [{"name": "Ana Sayfa", "url": "/"}, {"name": title, "url": f"/{slug}"}]
+    company_links = []
+    for s in sites[:15]:
+        firm_slug = s.get("slug", "")
+        company_links.append({
+            "name": s.get("name", ""),
+            "slug": firm_slug,
+            "guncel_giris_url": f"/{firm_slug}/guncel-giris" if firm_slug else "",
+            "deneme_bonusu_url": f"/{firm_slug}/deneme-bonusu" if firm_slug else "",
+            "odeme_yontemleri_url": f"/{firm_slug}/odeme-yontemleri" if firm_slug else "",
+        })
+    related_hubs = {"bonus": ["deneme-bonusu-veren-siteler", "bonus-veren-siteler"], "payment": ["odeme-yontemleri", "kripto-ile-bahis"]}
+    return {"seo": seo, "breadcrumb": breadcrumb, "sites": sites, "company_links": company_links, "related_hubs": related_hubs}
+
+
+@api_router.get("/hub/bonus/{hub_slug}")
+async def get_hub_bonus(hub_slug: str):
+    """Bonus hub page data."""
+    if hub_slug not in BONUS_HUB_SLUGS:
+        raise HTTPException(status_code=404, detail="Hub bulunamadi")
+    base_url = FRONTEND_BASE_URL.rstrip("/")
+    return await _build_hub_response(hub_slug, "bonus", "Deneme Bonusu Veren Siteler", base_url)
+
+
+@api_router.get("/hub/payment/{hub_slug}")
+async def get_hub_payment(hub_slug: str):
+    """Payment hub page data."""
+    if hub_slug not in PAYMENT_HUB_SLUGS:
+        raise HTTPException(status_code=404, detail="Hub bulunamadi")
+    base_url = FRONTEND_BASE_URL.rstrip("/")
+    return await _build_hub_response(hub_slug, "payment", "Odeme Yontemleri", base_url)
+
+
+@api_router.get("/programmatic/page/{slug}")
+async def get_programmatic_page(slug: str):
+    """Get single programmatic page by slug."""
+    from agents.programmatic_engine import ProgrammaticEngine
+    engine = ProgrammaticEngine(db)
+    page = await engine.get_page(slug.strip("/"))
+    if not page:
+        raise HTTPException(status_code=404, detail="Sayfa bulunamadi")
+    return page
+
+
+@api_router.get("/programmatic/pages")
+async def list_programmatic_pages(combination_type: str = None, limit: int = 50, offset: int = 0):
+    """List programmatic pages."""
+    from agents.programmatic_engine import ProgrammaticEngine
+    engine = ProgrammaticEngine(db)
+    return await engine.list_pages(combination_type=combination_type, limit=limit, offset=offset)
+
+
+@api_router.get("/programmatic/stats")
+async def get_programmatic_stats():
+    """Programmatic registry stats."""
+    from agents.programmatic_engine import ProgrammaticEngine
+    engine = ProgrammaticEngine(db)
+    return await engine.get_stats()
+
+
+@api_router.get("/firma-sub/{company_slug}/{page_type}")
+async def get_firma_sub(company_slug: str, page_type: str):
+    """Company sub-page (e.g. guncel-giris, deneme-bonusu) for CompanySubPage."""
+    if page_type not in VALID_FIRMA_SUB_PAGE_TYPES:
+        raise HTTPException(status_code=404, detail="Gecersiz sayfa tipi")
+    site = await db.bonus_sites.find_one(
+        {"$or": [{"slug": company_slug}, {"slug": f"{company_slug}-guncelgiris"}]},
+        {"_id": 0}
+    )
+    if not site:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    cluster = "company-guide" if page_type in ["guncel-giris", "guncel-adresi", "yeni-giris-adresi", "mobil-giris", "odeme-yontemleri"] else "bonus-guide"
+    faq = [
+        {"question": "Nasil giris yapilir?", "answer": "Sitedeki guncel adresi kullanarak uye olup giris yapabilirsiniz."},
+        {"question": "Bonus nasil alinir?", "answer": "Uyelik sonrasi canli destek uzerinden bonus talebinde bulunun."},
+    ]
+    hub_links = [{"name": "Deneme Bonusu", "url": "/deneme-bonusu-veren-siteler"}, {"name": "Odeme Yontemleri", "url": "/odeme-yontemleri"}]
+    related = await db.bonus_sites.find({"is_active": True, "slug": {"$ne": site.get("slug")}}, {"_id": 0, "name": 1, "slug": 1}).limit(6).to_list(6)
+    related_companies = [{"name": r.get("name", ""), "slug": r.get("slug", ""), "url": f"/{r.get('slug', '')}"} for r in related]
+    return {
+        "cluster": cluster,
+        "site": {**site, "bonus_amount": site.get("bonus_amount", ""), "turnover_requirement": site.get("turnover_requirement", 10)},
+        "seo": {"title": f"{site.get('name', '')} {page_type.replace('-', ' ').title()} 2026", "description": f"{site.get('name', '')} sayfasi."},
+        "breadcrumb": [{"name": "Ana Sayfa", "url": "/"}, {"name": site.get("name", ""), "url": f"/{site.get('slug', '')}"}, {"name": page_type.replace("-", " ").title(), "url": ""}],
+        "internal_links": [],
+        "similar_same_page": [],
+        "faq": faq,
+        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "hub_links": hub_links,
+        "related_companies": related_companies,
+    }
+
+
+@api_router.get("/company-articles/{company_slug}")
+async def get_company_articles_list(company_slug: str):
+    """List company articles for CompanyArticlesListPage."""
+    site = await db.bonus_sites.find_one({"$or": [{"slug": company_slug}, {"slug": f"{company_slug}-guncelgiris"}]}, {"_id": 0})
+    if not site:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    articles = await db.company_articles.find({"company_slug": company_slug, "is_published": True}, {"_id": 0}).sort("published_at", -1).to_list(100)
+    general_articles = await db.articles.find({"is_published": True}, {"_id": 0, "slug": 1, "title": 1}).limit(5).to_list(5)
+    sub_pages = [{"name": "Guncel Giris", "url": f"/companies/{company_slug}/guncel-giris"}, {"name": "Deneme Bonusu", "url": f"/companies/{company_slug}/deneme-bonusu"}]
+    hub_links = [{"name": "Deneme Bonusu Veren Siteler", "url": "/deneme-bonusu-veren-siteler"}, {"name": "Odeme Yontemleri", "url": "/odeme-yontemleri"}]
+    breadcrumb = [{"name": "Ana Sayfa", "url": "/"}, {"name": site.get("name", ""), "url": f"/companies/{company_slug}"}, {"name": "Makaleler", "url": ""}]
+    seo = {"title": f"{site.get('name', '')} Makaleler 2026", "description": f"{site.get('name', '')} rehber ve makaleler."}
+    return {"site": site, "articles": articles, "general_articles": general_articles, "sub_pages": sub_pages, "hub_links": hub_links, "breadcrumb": breadcrumb, "seo": seo}
+
+
+@api_router.get("/company-articles/{company_slug}/{article_slug}")
+async def get_company_article_detail(company_slug: str, article_slug: str):
+    """Single company article for CompanyArticlePage."""
+    site = await db.bonus_sites.find_one({"$or": [{"slug": company_slug}, {"slug": f"{company_slug}-guncelgiris"}]}, {"_id": 0})
+    if not site:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    article = await db.company_articles.find_one({"company_slug": company_slug, "slug": article_slug, "is_published": True}, {"_id": 0})
+    if not article:
+        raise HTTPException(status_code=404, detail="Makale bulunamadi")
+    related = await db.company_articles.find({"company_slug": company_slug, "slug": {"$ne": article_slug}, "is_published": True}, {"_id": 0}).limit(5).to_list(5)
+    related_sub_pages = [{"name": "Guncel Giris", "url": f"/companies/{company_slug}/guncel-giris"}, {"name": "Deneme Bonusu", "url": f"/companies/{company_slug}/deneme-bonusu"}]
+    related_hubs = [{"name": "Deneme Bonusu", "url": "/deneme-bonusu-veren-siteler"}]
+    similar_company_links = []
+    breadcrumb = [{"name": "Ana Sayfa", "url": "/"}, {"name": site.get("name", ""), "url": f"/companies/{company_slug}"}, {"name": "Makaleler", "url": f"/companies/{company_slug}/makaleler"}, {"name": article.get("title", article_slug), "url": ""}]
+    seo = {"title": article.get("seo_title") or article.get("title", ""), "description": article.get("meta_description") or article.get("excerpt", "")}
+    return {"site": site, "article": article, "related_articles": related, "related_sub_pages": related_sub_pages, "related_hubs": related_hubs, "similar_company_links": similar_company_links, "breadcrumb": breadcrumb, "seo": seo}
+
+
 class VideoGenerationRequest(BaseModel):
     model: str = "sora-2"
     size: str = "1280x720"
@@ -4381,15 +4553,11 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-seo-pages.xml</loc>
+    <loc>{api_base}/api/sitemap-company-articles.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-company-articles.xml</loc>
-    <lastmod>{today}</lastmod>
-  </sitemap>
-  <sitemap>
-    <loc>{base_url}/api/sitemap-programmatic.xml</loc>
+    <loc>{api_base}/api/sitemap-programmatic.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
 </sitemapindex>"""
@@ -4586,6 +4754,79 @@ async def sitemap_amp_videos(request: Request):
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 {chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
+
+@api_router.get("/sitemap-company-articles.xml")
+async def sitemap_company_articles(request: Request):
+    """Company articles sitemap: /companies/{slug}/makaleler and /companies/{slug}/makale/{article_slug}."""
+    base_url = FRONTEND_BASE_URL
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    urls = []
+    try:
+        articles = await db.company_articles.find(
+            {"is_published": True},
+            {"_id": 0, "company_slug": 1, "slug": 1, "updated_at": 1}
+        ).to_list(10000)
+        seen_companies = set()
+        for a in articles:
+            company_slug = a.get("company_slug", "")
+            article_slug = a.get("slug", "")
+            if not company_slug:
+                continue
+            if company_slug not in seen_companies:
+                seen_companies.add(company_slug)
+                urls.append(f"""  <url>
+    <loc>{base_url}/companies/{company_slug}/makaleler</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>""")
+            if article_slug:
+                lastmod = str(a.get("updated_at", ""))[:10] or today
+                urls.append(f"""  <url>
+    <loc>{base_url}/companies/{company_slug}/makale/{article_slug}</loc>
+    <lastmod>{lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>""")
+    except Exception:
+        pass
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls) if urls else f'  <url>\n    <loc>{base_url}/companies</loc>\n    <lastmod>{today}</lastmod>\n  </url>'}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
+
+@api_router.get("/sitemap-programmatic.xml")
+async def sitemap_programmatic(request: Request):
+    """Programmatic pages sitemap from programmatic_pages collection."""
+    base_url = FRONTEND_BASE_URL.rstrip("/")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    urls = []
+    try:
+        from agents.programmatic_engine import ProgrammaticEngine
+        engine = ProgrammaticEngine(db)
+        entries = await engine.generate_sitemap_urls(limit=50000)
+        for e in entries:
+            loc = e.get("loc", "").replace("https://guncelgiris.ai", base_url)
+            if not loc.startswith("http"):
+                loc = base_url + "/" + loc.lstrip("/")
+            lastmod = e.get("lastmod", today)[:10]
+            prio = e.get("priority", "0.7")
+            urls.append(f"""  <url>
+    <loc>{loc}</loc>
+    <lastmod>{lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>{prio}</priority>
+  </url>""")
+    except Exception:
+        pass
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls) if urls else f'  <url>\n    <loc>{base_url}/</loc>\n    <lastmod>{today}</lastmod>\n  </url>'}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
