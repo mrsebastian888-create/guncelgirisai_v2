@@ -5,7 +5,6 @@ Tests ALL 8 phases of the platform optimization.
 import pytest
 import requests
 import os
-import time
 
 # Base URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
@@ -357,7 +356,7 @@ class TestPhase5CompanyArticles:
         assert "article" in data
         assert "related_sub_pages" in data
         assert "related_hubs" in data
-        print(f"PASS: Article detail has related_sub_pages and related_hubs")
+        print("PASS: Article detail has related_sub_pages and related_hubs")
 
 
 # ===================== PHASE 6: PROGRAMMATIC SEO =====================
@@ -472,7 +471,7 @@ class TestPhase8Admin:
         expected_sections = ["settings", "page_types", "agents", "publishing", "serp", "articles", "sitemap", "indexing"]
         for section in expected_sections:
             assert section in data, f"Missing section: {section}"
-        print(f"PASS: Admin dashboard has all 8 sections")
+        print("PASS: Admin dashboard has all 8 sections")
     
     def test_admin_seo_settings(self, auth_headers):
         """GET /api/admin/seo/settings"""

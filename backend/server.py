@@ -230,7 +230,7 @@ async def ping_mongo() -> tuple[bool, float]:
 # ============== LIFESPAN ==============
 
 # Publish scheduler daemon (Phase 7) — initialized before lifespan
-from agents.publish_scheduler import PublishSchedulerDaemon as _PSD
+from agents.publish_scheduler import PublishSchedulerDaemon as _PSD  # noqa: E402
 publish_daemon = _PSD()
 
 @asynccontextmanager
@@ -5573,7 +5573,7 @@ async def seed_database():
 
 # Include router
 # GG2026 AI Agent Router
-from agents.router import router as agents_router
+from agents.router import router as agents_router  # noqa: E402
 api_router.include_router(agents_router)
 
 app.include_router(api_router)

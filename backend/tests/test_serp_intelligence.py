@@ -4,10 +4,8 @@ Tests for provider abstraction layer supporting Ahrefs, Semrush, DataForSEO.
 Features: keyword validation, ranking opportunities, competitor gap, longtail discovery, SERP difficulty.
 AI fallback used when no provider API keys are configured.
 """
-import pytest
 import requests
 import os
-import time
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 

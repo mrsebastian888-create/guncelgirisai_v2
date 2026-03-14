@@ -11,7 +11,7 @@ from .base_provider import BaseSERPProvider, SERPCapability
 from .ahrefs_provider import AhrefsProvider
 from .semrush_provider import SemrushProvider
 from .dataforseo_provider import DataForSEOProvider
-from .models import KeywordData, RankingOpportunity, CompetitorGap, SERPDifficulty, SERPProviderStatus
+from .models import SERPProviderStatus
 
 logger = logging.getLogger("agents.serp.manager")
 
