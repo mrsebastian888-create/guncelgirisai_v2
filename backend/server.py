@@ -5761,4 +5761,8 @@ async def seed_database():
     return {"message": "Seeded", "sites": len(sites)}
 
 # Include router
+# GG2026 AI Agent Router
+from agents.router import router as agents_router
+api_router.include_router(agents_router)
+
 app.include_router(api_router)
