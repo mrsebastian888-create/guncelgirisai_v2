@@ -1,85 +1,111 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v24.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v25.0
 
 ## Original Problem Statement
-Spor icerikleri ve deneme bonusu rehberlerini birlestiren, SEO uyumlu, AI destekli, multi-tenant icerik platformu. guncelgiris.ai sitesinin GG2026 SEO framework ile buyuk olcekli SEO buyumesine hazirlanmasi.
+guncelgiris.ai sitesinin GG2026 SEO framework ile buyuk olcekli SEO buyumesine hazirlanmasi. Spor icerikleri ve deneme bonusu rehberlerini birlestiren, SEO uyumlu, AI destekli platform.
 
 ## What's Been Implemented
 
-### v1-v22: Previous versions (see CHANGELOG.md for full history)
+### v1-v22: Previous versions (see CHANGELOG.md)
+### v23.0: GG2026 Phase 1 - Company folder architecture, hub pages, navigation, sitemap
+### v24.0: GG2026 Phase 2 - Page templates, internal linking engine, FAQ, schema support
 
-### v23.0: GG2026 SEO Framework - Phase 1 (Mar 2026)
-- Company folder architecture: 10 alt sayfa tipi, 264 firma = ~2640 URL
-- Two core clusters: Company Guide + Bonus Guide
-- 5 Bonus hub + 8 Payment hub pages
-- Navigation + footer + mobile nav guncelleme
-- Sitemap scaffolding (sitemap-seo-pages.xml)
+### v25.0: GG2026 Phase 3 - AI Agent Infrastructure (Mar 2026) - CURRENT
 
-### v24.0: GG2026 SEO Framework - Phase 2 (Mar 2026) - CURRENT
+**5 modular AI agents:**
 
-**Company Guide Template Sections:**
-- CompanyOverview: Firma istatistikleri (kategori, puan, bonus, lisans)
-- AccessInstructions: Adim adim erisim talimatlari (sayfa tipine ozel)
-- AddressChangeExplanation: Domain degisikligi aciklamasi
-- MobileLoginInfo: Mobil uyumluluk detaylari (sadece mobil-giris)
-- SecurityNotes: SSL, lisans, 2FA, GDPR bilgileri
+1. **Keyword Intelligence Agent** (`keyword_agent.py`)
+   - `cluster` — Keyword clustering by topic
+   - `intent` — Search intent classification
+   - `opportunities` — SERP gap/opportunity detection
+   - `discover` — Topic discovery from seed
 
-**Bonus Guide Template Sections:**
-- CompanySummary: Firma ozeti + istatistik kartlari
-- BonusAvailability: Aktif bonus durumu gostergesi
-- BonusTypesSection: Mevcut bonus turleri listesi
-- WageringExplanation: Cevrim sarti aciklamasi (ornek dahil)
-- AdvantagesDisadvantages: Avantaj/dezavantaj karsilastirmasi
-- RecommendedProfile: Hedef kullanici profili
+2. **Content Generator Agent** (`content_agent.py`)
+   - `company_page` — Company sub-page content (stored in agent_generated_content)
+   - `hub_page` — Hub page content generation
+   - `guide` — Comprehensive guide articles
+   - `article` — SEO articles with firm mentions
 
-**Shared Sections:**
-- FAQSection: Sayfa tipine ozel FAQ (accordion + FAQPage schema)
-- RelatedPagesBlock: Cluster ici baglanti blogu
-- LastUpdatedBlock: Son guncelleme zamani
-- RelatedCompaniesBlock: Benzer firmalar + alt sayfa linkleri
+3. **Internal Linking Agent** (`linking_agent.py`)
+   - `suggest` — AI-powered link suggestions for any page
+   - `audit_clusters` — Topical cluster health/coverage audit
+   - `orphans` — Orphan page detection
 
-**Internal Linking Engine:**
-- Hub → Company pages (bonus hub → deneme-bonusu, hosgeldin-bonusu, bonus-sartlari, guncel-giris)
-- Payment hub → Company payment + access pages (odeme-yontemleri, guncel-giris, deneme-bonusu, mobil-giris)
-- Company bonus ↔ Company access cross-cluster links
+4. **Update Agent** (`update_agent.py`)
+   - `scan` — Detect outdated content by days threshold
+   - `refresh` — AI-refresh specific company page content
+   - `timestamps` — Bulk timestamp updates
 
-**Schema Support:**
-- BreadcrumbList JSON-LD
-- FAQPage JSON-LD (per page type FAQ data)
-- Article JSON-LD (dateModified, headline, publisher)
+5. **Technical SEO Agent** (`seo_agent.py`)
+   - `titles` — AI-generated page titles (max 60 char)
+   - `descriptions` — AI-generated meta descriptions (max 160 char)
+   - `canonicals` — Canonical tag audit (2388 pages audited)
+   - `sitemap_audit` — Sitemap completeness check
 
-**Backend Enhancements:**
-- PAGE_TYPE_FAQ: 10 page type x 3-4 FAQ = ~35 unique FAQ items
-- Enhanced firma-sub response: faq, last_updated, hub_links, related_companies
+**Infrastructure:**
+- BaseAgent class with MongoDB job tracking (agent_jobs collection)
+- Generated content stored in agent_generated_content collection
+- 21 API endpoints under /api/agents/*
+- 12 LLM-powered + 9 non-LLM endpoints
+- Each operation creates a tracked job with status, duration_ms
 
 ## Architecture
 ```
-/app/
-├── backend/
-│   └── server.py              // PAGE_TYPE_FAQ, HUB_COMPANY_PAGE_MAPPING, enhanced firma-sub endpoint
-├── frontend/src/
-│   ├── pages/
-│   │   ├── CompanySubPage.jsx  // Rich templates: CompanyGuide + BonusGuide sections
-│   │   ├── BonusHubPage.jsx    // Enhanced internal linking
-│   │   ├── PaymentHubPage.jsx  // Enhanced internal linking
-│   │   └── ...existing pages
-│   └── components/
-│       └── ...existing components
+/app/backend/
+├── agents/
+│   ├── __init__.py          # Package exports
+│   ├── base.py              # BaseAgent, AgentJob, AgentResult
+│   ├── keyword_agent.py     # Agent 1: Keyword Intelligence
+│   ├── content_agent.py     # Agent 2: Content Generator
+│   ├── linking_agent.py     # Agent 3: Internal Linking
+│   ├── update_agent.py      # Agent 4: Update Agent
+│   ├── seo_agent.py         # Agent 5: Technical SEO
+│   └── router.py            # FastAPI router (21 endpoints)
+├── server.py                # Main app (includes agents_router)
+└── ...existing files
 ```
+
+## Key API Endpoints
+```
+GET  /api/agents/status              # All agents health
+GET  /api/agents/jobs                # Job list (filter by agent/status)
+GET  /api/agents/jobs/{job_id}       # Job details
+POST /api/agents/keyword/cluster     # Keyword clustering
+POST /api/agents/keyword/intent      # Intent classification
+POST /api/agents/keyword/opportunities # SERP gaps
+POST /api/agents/keyword/discover    # Topic discovery
+POST /api/agents/content/company-page # Company page content
+POST /api/agents/content/hub-page    # Hub page content
+POST /api/agents/content/guide       # Guide generation
+POST /api/agents/content/article     # Article generation
+POST /api/agents/linking/suggest     # Link suggestions
+POST /api/agents/linking/audit       # Cluster audit
+POST /api/agents/linking/orphans     # Orphan detection
+POST /api/agents/update/scan         # Outdated scan
+POST /api/agents/update/refresh      # Page refresh
+POST /api/agents/update/timestamps   # Bulk timestamps
+POST /api/agents/seo/titles          # Title generation
+POST /api/agents/seo/descriptions    # Meta desc generation
+POST /api/agents/seo/canonicals      # Canonical audit
+POST /api/agents/seo/sitemap-audit   # Sitemap audit
+```
+
+## DB Collections (new)
+- `agent_jobs` — Job tracking (job_id, agent, action, status, params, result, duration_ms)
+- `agent_generated_content` — AI-generated page content (company_slug, page_type, title, sections, faq)
 
 ## Prioritized Backlog
 
 ### P0 - Critical
-- Production domain (guncelgiris.ai) instability - BLOCKED on Emergent support
+- Production domain (guncelgiris.ai) - BLOCKED on Emergent support
 
 ### P1 - High Priority
-- GG2026 Phase 3+ (future phases as user requests)
-- Telegram BotFather rate limit solution (multi-account rotation)
+- GG2026 Phase 4+ (as user requests)
+- Admin UI for agent management (trigger, monitor, review)
+- Telegram BotFather rate limit solution
 
 ### P2 - Medium Priority
-- AI Video Generation POC (Sora 2)
-- Company Intelligence Score
+- AI Video Generation, Company Intelligence Score
 - AMP pages fix
 
 ### P3 - Backlog
-- Backend refactoring (server.py modular router structure)
-- Full Company Intelligence with real API data
+- Backend refactoring (server.py modular structure)
