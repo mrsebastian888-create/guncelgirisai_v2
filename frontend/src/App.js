@@ -24,6 +24,8 @@ import PaymentHubPage from "@/pages/PaymentHubPage";
 import CompanyArticlesListPage from "@/pages/CompanyArticlesListPage";
 import CompanyArticlePage from "@/pages/CompanyArticlePage";
 import ProgrammaticPage from "@/pages/ProgrammaticPage";
+import VideoGalleryPage from "@/pages/VideoGalleryPage";
+import VideoPlayerPage from "@/pages/VideoPlayerPage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -87,6 +89,10 @@ function AppLayout({ isLoading }) {
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
               <Route path="/companies" element={<CompaniesPage />} />
               <Route path="/companies/:slug" element={<CompanyProfilePage />} />
+
+              {/* Video Gallery & Player */}
+              <Route path="/videolar" element={<VideoGalleryPage />} />
+              <Route path="/videolar/:videoId" element={<VideoPlayerPage />} />
 
               {/* GG2026 SEO: Bonus Hub Pages */}
               <Route path="/deneme-bonusu-veren-siteler" element={<BonusHubPage />} />

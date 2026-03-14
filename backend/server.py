@@ -327,6 +327,13 @@ async def lifespan(app: FastAPI):
     # Start publish scheduler daemon
     await publish_daemon.start(db)
 
+    # Init video storage
+    try:
+        from agents.video_library import init_storage as _init_video_storage
+        _init_video_storage()
+    except Exception as e:
+        logger.warning(f"Video storage init skipped: {e}")
+
     # Auto-seed companies if empty (ensures data persists across deploys)
     try:
         company_count = await db.companies.count_documents({"is_approved": True})
@@ -5534,6 +5541,110 @@ async def publish_reschedule_failed():
 async def publish_schedule_map():
     """Get the day-of-week content type schedule."""
     return {"schedule": DAY_CONTENT_MAP}
+
+
+# ============== VIDEO LIBRARY SYSTEM ==============
+
+from fastapi import File, UploadFile
+from agents.video_library import VideoLibrary, init_storage as init_video_storage
+
+
+@api_router.get("/videos")
+async def list_videos(company_slug: Optional[str] = None, category: Optional[str] = None, limit: int = 30, offset: int = 0):
+    """List videos for gallery page."""
+    lib = VideoLibrary(db)
+    return await lib.list_videos(company_slug, category, limit, offset)
+
+
+@api_router.get("/videos/{video_id}")
+async def get_video(video_id: str):
+    """Get single video detail."""
+    lib = VideoLibrary(db)
+    video = await lib.get_video(video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    # Get related videos from same company
+    related = []
+    if video.get("company_slug"):
+        related_result = await lib.list_videos(company_slug=video["company_slug"], limit=6)
+        related = [v for v in related_result["videos"] if v["video_id"] != video_id][:5]
+
+    # Get company info if linked
+    company = None
+    if video.get("company_slug"):
+        company = await db.bonus_sites.find_one(
+            {"slug": {"$regex": f"^{re.escape(video['company_slug'])}"}},
+            {"_id": 0, "name": 1, "slug": 1, "logo_url": 1, "bonus_amount": 1, "affiliate_url": 1, "rating": 1}
+        )
+
+    return {"video": video, "related": related, "company": company}
+
+
+@api_router.get("/videos/{video_id}/file")
+async def get_video_file(video_id: str):
+    """Stream video file from object storage."""
+    lib = VideoLibrary(db)
+    result = await lib.get_file(video_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Video file not found")
+    data, content_type = result
+    return Response(content=data, media_type=content_type)
+
+
+@api_router.post("/videos/upload")
+async def upload_video(
+    file: UploadFile = File(...),
+    title: str = "",
+    description: str = "",
+    company_slug: str = "",
+    category: str = "general",
+    tags: str = "",
+    request: Request = None,
+):
+    """Upload a video file (max 50MB)."""
+    require_admin_request(request)
+    file_data = await file.read()
+
+    # Get company name if slug provided
+    company_name = ""
+    if company_slug:
+        site = await db.bonus_sites.find_one(
+            {"slug": {"$regex": f"^{re.escape(company_slug)}"}},
+            {"_id": 0, "name": 1}
+        )
+        company_name = site.get("name", "") if site else ""
+
+    metadata = {
+        "title": title or file.filename,
+        "description": description,
+        "company_slug": company_slug,
+        "company_name": company_name,
+        "category": category,
+        "tags": [t.strip() for t in tags.split(",") if t.strip()] if tags else [],
+        "source": "upload",
+    }
+    lib = VideoLibrary(db)
+    return await lib.upload_video(file_data, file.filename, file.content_type or "video/mp4", metadata)
+
+
+@api_router.post("/videos/register")
+async def register_video(data: Dict[str, Any], request: Request = None):
+    """Register an external or AI-generated video URL."""
+    require_admin_request(request)
+    lib = VideoLibrary(db)
+    return await lib.register_external(data)
+
+
+@api_router.delete("/videos/{video_id}")
+async def delete_video(video_id: str, request: Request):
+    """Soft delete a video."""
+    require_admin_request(request)
+    lib = VideoLibrary(db)
+    deleted = await lib.delete_video(video_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Video not found")
+    return {"deleted": True, "video_id": video_id}
 
 
 # ============== ADMIN CONTROL SYSTEM (Phase 8) ==============

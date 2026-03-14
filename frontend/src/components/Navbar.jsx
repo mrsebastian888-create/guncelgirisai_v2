@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Gift, Activity, ChevronDown, Globe } from "lucide-react";
+import { Menu, X, Gift, Activity, ChevronDown, Globe, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { API } from "@/App";
@@ -65,6 +65,7 @@ const Navbar = () => {
       ]
     },
     { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
+    { label: "Videolar", href: "/videolar", icon: Film },
   ];
 
   const isActive = (href) => {
@@ -79,6 +80,7 @@ const Navbar = () => {
     { label: "Tum Bonuslar", href: "/bonus-veren-siteler" },
     { label: "Firma Rehberi", href: "/#firma-rehberi" },
     { label: "Odeme Yontemleri", href: "/odeme-yontemleri" },
+    { label: "Videolar", href: "/videolar" },
     { label: "Spor Haberleri", href: "/spor-haberleri" },
   ];
 
