@@ -1,4 +1,4 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v23.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v24.0
 
 ## Original Problem Statement
 Spor icerikleri ve deneme bonusu rehberlerini birlestiren, SEO uyumlu, AI destekli, multi-tenant icerik platformu. guncelgiris.ai sitesinin GG2026 SEO framework ile buyuk olcekli SEO buyumesine hazirlanmasi.
@@ -6,63 +6,64 @@ Spor icerikleri ve deneme bonusu rehberlerini birlestiren, SEO uyumlu, AI destek
 ## What's Been Implemented
 
 ### v1-v22: Previous versions (see CHANGELOG.md for full history)
-### v23.0: GG2026 SEO Framework - Phase 1 (Mar 2026) - CURRENT
 
-**Degisiklikler:**
-- Company folder architecture: Her firma icin 10 alt sayfa tipi (guncel-giris, deneme-bonusu, odeme-yontemleri vb.)
-- Two core clusters: Company Guide (Firma Rehberi) ve Bonus Guide (Bonus Rehberi) kume yapisi
-- Internal linking: Kumeler arasi cift yonlu baglanti sistemi
-- 5 Bonus hub pages: /deneme-bonusu-veren-siteler, /guncel-deneme-bonusu, /yatirimsiz-deneme-bonusu, /hosgeldin-bonusu (var), /bonus-veren-siteler
-- 8 Payment hub pages: /odeme-yontemleri, /mobil-odeme-ile-bahis, /kredi-karti-ile-bahis, /papel-ile-bahis, /havale-ile-bahis, /kripto-ile-bahis, /bddk-onayli-odeme-yontemleri, /guvenli-odeme-yontemleri
-- Navigation menu guncelleme: Bonuslar, Firma Rehberi, Odeme dropdown menuleri
-- Technical SEO: Dynamic titles, meta descriptions, canonical URLs, JSON-LD breadcrumbs
-- Sitemap scaffolding: sitemap-seo-pages.xml eklendi (tum hub ve alt sayfalari icerir)
+### v23.0: GG2026 SEO Framework - Phase 1 (Mar 2026)
+- Company folder architecture: 10 alt sayfa tipi, 264 firma = ~2640 URL
+- Two core clusters: Company Guide + Bonus Guide
+- 5 Bonus hub + 8 Payment hub pages
+- Navigation + footer + mobile nav guncelleme
+- Sitemap scaffolding (sitemap-seo-pages.xml)
 
-**Yeni API Endpoints:**
-- `GET /api/firma-sub/{base_slug}/{page_type}` - Company sub-page data with SEO, breadcrumb, cluster links
-- `GET /api/hub/bonus/{hub_slug}` - Bonus hub page data with sites, company links, related hubs
-- `GET /api/hub/payment/{hub_slug}` - Payment hub page data with sites, company links, cross-cluster links
-- `GET /api/sitemap-seo-pages.xml` - New SEO pages sitemap
+### v24.0: GG2026 SEO Framework - Phase 2 (Mar 2026) - CURRENT
 
-**Yeni Frontend Sayfalar:**
-- CompanySubPage.jsx - /:companySlug/:pageType route
-- BonusHubPage.jsx - Bonus hub sayfalari
-- PaymentHubPage.jsx - Odeme hub sayfalari
+**Company Guide Template Sections:**
+- CompanyOverview: Firma istatistikleri (kategori, puan, bonus, lisans)
+- AccessInstructions: Adim adim erisim talimatlari (sayfa tipine ozel)
+- AddressChangeExplanation: Domain degisikligi aciklamasi
+- MobileLoginInfo: Mobil uyumluluk detaylari (sadece mobil-giris)
+- SecurityNotes: SSL, lisans, 2FA, GDPR bilgileri
 
-**URL Yapisi:**
-```
-/{company}/guncel-giris          # Firma guncel giris
-/{company}/deneme-bonusu         # Firma deneme bonusu
-/{company}/hosgeldin-bonusu      # Firma hosgeldin bonusu
-/{company}/odeme-yontemleri      # Firma odeme yontemleri
-/deneme-bonusu-veren-siteler     # Hub: Deneme bonusu veren siteler
-/guncel-deneme-bonusu            # Hub: Guncel deneme bonusu
-/odeme-yontemleri                # Hub: Odeme yontemleri
-/kripto-ile-bahis                # Hub: Kripto ile bahis
-...
-```
+**Bonus Guide Template Sections:**
+- CompanySummary: Firma ozeti + istatistik kartlari
+- BonusAvailability: Aktif bonus durumu gostergesi
+- BonusTypesSection: Mevcut bonus turleri listesi
+- WageringExplanation: Cevrim sarti aciklamasi (ornek dahil)
+- AdvantagesDisadvantages: Avantaj/dezavantaj karsilastirmasi
+- RecommendedProfile: Hedef kullanici profili
+
+**Shared Sections:**
+- FAQSection: Sayfa tipine ozel FAQ (accordion + FAQPage schema)
+- RelatedPagesBlock: Cluster ici baglanti blogu
+- LastUpdatedBlock: Son guncelleme zamani
+- RelatedCompaniesBlock: Benzer firmalar + alt sayfa linkleri
+
+**Internal Linking Engine:**
+- Hub → Company pages (bonus hub → deneme-bonusu, hosgeldin-bonusu, bonus-sartlari, guncel-giris)
+- Payment hub → Company payment + access pages (odeme-yontemleri, guncel-giris, deneme-bonusu, mobil-giris)
+- Company bonus ↔ Company access cross-cluster links
+
+**Schema Support:**
+- BreadcrumbList JSON-LD
+- FAQPage JSON-LD (per page type FAQ data)
+- Article JSON-LD (dateModified, headline, publisher)
+
+**Backend Enhancements:**
+- PAGE_TYPE_FAQ: 10 page type x 3-4 FAQ = ~35 unique FAQ items
+- Enhanced firma-sub response: faq, last_updated, hub_links, related_companies
 
 ## Architecture
 ```
 /app/
 ├── backend/
-│   ├── server.py              // GG2026 SEO framework endpoints added
-│   ├── telegram_bot_manager.py
-│   └── modules/
+│   └── server.py              // PAGE_TYPE_FAQ, HUB_COMPANY_PAGE_MAPPING, enhanced firma-sub endpoint
 ├── frontend/src/
-│   ├── App.js                 // Updated routes (hub pages + company sub-pages)
 │   ├── pages/
-│   │   ├── CompanySubPage.jsx  // NEW: Company folder sub-pages
-│   │   ├── BonusHubPage.jsx    // NEW: Bonus hub pages
-│   │   ├── PaymentHubPage.jsx  // NEW: Payment hub pages
-│   │   ├── HomePage.jsx
-│   │   ├── FirmPage.jsx
-│   │   ├── BonusGuidePage.jsx
-│   │   └── AdminPage.jsx
+│   │   ├── CompanySubPage.jsx  // Rich templates: CompanyGuide + BonusGuide sections
+│   │   ├── BonusHubPage.jsx    // Enhanced internal linking
+│   │   ├── PaymentHubPage.jsx  // Enhanced internal linking
+│   │   └── ...existing pages
 │   └── components/
-│       ├── Navbar.jsx          // Updated navigation dropdowns
-│       ├── Footer.jsx          // Updated footer links
-│       └── MobileBottomNav.jsx // Updated mobile nav
+│       └── ...existing components
 ```
 
 ## Prioritized Backlog
@@ -71,16 +72,14 @@ Spor icerikleri ve deneme bonusu rehberlerini birlestiren, SEO uyumlu, AI destek
 - Production domain (guncelgiris.ai) instability - BLOCKED on Emergent support
 
 ### P1 - High Priority
-- GG2026 Phase 2: Content enrichment (AI-generated SEO content for sub-pages)
+- GG2026 Phase 3+ (future phases as user requests)
 - Telegram BotFather rate limit solution (multi-account rotation)
-- Company Intelligence API keys integration
 
 ### P2 - Medium Priority
 - AI Video Generation POC (Sora 2)
-- Company Intelligence Score implementation
-- Admin Panel for company management
-- AMP pages fix (blocked on production stability)
+- Company Intelligence Score
+- AMP pages fix
 
 ### P3 - Backlog
 - Backend refactoring (server.py modular router structure)
-- Full Company Intelligence module with real API data
+- Full Company Intelligence with real API data
