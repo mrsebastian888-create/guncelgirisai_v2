@@ -4793,9 +4793,10 @@ async def sitemap_company_articles(request: Request):
   </url>""")
     except Exception:
         pass
+    body = chr(10).join(urls) if urls else "  <url>" + chr(10) + "    <loc>" + base_url + "/companies</loc>" + chr(10) + "    <lastmod>" + today + "</lastmod>" + chr(10) + "  </url>"
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{chr(10).join(urls) if urls else f'  <url>\n    <loc>{base_url}/companies</loc>\n    <lastmod>{today}</lastmod>\n  </url>'}
+{body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -4824,9 +4825,10 @@ async def sitemap_programmatic(request: Request):
   </url>""")
     except Exception:
         pass
+    body = chr(10).join(urls) if urls else "  <url>" + chr(10) + "    <loc>" + base_url + "/</loc>" + chr(10) + "    <lastmod>" + today + "</lastmod>" + chr(10) + "  </url>"
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{chr(10).join(urls) if urls else f'  <url>\n    <loc>{base_url}/</loc>\n    <lastmod>{today}</lastmod>\n  </url>'}
+{body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
