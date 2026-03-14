@@ -1,63 +1,57 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v29.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v30.0
 
 ## Original Problem Statement
 guncelgiris.ai sitesinin GG2026 SEO framework ile buyuk olcekli SEO buyumesine hazirlanmasi.
 
 ## What's Been Implemented
 
-### v23-v28: GG2026 Phase 1-6 (see CHANGELOG.md)
+### v23-v29: GG2026 Phase 1-7 (see CHANGELOG.md)
 
-### v29.0: Phase 7 - Controlled Publishing System (Mar 2026) - CURRENT
+### v30.0: Phase 8 - Admin Control System (Mar 2026) - CURRENT
 
-**Queue-Based Publishing:**
-- `publish_queue` MongoDB collection: pending → scheduled → publishing → published/failed
-- Rate limiting: 8-15 pages per day (configurable)
-- Priority system: 1=highest, 10=lowest
-- Slug dedup: blocks pending/scheduled duplicates
-- Manual override: immediately publish any item
+**8 Monitoring Subsystems:**
+1. **Page Type Toggles**: Enable/disable company sub-pages, hubs, articles, programmatic pages, guides (with counts)
+2. **AI Agent Toggles**: Enable/disable 5 agents with job stats and success rates
+3. **Publish Queue Visibility**: Queue status, today's activity, 7-day forecast, recent published
+4. **Company Priority Lists**: Sort order, coverage score (articles×10 + programmatic×5 + 10), per-firm stats
+5. **SERP Sync Status**: Provider configuration, fallback mode, recent SERP jobs
+6. **Article Generation Status**: Company vs general articles, AI generation coverage (firms with articles %)
+7. **Sitemap Health**: 10 sitemaps, total URL count, health status, warnings
+8. **Indexing Status**: Programmatic page indexable %, non-indexable reasons, recommendations
 
-**Day-of-Week Content Schedule:**
-| Day | Content Type |
-|-----|-------------|
-| Monday | Hub pages (intent, license, country) |
-| Tuesday | Company pages (sub-pages, payment, year) |
-| Wednesday | Guides (rehber, guide topics) |
-| Thursday | Comparison pages (karsilastirma, intent×category) |
-| Friday | Bonus pages (deneme, hosgeldin, bonus rehberi) |
-| Saturday | Articles (makale, inceleme, giris rehberi) |
-| Sunday | Content updates (refresh, timestamp updates) |
+**Settings System:**
+- MongoDB `admin_settings` collection (singleton _id='global')
+- Dot-path updates: `agents.keyword_intelligence`, `publishing.max_per_day`, etc.
+- Default settings seeded on first access
 
-**Background Daemon:**
-- Auto-runs every 30 min
-- Auto-schedules pending items by day rules
-- Auto-publishes due items for today
-- Lifecycle integrated with FastAPI lifespan
-
-**9 API Endpoints:**
-- `GET /api/publish/status` — Queue stats + 7-day forecast + daemon status
-- `POST /api/publish/enqueue` — Add items to queue
-- `POST /api/publish/schedule` — Schedule pending items
-- `POST /api/publish/run` — Manually trigger today's publishing
-- `POST /api/publish/manual` — Override: publish specific items immediately
-- `GET /api/publish/queue` — List items with status filter + pagination
-- `POST /api/publish/remove` — Remove pending/scheduled items
-- `POST /api/publish/reschedule-failed` — Move failed → pending
-- `GET /api/publish/schedule-map` — Day content mapping
+**12 Admin API Endpoints (JWT protected):**
+- `GET /api/admin/seo/dashboard` — Full dashboard (all 8 sections)
+- `GET/POST /api/admin/seo/settings` — Get/update toggles
+- `GET /api/admin/seo/page-types` — Page type status
+- `GET /api/admin/seo/agents` — Agent status
+- `GET /api/admin/seo/publishing` — Publish queue
+- `GET /api/admin/seo/companies` — Company priorities
+- `POST /api/admin/seo/companies/priority` — Update priority
+- `GET /api/admin/seo/serp` — SERP status
+- `GET /api/admin/seo/articles` — Article status
+- `GET /api/admin/seo/sitemap` — Sitemap health
+- `GET /api/admin/seo/indexing` — Indexing status
 
 ## Full GG2026 Architecture Summary
 ```
-Phase 1: URL structure (264 firms × 10 sub-pages = 2,640 URLs)
-Phase 2: Page templates + internal linking engine + FAQ + schemas
-Phase 3: 5 AI agents (keyword, content, linking, update, SEO) = 21 endpoints
-Phase 4: SERP Intelligence (Ahrefs/Semrush/DataForSEO) = 6 endpoints
-Phase 5: Company Articles (/{company}/makaleler/{slug}) = 4 endpoints
-Phase 6: Programmatic SEO Engine (7 combination types) = 6 endpoints
-Phase 7: Controlled Publishing (queue + scheduler + daemon) = 9 endpoints
-─────────────────────────────────────────────────────────
-Total: 46+ API endpoints, 50K+ page capacity, 10 sitemaps
+Phase 1: URL structure (2,640 company sub-pages)
+Phase 2: Page templates + internal linking + FAQ + schemas
+Phase 3: 5 AI agents (21 endpoints)
+Phase 4: SERP Intelligence — 3 providers (6 endpoints)
+Phase 5: Company Articles (4 endpoints)
+Phase 6: Programmatic SEO Engine (6 endpoints)
+Phase 7: Controlled Publishing (9 endpoints)
+Phase 8: Admin Control System (12 endpoints)
+─────────────────────────────────────────────────
+Total: 58+ API endpoints, 10 sitemaps, 4,500+ URLs, 50K+ capacity
 ```
 
 ## Prioritized Backlog
-### P1: Phase 8+ (as user requests)
-### P2: Admin UI for publishing dashboard, SERP provider keys
+### P1: Phase 9+ (as user requests), Admin UI dashboard
+### P2: SERP provider keys, bulk content generation
 ### P3: Telegram, AI Video, Backend refactoring
