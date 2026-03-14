@@ -4633,6 +4633,82 @@ PAYMENT_HUB_PAGES = {
 }
 
 
+# FAQ data per page type
+PAGE_TYPE_FAQ = {
+    "guncel-giris": [
+        {"q": "{name} guncel giris adresi nedir?", "a": "{name} guncel giris adresi, sitenin en son calisan erisim linkidir. DNS engellerinden dolayi adresler periyodik olarak degisebilir."},
+        {"q": "{name} giris adresi neden degisiyor?", "a": "BTK kararlari nedeniyle bazi sitelerin domain adresleri engellenebilir. Site yonetimi yeni bir domain uzerinden hizmet vermeye devam eder."},
+        {"q": "{name} sitesine nasil guvenli erisim saglarim?", "a": "Bu sayfadaki guncel linki kullanarak erisim saglayabilirsiniz. Her zaman SSL sertifikali (https) baglanti kullandiginizdan emin olun."},
+        {"q": "{name} giris yaparken nelere dikkat etmeliyim?", "a": "Resmi link disindaki adreslere girmekten kacinin. Kullanici adi ve sifrenizi sadece resmi sitede kullanin. 7/24 canli destek hatti ile iletisime geciniz."},
+    ],
+    "guncel-adresi": [
+        {"q": "{name} guncel adresi nasil ogrenirim?", "a": "Bu sayfada {name} sitesinin en son guncellenen adresi paylasılmaktadir. Sayfayi yer imlerinize ekleyerek her zaman guncel adrese ulasabilirsiniz."},
+        {"q": "{name} adresi ne siklikla degisir?", "a": "Adres degisikligi duzenli bir takvime bagli degildir. Engellemeler sonrasi hizla yeni adres yayinlanir."},
+        {"q": "{name} eski adresim calisiyor mu?", "a": "Eski adresler genellikle yeni adrese yonlendirilir, ancak bu her zaman gecerli olmayabilir. En guncel adresi kullanmaniz onerilir."},
+    ],
+    "yeni-giris-adresi": [
+        {"q": "{name} yeni giris adresi nereden bulunur?", "a": "Bu sayfa {name} yeni giris adresini guncel olarak paylasir. Sayfayi takip ederek adres degisikliklerinden aninda haberdar olun."},
+        {"q": "Yeni adresle eski hesabima girebilir miyim?", "a": "Evet, tum kullanici bilgileriniz ve bakiyeniz yeni adres uzerinden de gecerlidir. Hesap bilgileriniz degismez."},
+        {"q": "{name} alternatif giris yontemleri var mi?", "a": "VPN kullanimi veya mobil uygulama uzerinden de siteye erisim mumkundur. Detaylar icin canli destek ile iletisime gecebilirsiniz."},
+    ],
+    "mobil-giris": [
+        {"q": "{name} mobil giris nasil yapilir?", "a": "Telefonunuzun tarayicisinda guncel giris adresini acarak mobil uyumlu arayuze erisebilirsiniz. Ayrica mobil uygulama secenegi de mevcuttur."},
+        {"q": "{name} mobil uygulamasi var mi?", "a": "Cogu bahis sitesi mobil uyumlu web arayuzu sunar. Bazi siteler ayrica iOS ve Android icin uygulama da sunmaktadir."},
+        {"q": "Mobil giris ile masaustu arasinda fark var mi?", "a": "Hayir, tum islemler (bahis, para yatirma/cekme, bonus talebi) mobil arayuz uzerinden de ayni sekilde yapilabilir."},
+    ],
+    "deneme-bonusu": [
+        {"q": "{name} deneme bonusu nasil alinir?", "a": "{name} sitesine uye olduktan sonra canli destek uzerinden deneme bonusu talebinde bulunabilirsiniz."},
+        {"q": "{name} deneme bonusu cevrim sarti nedir?", "a": "Deneme bonusu icin genellikle bonus miktarinin belirli bir kati kadar cevrim yapmaniz gerekmektedir. Detaylar site kurallarinda belirtilmistir."},
+        {"q": "Deneme bonusu ile kazandigimi cekebilir miyim?", "a": "Evet, cevrim sartlarini tamamladiktan sonra kazancinizi cekebilirsiniz. Maksimum cekim limitleri uygulanabilir."},
+        {"q": "{name} deneme bonusu kac TL?", "a": "{name} guncel deneme bonusu {bonus_amount} degerindedir. Bonus miktari kampanya donemlerine gore degisiklik gosterebilir."},
+    ],
+    "deneme-bonusu-2026": [
+        {"q": "2026 yilinda {name} deneme bonusu veriyor mu?", "a": "Evet, {name} 2026 yilinda da deneme bonusu sunmaya devam etmektedir. Guncel miktar {bonus_amount} olarak belirlenmistir."},
+        {"q": "2026 deneme bonusu sartlari degisti mi?", "a": "Bonus sartlari donemsel olarak guncellenebilir. En guncel bilgiler icin bu sayfayi ve {name} bonus sartlari sayfasini kontrol edin."},
+        {"q": "{name} 2026 bonusu ne zaman gecerli?", "a": "Bonus genellikle uyelik sonrasi 72 saat icerisinde talep edilmelidir. Gecerlilik suresi site kurallarinda belirtilmistir."},
+    ],
+    "hosgeldin-bonusu": [
+        {"q": "{name} hosgeldin bonusu nedir?", "a": "Hosgeldin bonusu, ilk kez uye olan kullanicilara sunulan ozel bonus firsatidir. Genellikle ilk yatiriminizin belirli bir yuzdesini bonus olarak alirsiniz."},
+        {"q": "{name} hosgeldin bonusu ne kadar?", "a": "{name} hosgeldin bonusu {bonus_amount} degerindedir. Bu miktar ilk yatiriminiza gore degisebilir."},
+        {"q": "Hosgeldin bonusu ile deneme bonusu ayni mi?", "a": "Hayir. Deneme bonusu yatirim gerektirmezken, hosgeldin bonusu ilk yatiriminiza eklenen ekstra bakiyedir."},
+        {"q": "Hosgeldin bonusu sadece bir kez mi alinir?", "a": "Evet, hosgeldin bonusu sadece yeni uyelik ve ilk yatirim icin gecerlidir. Her hesap icin bir kez kullanilabilir."},
+    ],
+    "yatirimsiz-deneme-bonusu": [
+        {"q": "{name} yatirimsiz bonus veriyor mu?", "a": "Evet, {name} yeni uyelerine yatirim gerektirmeden deneme bonusu sunmaktadir. Uyelik sonrasi canli destekten talep edebilirsiniz."},
+        {"q": "Yatirimsiz bonus ile ne kadar kazanabilirim?", "a": "Kazanc miktari cevrim sartlari ve maksimum cekim limitine baglidir. Genel olarak bonus miktarinin 5-10 katina kadar cekim yapilabilir."},
+        {"q": "Yatirimsiz bonus icin belge gerekiyor mu?", "a": "Bazi siteler kimlik dogrulama isteyebilir. Bonus talebi sirasinda canli destek size gereken adimlar hakkinda bilgi verecektir."},
+    ],
+    "bonus-sartlari": [
+        {"q": "{name} bonus cevrim sarti nedir?", "a": "{name} cevrim sarti {turnover}x olarak belirlenmistir. Yani bonus miktarinin {turnover} kati kadar bahis yapmaniz gerekmektedir."},
+        {"q": "Cevrim sartini nasil tamamlarim?", "a": "Spor bahisleri veya casino oyunlari oynayarak cevrim sartinizi tamamlayabilirsiniz. Minimum oran gereksinimleri uygulanabilir."},
+        {"q": "{name} bonusu iptal edilebilir mi?", "a": "Bonus kurallarinin ihlali durumunda bonus iptal edilebilir. Kurallari dikkatlice okumak onemlidir."},
+        {"q": "Birden fazla bonus kullanabilir miyim?", "a": "Genellikle ayni anda birden fazla bonus aktif edilemez. Bir bonus tamamlandiktan sonra yeni bonus talep edebilirsiniz."},
+    ],
+    "odeme-yontemleri": [
+        {"q": "{name} hangi odeme yontemlerini kabul ediyor?", "a": "{name} Papara, banka havale/EFT, kripto para, kredi karti ve diger populer odeme yontemlerini kabul etmektedir."},
+        {"q": "{name} para yatirma alt limiti nedir?", "a": "Minimum yatirim tutari genellikle 50 TL'dir. Odeme yontemine gore bu miktar degisiklik gosterebilir."},
+        {"q": "{name} para cekme suresi ne kadar?", "a": "Para cekme islemleri genellikle 15 dakika ile 24 saat arasinda tamamlanir. Papara ve kripto islemleri daha hizlidir."},
+        {"q": "{name} odeme guvenligi nasil saglanir?", "a": "{name} tum finansal islemlerde SSL sifreleme kullanmaktadir. Kisisel ve finansal bilgileriniz guvenli bir sekilde korunur."},
+    ],
+}
+
+# Hub page linking targets (for internal linking engine)
+HUB_COMPANY_PAGE_MAPPING = {
+    "bonus-guide": {
+        "hubs": ["deneme-bonusu-veren-siteler", "guncel-deneme-bonusu", "yatirimsiz-deneme-bonusu", "bonus-veren-siteler"],
+        "company_pages": ["deneme-bonusu", "hosgeldin-bonusu", "yatirimsiz-deneme-bonusu", "bonus-sartlari"],
+    },
+    "company-guide": {
+        "hubs": [],
+        "company_pages": ["guncel-giris", "guncel-adresi", "yeni-giris-adresi", "mobil-giris"],
+    },
+    "payment": {
+        "hubs": ["odeme-yontemleri", "papel-ile-bahis", "kripto-ile-bahis", "guvenli-odeme-yontemleri"],
+        "company_pages": ["odeme-yontemleri"],
+    },
+}
+
+
 def extract_base_slug(full_slug: str) -> str:
     """Extract base company name slug from full slug like 'onwin-guncelgiris' -> 'onwin'"""
     if full_slug.endswith("-guncelgiris"):
@@ -4720,6 +4796,43 @@ async def get_firma_sub_page(base_slug: str, page_type: str):
         {"name": h1, "url": f"/{base}/{page_type}"},
     ]
 
+    # FAQ data
+    raw_faq = PAGE_TYPE_FAQ.get(page_type, [])
+    turnover = str(site.get("turnover_requirement", 10))
+    faq_items = []
+    for item in raw_faq:
+        faq_items.append({
+            "question": item["q"].format(name=name, bonus_amount=bonus_amount, turnover=turnover),
+            "answer": item["a"].format(name=name, bonus_amount=bonus_amount, turnover=turnover),
+        })
+
+    # Last updated
+    last_updated = site.get("updated_at") or site.get("created_at") or datetime.now(timezone.utc).isoformat()
+
+    # Hub page links (linking engine: hub → company pages)
+    hub_links = []
+    for hub_slug, hub_data in BONUS_HUB_PAGES.items():
+        hub_links.append({"slug": hub_slug, "title": hub_data["h1"], "url": f"/{hub_slug}"})
+    for hub_slug, hub_data in PAYMENT_HUB_PAGES.items():
+        hub_links.append({"slug": hub_slug, "title": hub_data["h1"], "url": f"/{hub_slug}"})
+
+    # Related content - companies with their sub-page links
+    related_companies = []
+    for s in similar[:6]:
+        s_base = extract_base_slug(s.get("slug", ""))
+        if s_base:
+            related_companies.append({
+                "name": s["name"],
+                "logo_url": s.get("logo_url", ""),
+                "bonus_amount": s.get("bonus_amount", ""),
+                "rating": s.get("rating", 4.5),
+                "guncel_giris": f"/{s_base}/guncel-giris",
+                "deneme_bonusu": f"/{s_base}/deneme-bonusu",
+                "hosgeldin_bonusu": f"/{s_base}/hosgeldin-bonusu",
+                "odeme_yontemleri": f"/{s_base}/odeme-yontemleri",
+                "same_page": f"/{s_base}/{page_type}",
+            })
+
     return {
         "site": site,
         "page_type": page_type,
@@ -4734,8 +4847,13 @@ async def get_firma_sub_page(base_slug: str, page_type: str):
         "internal_links": {
             "company_guide": company_guide_links,
             "bonus_guide": bonus_guide_links,
+            "all": internal_links,
         },
         "similar_same_page": similar_same_page,
+        "faq": faq_items,
+        "last_updated": str(last_updated)[:19],
+        "hub_links": hub_links[:8],
+        "related_companies": related_companies,
     }
 
 

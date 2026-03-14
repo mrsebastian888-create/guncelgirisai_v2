@@ -169,7 +169,7 @@ export default function BonusHubPage() {
                     <ExternalLink className="w-3.5 h-3.5" /> Kayit Ol
                   </a>
                 </div>
-                {/* Company sub-page links */}
+                {/* Company sub-page links - internal linking engine */}
                 {company_links[i] && (
                   <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/5">
                     <Link to={company_links[i].guncel_giris_url} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-[#00F0FF] hover:bg-[#00F0FF]/10 transition-colors">
@@ -177,6 +177,12 @@ export default function BonusHubPage() {
                     </Link>
                     <Link to={company_links[i].deneme_bonusu_url} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-neon-green hover:bg-neon-green/10 transition-colors">
                       Deneme Bonusu
+                    </Link>
+                    <Link to={`/${company_links[i].base_slug}/hosgeldin-bonusu`} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-yellow-400 hover:bg-yellow-400/10 transition-colors">
+                      Hosgeldin Bonusu
+                    </Link>
+                    <Link to={`/${company_links[i].base_slug}/bonus-sartlari`} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-muted-foreground hover:bg-white/10 transition-colors">
+                      Bonus Sartlari
                     </Link>
                     <a href={site.affiliate_url} target="_blank" rel="noopener noreferrer"
                       className="sm:hidden text-[11px] px-2 py-1 rounded-md bg-neon-green/20 text-neon-green font-bold">

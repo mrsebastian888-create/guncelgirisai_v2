@@ -174,6 +174,12 @@ export default function PaymentHubPage() {
                     <Link to={company_links[i].guncel_giris_url} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-neon-green hover:bg-neon-green/10 transition-colors">
                       Guncel Giris
                     </Link>
+                    <Link to={`/${company_links[i].base_slug}/deneme-bonusu`} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-neon-green hover:bg-neon-green/10 transition-colors">
+                      Deneme Bonusu
+                    </Link>
+                    <Link to={`/${company_links[i].base_slug}/mobil-giris`} className="text-[11px] px-2 py-1 rounded-md bg-white/5 text-muted-foreground hover:bg-white/10 transition-colors">
+                      Mobil Giris
+                    </Link>
                     <a href={site.affiliate_url} target="_blank" rel="noopener noreferrer"
                       className="sm:hidden text-[11px] px-2 py-1 rounded-md bg-[#00F0FF]/20 text-[#00F0FF] font-bold">
                       Siteye Git
