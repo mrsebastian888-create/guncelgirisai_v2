@@ -15,6 +15,7 @@ import LoginPage from "@/pages/LoginPage";
 import MatchDetailPage from "@/pages/MatchDetailPage";
 import FirmPage from "@/pages/FirmPage";
 import FirmVideoPage from "@/pages/FirmVideoPage";
+import SlugResolver from "@/pages/SlugResolver";
 import CompanyProfilePage from "@/pages/CompanyProfilePage";
 import CompaniesPage from "@/pages/CompaniesPage";
 import CompanySubPage from "@/pages/CompanySubPage";
@@ -22,6 +23,7 @@ import BonusHubPage from "@/pages/BonusHubPage";
 import PaymentHubPage from "@/pages/PaymentHubPage";
 import CompanyArticlesListPage from "@/pages/CompanyArticlesListPage";
 import CompanyArticlePage from "@/pages/CompanyArticlePage";
+import ProgrammaticPage from "@/pages/ProgrammaticPage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -106,11 +108,14 @@ function AppLayout({ isLoading }) {
               <Route path="/:companySlug/makaleler" element={<CompanyArticlesListPage />} />
               <Route path="/:companySlug/makaleler/:articleSlug" element={<CompanyArticlePage />} />
 
+              {/* GG2026 Phase 6: Programmatic SEO — guide pages */}
+              <Route path="/rehber/:slug" element={<ProgrammaticPage />} />
+
               {/* GG2026 SEO: Company Sub-Pages (must be before /:slug catch-all) */}
               <Route path="/:companySlug/:pageType" element={<CompanySubPage />} />
 
               <Route path="/:slug/video" element={<FirmVideoPage />} />
-              <Route path="/:slug" element={<FirmPage />} />
+              <Route path="/:slug" element={<SlugResolver />} />
 
               {/* Admin routes — SADECE admin subdomainde */}
               {adminDomain && <Route path="/admin-login" element={<LoginPage />} />}

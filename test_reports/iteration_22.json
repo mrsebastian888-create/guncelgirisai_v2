@@ -1,0 +1,120 @@
+{
+  "summary": "GG2026 Phase 6: Programmatic SEO Engine - ALL 24 backend tests PASS, ALL frontend routes verified. 21 programmatic pages registered (8 intent, 3 license, 3 country, 7 guide), 14 indexable.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_programmatic_seo.py",
+    "/app/test_reports/pytest/programmatic_seo_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_programmatic_seo.py"
+  ],
+  "success_rate": {
+    "backend": "100% (24/24 tests passed)",
+    "frontend": "100% (all UI routes verified)"
+  },
+  "features_verified": {
+    "GET /api/programmatic/stats": {
+      "status": "PASS",
+      "details": "Returns total_pages=21, indexable_pages=14, by_combination_type breakdown, available_types list"
+    },
+    "POST /api/programmatic/generate (dry_run=true)": {
+      "status": "PASS",
+      "details": "Preview mode returns pages_to_create count without creating"
+    },
+    "POST /api/programmatic/generate (dry_run=false)": {
+      "status": "PASS",
+      "details": "Actually registers pages. Duplicate prevention blocks already-registered pages"
+    },
+    "POST /api/programmatic/register": {
+      "status": "PASS",
+      "details": "Single page registration with validation. Invalid combination_type rejected"
+    },
+    "GET /api/programmatic/pages": {
+      "status": "PASS",
+      "details": "List registered pages with filtering by combination_type and pagination (limit/offset)"
+    },
+    "GET /api/programmatic/page/{slug}": {
+      "status": "PASS",
+      "details": "Returns enriched page data with sites, breadcrumb, hub_links. 404 for non-existent pages"
+    },
+    "Duplicate prevention": {
+      "status": "PASS",
+      "details": "Re-generating same type returns 0 registered (blocks duplicates)"
+    },
+    "Canonical rules": {
+      "status": "PASS",
+      "details": "Reserved slugs (deneme-bonusu, odeme-yontemleri etc) are blocked from registration"
+    },
+    "Indexing eligibility": {
+      "status": "PASS",
+      "details": "Pages with too-short title/desc marked non-indexable. Hub pages with >=3 firms are indexable"
+    },
+    "GET /api/sitemap-programmatic.xml": {
+      "status": "PASS",
+      "details": "Valid XML with 14 indexable page URLs"
+    },
+    "GET /api/sitemap.xml": {
+      "status": "PASS",
+      "details": "Includes sitemap-programmatic.xml entry"
+    },
+    "Frontend /en-guvenilir-bahis-siteleri": {
+      "status": "PASS",
+      "details": "Renders ProgrammaticPage via SlugResolver. Shows H1, site list, breadcrumb, hub_links"
+    },
+    "Frontend /tulipbet-guncelgiris": {
+      "status": "PASS",
+      "details": "Renders FirmPage via SlugResolver fallback (not programmatic)"
+    },
+    "Frontend /rehber/bahis-nasil-yapilir": {
+      "status": "PASS",
+      "details": "Renders ProgrammaticPage for guide pages"
+    },
+    "Existing routes unbroken": {
+      "status": "PASS",
+      "routes_tested": ["/", "/deneme-bonusu", "/:companySlug/:pageType"],
+      "details": "Homepage, bonus guide, company sub-pages all working correctly"
+    }
+  },
+  "programmatic_stats": {
+    "total_pages": 21,
+    "indexable_pages": 14,
+    "non_indexable": 7,
+    "by_combination_type": {
+      "company_x_bonus": 0,
+      "company_x_payment": 0,
+      "company_x_year": 0,
+      "intent_x_category": 8,
+      "license_x_category": 3,
+      "country_x_category": 3,
+      "guide_x_topic": 7
+    }
+  },
+  "engine_components": {
+    "PageRegistry": "Central catalog for all programmatic pages",
+    "SlugGenerator": "Builds valid slugs from dimension combinations",
+    "TemplateSelector": "Maps combination types to frontend templates",
+    "CanonicalManager": "Enforces canonical rules, prevents conflicts",
+    "DuplicatePrevention": "Blocks near-duplicate pages and existing routes",
+    "IndexingEligibility": "Checks min title/desc length, min firms for hub pages",
+    "SitemapIntegration": "Feeds dynamic sitemap generation"
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All APIs are real, no mocking used"
+  },
+  "test_credentials": null,
+  "seed_data_creation": "21 programmatic pages registered (8 intent_x_category, 3 license_x_category, 3 country_x_category, 7 guide_x_topic). 1 test page created during indexing eligibility test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "GG2026 Phase 6 Programmatic SEO Engine complete. programmatic_pages collection stores pages with combination_type, dimensions, seo, filter_query. SlugResolver checks /api/programmatic/page/{slug} first, falls back to FirmPage on 404. Guide pages served at /rehber/{slug}. 7 combination types available. Reserved slugs from Phase 1-5 are blocked."
+}

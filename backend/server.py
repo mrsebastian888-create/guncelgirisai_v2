@@ -4276,6 +4276,10 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     <loc>{base_url}/api/sitemap-company-articles.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-programmatic.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
 </sitemapindex>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -5283,6 +5287,145 @@ async def sitemap_company_articles(request: Request):
     <priority>0.6</priority>
   </url>""")
 
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
+
+
+# ============== PROGRAMMATIC SEO ENGINE (Phase 6) ==============
+
+from agents.programmatic_engine import PageRegistry, COMBINATION_TYPES, INTENT_CATEGORIES, LICENSE_CATEGORIES, COUNTRY_CATEGORIES, GUIDE_TOPICS, PAYMENT_METHODS
+
+
+@api_router.get("/programmatic/stats")
+async def programmatic_stats():
+    """Get programmatic SEO engine statistics."""
+    registry = PageRegistry(db)
+    return await registry.get_stats()
+
+
+@api_router.post("/programmatic/generate")
+async def programmatic_generate(data: Dict[str, Any]):
+    """Generate page combinations. Use dry_run=true to preview."""
+    combination_type = data.get("combination_type")
+    dry_run = data.get("dry_run", True)
+    if not combination_type:
+        raise HTTPException(status_code=400, detail="combination_type gerekli")
+    registry = PageRegistry(db)
+    return await registry.generate_combinations(combination_type, dry_run=dry_run)
+
+
+@api_router.post("/programmatic/register")
+async def programmatic_register(data: Dict[str, Any]):
+    """Register a single programmatic page."""
+    combination_type = data.get("combination_type")
+    dimensions = data.get("dimensions", {})
+    seo = data.get("seo", {})
+    filter_query = data.get("filter_query")
+    if not combination_type or not dimensions:
+        raise HTTPException(status_code=400, detail="combination_type ve dimensions gerekli")
+    registry = PageRegistry(db)
+    return await registry.register_page(combination_type, dimensions, seo, filter_query)
+
+
+@api_router.get("/programmatic/pages")
+async def programmatic_list(combination_type: Optional[str] = None, limit: int = 50, offset: int = 0):
+    """List registered programmatic pages."""
+    registry = PageRegistry(db)
+    return await registry.list_pages(combination_type, limit, offset)
+
+
+@api_router.get("/programmatic/page/{slug:path}")
+async def programmatic_get_page(slug: str):
+    """Get a specific programmatic page with data for rendering."""
+    registry = PageRegistry(db)
+    page = await registry.get_page(slug)
+    if not page:
+        raise HTTPException(status_code=404, detail="Programmatic page bulunamadi")
+
+    # Enrich with firm data for rendering
+    combo_type = page.get("combination_type", "")
+    dims = page.get("dimensions", {})
+    sites = []
+    site_detail = None
+
+    if "company" in dims:
+        company = dims["company"]
+        site_detail = await db.bonus_sites.find_one(
+            {"slug": {"$regex": f"^{re.escape(company)}"}}, {"_id": 0}
+        )
+
+    # For hub-type pages, fetch filtered firms
+    if combo_type in ("intent_x_category", "license_x_category", "country_x_category"):
+        fq = dict(page.get("filter_query", {}))
+        fq["is_active"] = True
+        # Convert filter shorthand to mongo query
+        mongo_q: Dict[str, Any] = {"is_active": True}
+        if fq.get("min_rating"):
+            mongo_q["rating"] = {"$gte": fq["min_rating"]}
+        if fq.get("bonus_type"):
+            mongo_q["bonus_type"] = fq["bonus_type"]
+        if fq.get("category"):
+            mongo_q["category"] = fq["category"]
+        if fq.get("min_bonus"):
+            mongo_q["bonus_value"] = {"$gte": fq["min_bonus"]}
+        sites = await db.bonus_sites.find(mongo_q, {"_id": 0}).sort("sort_order", 1).limit(50).to_list(50)
+
+    elif combo_type == "company_x_payment":
+        if site_detail:
+            sites = [site_detail]
+        # Also get similar firms
+        similar = await db.bonus_sites.find(
+            {"is_active": True, "name": {"$ne": site_detail.get("name", "") if site_detail else ""}},
+            {"_id": 0}
+        ).sort("rating", -1).limit(6).to_list(6)
+        sites.extend(similar)
+
+    elif combo_type == "company_x_year":
+        if site_detail:
+            sites = [site_detail]
+
+    elif combo_type == "guide_x_topic":
+        sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).sort("sort_order", 1).limit(20).to_list(20)
+
+    # Build breadcrumb
+    breadcrumb = [{"name": "Ana Sayfa", "url": "/"}]
+    slug_parts = page["slug"].split("/")
+    if len(slug_parts) > 1:
+        breadcrumb.append({"name": slug_parts[0].upper(), "url": f"/{slug_parts[0]}"})
+    breadcrumb.append({"name": page["seo"]["h1"], "url": f"/{page['slug']}"})
+
+    # Internal links
+    hub_links = []
+    for k, v in {**INTENT_CATEGORIES}.items():
+        hub_links.append({"slug": k, "title": v["title"], "url": f"/{k}"})
+    for k, v in {**LICENSE_CATEGORIES}.items():
+        hub_links.append({"slug": k, "title": f"{v['license_name']} Lisansli {v['category_name']}", "url": f"/{k}"})
+
+    return {
+        "page": page,
+        "sites": sites,
+        "site_detail": site_detail,
+        "breadcrumb": breadcrumb,
+        "hub_links": hub_links[:10],
+    }
+
+
+@api_router.get("/sitemap-programmatic.xml")
+async def sitemap_programmatic(request: Request):
+    """Sitemap for all indexable programmatic pages."""
+    registry = PageRegistry(db)
+    urls_data = await registry.generate_sitemap_urls()
+    urls = []
+    for u in urls_data:
+        urls.append(f"""  <url>
+    <loc>{u["loc"]}</loc>
+    <lastmod>{u["lastmod"]}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>{u["priority"]}</priority>
+  </url>""")
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 {chr(10).join(urls)}
