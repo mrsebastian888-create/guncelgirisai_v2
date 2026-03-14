@@ -245,3 +245,85 @@ async def seo_sitemap_audit(request: Request):
     db, key = _get_db_and_key(request)
     agent = TechnicalSEOAgent(db, key)
     return await agent.audit_sitemap()
+
+
+# ── SERP Intelligence Layer ──────────────────
+
+from .serp import SERPManager
+
+class SERPValidateRequest(BaseModel):
+    keywords: List[str]
+    country: str = "tr"
+
+class SERPOpportunitiesRequest(BaseModel):
+    domain: str = "guncelgiris.ai"
+    keywords: Optional[List[str]] = None
+    country: str = "tr"
+    limit: int = 20
+
+class SERPCompetitorGapRequest(BaseModel):
+    domain: str = "guncelgiris.ai"
+    competitors: List[str]
+    country: str = "tr"
+    limit: int = 20
+
+class SERPLongtailRequest(BaseModel):
+    seed_keyword: str
+    country: str = "tr"
+    limit: int = 30
+
+class SERPDifficultyRequest(BaseModel):
+    keywords: List[str]
+    country: str = "tr"
+
+
+def _get_serp_manager(request: Request) -> SERPManager:
+    _, key = _get_db_and_key(request)
+    return SERPManager(llm_key=key)
+
+
+@router.get("/serp/status")
+async def serp_status(request: Request):
+    """Get SERP provider statuses (Ahrefs, Semrush, DataForSEO)."""
+    mgr = _get_serp_manager(request)
+    statuses = await mgr.get_all_statuses()
+    return {
+        "providers": [s.model_dump() for s in statuses],
+        "any_configured": mgr.has_providers,
+        "fallback_available": bool(mgr.llm_key),
+    }
+
+
+@router.post("/serp/validate")
+async def serp_validate(req: SERPValidateRequest, request: Request):
+    """Validate keywords — provider or AI fallback."""
+    mgr = _get_serp_manager(request)
+    return await mgr.validate_keywords(req.keywords, req.country)
+
+
+@router.post("/serp/opportunities")
+async def serp_opportunities(req: SERPOpportunitiesRequest, request: Request):
+    """Detect ranking opportunities for a domain."""
+    mgr = _get_serp_manager(request)
+    return await mgr.get_ranking_opportunities(req.domain, req.keywords, req.country, req.limit)
+
+
+@router.post("/serp/competitor-gap")
+async def serp_competitor_gap(req: SERPCompetitorGapRequest, request: Request):
+    """Competitor keyword gap analysis."""
+    mgr = _get_serp_manager(request)
+    return await mgr.competitor_gap_analysis(req.domain, req.competitors, req.country, req.limit)
+
+
+@router.post("/serp/longtail")
+async def serp_longtail(req: SERPLongtailRequest, request: Request):
+    """Discover long-tail keyword variations."""
+    mgr = _get_serp_manager(request)
+    return await mgr.discover_longtail(req.seed_keyword, req.country, req.limit)
+
+
+@router.post("/serp/difficulty")
+async def serp_difficulty(req: SERPDifficultyRequest, request: Request):
+    """Analyze SERP difficulty for keywords."""
+    mgr = _get_serp_manager(request)
+    return await mgr.analyze_serp_difficulty(req.keywords, req.country)
