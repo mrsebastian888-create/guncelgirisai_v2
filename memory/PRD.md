@@ -1,78 +1,57 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v22.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v30.0
 
 ## Original Problem Statement
-Spor içerikleri ve deneme bonusu rehberlerini birleştiren, SEO uyumlu, AI destekli, multi-tenant içerik platformu.
+guncelgiris.ai sitesinin GG2026 SEO framework ile buyuk olcekli SEO buyumesine hazirlanmasi.
 
 ## What's Been Implemented
 
-### v1-v21: Previous versions (see CHANGELOG.md for full history)
-### v22.0: Telegram Bot Management System (Feb 2026) - CURRENT
+### v23-v29: GG2026 Phase 1-7 (see CHANGELOG.md)
 
-**Değişiklikler:**
-- Telethon ile BotFather otomasyonu: Firma bazlı Telegram botları otomatik oluşturma
-- Telefon doğrulama akışı: send-code → verify-code → verify-password (2FA)
-- 264 firma için bot username haritası: `{firma}_guncel2026_bot` formatı
-- Admin panel Telegram sekmesi: Bot listesi, firma haritası, broadcast mesaj, istatistikler
-- Webhook tabanlı bot runner: `/api/telegram/webhook/{bot_id}` public endpoint
-- Bot komutları: /start (hoşgeldin + giriş linki), /bonus (bonus bilgisi), /link (affiliate URL), /destek
-- Abone takip sistemi: `telegram_subscribers` koleksiyonu
-- Broadcast mesaj sistemi: Tek bot veya tüm botlara toplu mesaj
-- Toplu bot oluşturma: Batch processing ile rate limit yönetimi
-- Dashboard istatistiklerinde Telegram Bot sayısı
+### v30.0: Phase 8 - Admin Control System (Mar 2026) - CURRENT
 
-**Yeni DB Koleksiyonları:**
-- `telegram_bots`: bot_id, firm_id, firm_name, bot_username, bot_token, status, webhook_active
-- `telegram_subscribers`: bot_id, chat_id, firm_id, username, first_name, subscribed_at
+**8 Monitoring Subsystems:**
+1. **Page Type Toggles**: Enable/disable company sub-pages, hubs, articles, programmatic pages, guides (with counts)
+2. **AI Agent Toggles**: Enable/disable 5 agents with job stats and success rates
+3. **Publish Queue Visibility**: Queue status, today's activity, 7-day forecast, recent published
+4. **Company Priority Lists**: Sort order, coverage score (articles×10 + programmatic×5 + 10), per-firm stats
+5. **SERP Sync Status**: Provider configuration, fallback mode, recent SERP jobs
+6. **Article Generation Status**: Company vs general articles, AI generation coverage (firms with articles %)
+7. **Sitemap Health**: 10 sitemaps, total URL count, health status, warnings
+8. **Indexing Status**: Programmatic page indexable %, non-indexable reasons, recommendations
 
-**Yeni API Endpoints:**
-- `GET /api/admin/telegram/auth/status` - Auth durumu
-- `POST /api/admin/telegram/auth/send-code` - Doğrulama kodu gönder
-- `POST /api/admin/telegram/auth/verify-code` - Kodu doğrula
-- `POST /api/admin/telegram/auth/verify-password` - 2FA şifre doğrula
-- `GET /api/admin/telegram/stats` - İstatistikler
-- `GET /api/admin/telegram/bots` - Bot listesi
-- `POST /api/admin/telegram/create-bot` - Tek bot oluştur
-- `POST /api/admin/telegram/create-bulk` - Toplu bot oluştur
-- `DELETE /api/admin/telegram/bot/{bot_id}` - Bot sil
-- `POST /api/admin/telegram/activate-webhook/{bot_id}` - Webhook aktif et
-- `POST /api/admin/telegram/broadcast` - Broadcast mesaj
-- `GET /api/admin/telegram/firm-bot-map` - Firma-bot haritası
-- `POST /api/telegram/webhook/{bot_id}` - Public webhook handler
+**Settings System:**
+- MongoDB `admin_settings` collection (singleton _id='global')
+- Dot-path updates: `agents.keyword_intelligence`, `publishing.max_per_day`, etc.
+- Default settings seeded on first access
 
-## Architecture
+**12 Admin API Endpoints (JWT protected):**
+- `GET /api/admin/seo/dashboard` — Full dashboard (all 8 sections)
+- `GET/POST /api/admin/seo/settings` — Get/update toggles
+- `GET /api/admin/seo/page-types` — Page type status
+- `GET /api/admin/seo/agents` — Agent status
+- `GET /api/admin/seo/publishing` — Publish queue
+- `GET /api/admin/seo/companies` — Company priorities
+- `POST /api/admin/seo/companies/priority` — Update priority
+- `GET /api/admin/seo/serp` — SERP status
+- `GET /api/admin/seo/articles` — Article status
+- `GET /api/admin/seo/sitemap` — Sitemap health
+- `GET /api/admin/seo/indexing` — Indexing status
+
+## Full GG2026 Architecture Summary
 ```
-/app/
-├── backend/
-│   ├── server.py              // Telegram endpoints added
-│   ├── telegram_bot_manager.py // NEW: Core bot logic
-│   └── telegram_session.*     // Telethon session (created after auth)
-├── frontend/src/
-│   └── pages/AdminPage.jsx    // TelegramTab component added
+Phase 1: URL structure (2,640 company sub-pages)
+Phase 2: Page templates + internal linking + FAQ + schemas
+Phase 3: 5 AI agents (21 endpoints)
+Phase 4: SERP Intelligence — 3 providers (6 endpoints)
+Phase 5: Company Articles (4 endpoints)
+Phase 6: Programmatic SEO Engine (6 endpoints)
+Phase 7: Controlled Publishing (9 endpoints)
+Phase 8: Admin Control System (12 endpoints)
+─────────────────────────────────────────────────
+Total: 58+ API endpoints, 10 sitemaps, 4,500+ URLs, 50K+ capacity
 ```
-
-## Testing
-- iteration_16: Telegram Bot Management 25/25 backend + 100% frontend
 
 ## Prioritized Backlog
-### P0 (Resolved)
-- [x] Telegram Bot Management System (Feb 2026)
-
-### P1 (Next)
-- [ ] Telegram hesap doğrulama (kullanıcı telefon doğrulaması yapmalı)
-- [ ] İlk bot oluşturma pilot testi (tek firma)
-- [ ] Toplu bot oluşturma (264 firma)
-- [ ] Production admin login doğrulaması
-- [ ] External API keyleriyle gerçek discovery/enrichment
-- [ ] AI video üretimi scheduler + batch
-
-### P2 (Future)
-- [ ] Bot mesaj şablonları (özelleştirilebilir)
-- [ ] Bot analitik dashboard (tıklama, dönüşüm)
-- [ ] Otomatik broadcast scheduler
-- [ ] Backend modüler refactoring
-- [ ] Çoklu dil desteği (i18n)
-
-## Key Credentials
-- Admin: username=admin, password=123123..
-- Telegram API ID: 36998690
-- Telegram API Hash: c38a1278304bf1a28f1bb0dbc293063d
+### P1: Phase 9+ (as user requests), Admin UI dashboard
+### P2: SERP provider keys, bulk content generation
+### P3: Telegram, AI Video, Backend refactoring

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Gift, Activity, ChevronDown, Globe, Brain, Building2 } from "lucide-react";
+import { Menu, X, Gift, Activity, ChevronDown, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { API } from "@/App";
@@ -36,18 +36,35 @@ const Navbar = () => {
   };
 
   const navLinks = [
-    { label: "AI Company Intelligence", href: "/companies", icon: Building2, pinned: true },
     { 
       label: "Bonuslar", 
       icon: Gift,
       children: [
         { label: "Deneme Bonusu", href: "/deneme-bonusu" },
         { label: "Hosgeldin Bonusu", href: "/hosgeldin-bonusu" },
-        { label: "Tum Bonuslar", href: "/bonus/deneme" }
+        { label: "Yatirimsiz Bonus", href: "/yatirimsiz-deneme-bonusu" },
+        { label: "Tum Bonuslar", href: "/bonus-veren-siteler" }
       ]
     },
-    { label: "Firma Rehberi", href: "/#firma-rehberi", icon: Globe },
-    { label: "Guncel Giris", href: "/bonus/guncel-giris-adresleri", icon: Globe },
+    { 
+      label: "Firma Rehberi", 
+      icon: Globe,
+      children: [
+        { label: "Guncel Giris", href: "/deneme-bonusu-veren-siteler" },
+        { label: "Guncel Adres", href: "/guncel-deneme-bonusu" },
+        { label: "Firma Listesi", href: "/#firma-rehberi" }
+      ]
+    },
+    { 
+      label: "Odeme", 
+      icon: Globe,
+      children: [
+        { label: "Odeme Yontemleri", href: "/odeme-yontemleri" },
+        { label: "Papara ile Bahis", href: "/papel-ile-bahis" },
+        { label: "Kripto ile Bahis", href: "/kripto-ile-bahis" },
+        { label: "Guvenli Odeme", href: "/guvenli-odeme-yontemleri" }
+      ]
+    },
     { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
     { label: "Sağlayıcılar", href: "/saglayicilar", icon: Globe },
     { label: "AI Analiz", href: "/companies", icon: Brain },
@@ -59,12 +76,12 @@ const Navbar = () => {
   };
 
   const mobileLinks = [
-    { label: "Firma Rehberi", href: "/#firma-rehberi" },
-    { label: "AI Company Intelligence", href: "/companies" },
-    { label: "Bonuslar", href: "/bonus/deneme" },
     { label: "Deneme Bonusu", href: "/deneme-bonusu" },
     { label: "Hosgeldin Bonusu", href: "/hosgeldin-bonusu" },
-    { label: "Guncel Giris Adresleri", href: "/bonus/guncel-giris-adresleri" },
+    { label: "Yatirimsiz Bonus", href: "/yatirimsiz-deneme-bonusu" },
+    { label: "Tum Bonuslar", href: "/bonus-veren-siteler" },
+    { label: "Firma Rehberi", href: "/#firma-rehberi" },
+    { label: "Odeme Yontemleri", href: "/odeme-yontemleri" },
     { label: "Spor Haberleri", href: "/spor-haberleri" },
     { label: "Sağlayıcılar", href: "/saglayicilar" },
     { label: "AI Analiz Araci", href: "/ai-analiz" },

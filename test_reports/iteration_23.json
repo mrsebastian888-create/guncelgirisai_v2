@@ -1,0 +1,112 @@
+{
+  "summary": "GG2026 Phase 7: Controlled Publishing System - ALL 33 backend tests PASS. Queue-based SEO publishing with 8-15 pages/day rate limit. Day-of-week content types working correctly. Daemon running.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_publish_scheduler.py",
+    "/app/test_reports/pytest/publish_scheduler_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_publish_scheduler.py"
+  ],
+  "success_rate": {
+    "backend": "100% (33/33 tests passed)",
+    "frontend": "N/A (backend only testing)"
+  },
+  "features_verified": {
+    "GET /api/publish/status": {
+      "status": "PASS",
+      "details": "Returns queue stats (total/pending/scheduled/published/failed), today's schedule, daemon status (running=true, interval=30min), 7-day forecast, rate limits (8-15 per day)"
+    },
+    "POST /api/publish/enqueue": {
+      "status": "PASS",
+      "details": "Adds items to queue. Slug dedup blocks pending/scheduled duplicates. Returns added/skipped counts. 400 for empty items list."
+    },
+    "POST /api/publish/schedule": {
+      "status": "PASS",
+      "details": "Assigns dates to pending items based on day-of-week rules. Accepts custom min/max_per_day. Returns scheduled count."
+    },
+    "POST /api/publish/run": {
+      "status": "PASS",
+      "details": "Publishes today's scheduled items. Returns published/failed/due_items counts."
+    },
+    "POST /api/publish/manual": {
+      "status": "PASS",
+      "details": "Override: immediately publishes specific items by queue_ids. Sets manual_override=true. Requires queue_ids (400 otherwise)."
+    },
+    "GET /api/publish/queue": {
+      "status": "PASS",
+      "details": "Lists queue items with status filter (pending/scheduled/published/failed) and pagination (limit/offset). Returns total count."
+    },
+    "POST /api/publish/remove": {
+      "status": "PASS",
+      "details": "Removes pending/scheduled items from queue by queue_ids. Published items cannot be removed."
+    },
+    "POST /api/publish/reschedule-failed": {
+      "status": "PASS",
+      "details": "Moves failed items back to pending status with error cleared. Returns rescheduled count."
+    },
+    "GET /api/publish/schedule-map": {
+      "status": "PASS",
+      "details": "Returns DAY_CONTENT_MAP with all 7 days (0-6). Each day has day name, content_types list, and label."
+    },
+    "Day-of-week content mapping": {
+      "status": "PASS",
+      "details": "Mon=hub_page, Tue=company_page, Wed=guide, Thu=comparison, Fri=bonus, Sat=article, Sun=update - verified"
+    },
+    "Rate limiting 8-15/day": {
+      "status": "PASS",
+      "details": "min_per_day=8, max_per_day=15 enforced. Forecast shows capacity_remaining for each day."
+    },
+    "Daemon auto-processing": {
+      "status": "PASS",
+      "details": "daemon.running=true, interval=30 min. Auto-schedules pending items and publishes due items."
+    },
+    "Existing routes unbroken": {
+      "status": "PASS",
+      "routes_tested": ["/api/bonus-sites", "/api/programmatic/stats", "/health"],
+      "details": "All Phase 1-6 routes still working correctly"
+    }
+  },
+  "queue_status": {
+    "total": 11,
+    "pending": 0,
+    "scheduled": 4,
+    "published": 7,
+    "failed": 0,
+    "today": {
+      "date": "2026-03-14",
+      "day": "Saturday",
+      "content_type": "Makaleler",
+      "published": 5,
+      "scheduled": 0
+    }
+  },
+  "day_content_map": {
+    "0": "Monday = Hub Sayfalari (hub_page, intent_hub, license_hub, country_hub)",
+    "1": "Tuesday = Firma Sayfalari (company_page, company_sub, company_x_payment, company_x_year)",
+    "2": "Wednesday = Rehberler (guide, guide_hub, guide_x_topic)",
+    "3": "Thursday = Karsilastirma Sayfalari (comparison, karsilastirma, intent_x_category)",
+    "4": "Friday = Bonus Sayfalari (bonus, bonus_page, company_x_bonus, deneme-bonusu-rehberi, hosgeldin-bonusu-rehberi)",
+    "5": "Saturday = Makaleler (article, company_article, inceleme, giris-rehberi)",
+    "6": "Sunday = Icerik Guncellemeleri (update, refresh, content_update)"
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All APIs are real, no mocking used"
+  },
+  "test_credentials": null,
+  "seed_data_creation": "Test items created and cleaned up during testing. Existing queue has 11 items (7 published, 4 scheduled).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "GG2026 Phase 7 Controlled Publishing System complete. MongoDB collection: publish_queue. Statuses: pending → scheduled → publishing → published/failed. Daemon runs every 30 min, auto-schedules pending and publishes due items. Priority 1=highest, 10=lowest. Published items can be re-queued (dedup only checks pending/scheduled). Schedule looks up to 30 days ahead for valid slot."
+}

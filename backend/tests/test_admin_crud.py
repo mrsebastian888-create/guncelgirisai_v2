@@ -12,7 +12,7 @@ import os
 import uuid
 
 # Use the production URL from environment
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://tech-intel.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://bot-control-4.preview.emergentagent.com').rstrip('/')
 
 class TestBonusSitesCRUD:
     """Test Bonus Sites CRUD operations - focus on PUT and DELETE"""

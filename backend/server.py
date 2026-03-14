@@ -229,6 +229,10 @@ async def ping_mongo() -> tuple[bool, float]:
 
 # ============== LIFESPAN ==============
 
+# Publish scheduler daemon (Phase 7) — initialized before lifespan
+from agents.publish_scheduler import PublishSchedulerDaemon as _PSD
+publish_daemon = _PSD()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler"""
@@ -266,6 +270,10 @@ async def lifespan(app: FastAPI):
         ("companies", "featured_boolean", False),
         ("companies", "intelligence_score", False),
         ("companies", "updated_at", False),
+        ("publish_queue", "status", False),
+        ("publish_queue", "scheduled_date", False),
+        ("programmatic_pages", "slug", True),
+        ("programmatic_pages", "combination_type", False),
     ]
     for coll, field, uniq in index_defs:
         try:
@@ -324,6 +332,9 @@ async def lifespan(app: FastAPI):
 
     await company_intelligence_scheduler.start()
 
+    # Start publish scheduler daemon
+    await publish_daemon.start(db)
+
     # Auto-seed companies if empty (ensures data persists across deploys)
     try:
         company_count = await db.companies.count_documents({"is_approved": True})
@@ -340,6 +351,8 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down application...")
     await content_scheduler.stop()
     await company_intelligence_scheduler.stop()
+    # Stop publish scheduler
+    await publish_daemon.stop()
     await disconnect_from_mongo()
     logger.info("Application shutdown complete")
 
@@ -4367,6 +4380,18 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     <loc>{api_base}/api/sitemap-amp-videos.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-seo-pages.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-company-articles.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-programmatic.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
 </sitemapindex>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -5306,4 +5331,8 @@ async def seed_database():
     return {"message": "Seeded", "sites": len(sites)}
 
 # Include router
+# GG2026 AI Agent Router
+from agents.router import router as agents_router
+api_router.include_router(agents_router)
+
 app.include_router(api_router)

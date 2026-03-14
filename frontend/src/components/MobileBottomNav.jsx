@@ -1,11 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { Gift, Users, Building2, Activity } from "lucide-react";
+import { Gift, Users, CreditCard, Activity } from "lucide-react";
 
 const navItems = [
-  { label: "AI Intel", href: "/companies", icon: Building2, color: "#00F0FF" },
-  { label: "Bonuslar", href: "/deneme-bonusu", icon: Gift, color: "#FFD700" },
+  { label: "Bonuslar", href: "/deneme-bonusu", icon: Gift, color: "#00FF87" },
   { label: "Firmalar", href: "/#firma-rehberi", icon: Users, color: "#00F0FF", isAnchor: true },
-  { label: "Spor", href: "/spor-haberleri", icon: Activity, color: "#00FF87" },
+  { label: "Odeme", href: "/odeme-yontemleri", icon: CreditCard, color: "#FFD700" },
+  { label: "Spor", href: "/spor-haberleri", icon: Activity, color: "#00F0FF" },
 ];
 
 const MobileBottomNav = () => {

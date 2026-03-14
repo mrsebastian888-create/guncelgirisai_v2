@@ -60,6 +60,7 @@ import LoginPage from "@/pages/LoginPage";
 import MatchDetailPage from "@/pages/MatchDetailPage";
 import FirmPage from "@/pages/FirmPage";
 import FirmVideoPage from "@/pages/FirmVideoPage";
+import SlugResolver from "@/pages/SlugResolver";
 import CompanyProfilePage from "@/pages/CompanyProfilePage";
 import CompaniesPage from "@/pages/CompaniesPage";
 import ProvidersPage from "@/pages/ProvidersPage";
