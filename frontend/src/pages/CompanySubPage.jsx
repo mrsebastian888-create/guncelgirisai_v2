@@ -633,6 +633,18 @@ export default function CompanySubPage() {
             {/* Related Companies */}
             <RelatedCompaniesBlock related_companies={related_companies} pageType={pageType} accentColor={accentColor} />
 
+            {/* Company Articles Link */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5" data-testid="company-sub-articles-link">
+              <Link to={`/${baseSlug}/makaleler`} className="flex items-center gap-3 p-3 rounded-xl bg-neon-green/5 border border-neon-green/20 hover:bg-neon-green/10 transition-all group">
+                <FileText className="w-5 h-5 text-neon-green" />
+                <div>
+                  <div className="text-sm font-bold group-hover:text-neon-green transition-colors">{site.name} Makaleleri</div>
+                  <div className="text-xs text-muted-foreground">Rehberler ve detayli icerikler</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto" />
+              </Link>
+            </div>
+
             {/* Hub Links */}
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5" data-testid="company-sub-hub-links">
               <h3 className="font-heading text-base font-bold uppercase mb-3">Rehberler</h3>

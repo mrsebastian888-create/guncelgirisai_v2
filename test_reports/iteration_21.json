@@ -1,0 +1,102 @@
+{
+  "summary": "GG2026 Phase 5: Company Article System - ALL 30 backend tests PASS, ALL frontend features verified. Company-specific editorial article layer at /{company}/makaleler/{article-slug} fully functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_company_articles.py",
+    "/app/test_reports/pytest/company_articles_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_company_articles.py"
+  ],
+  "success_rate": {
+    "backend": "100% (30/30 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "features_verified": {
+    "POST /api/company-articles": {
+      "status": "PASS",
+      "details": "Creates article with company_slug, article_type, auto-generates slug from title, validates required fields"
+    },
+    "GET /api/company-articles/{base_slug}": {
+      "status": "PASS",
+      "details": "Returns site info, articles list, sub_pages internal links, hub_links, breadcrumb, SEO data. tulipbet has 2 test articles."
+    },
+    "GET /api/company-articles/{base_slug}/{article_slug}": {
+      "status": "PASS",
+      "details": "Returns full article with related_articles, related_sub_pages (filtered by cluster), related_hubs, similar_company_links, breadcrumb"
+    },
+    "GET /api/sitemap-company-articles.xml": {
+      "status": "PASS",
+      "details": "Valid XML with article URLs (/company/makaleler/slug) and listing page URLs for all 264 firms"
+    },
+    "GET /api/sitemap.xml": {
+      "status": "PASS",
+      "details": "Includes sitemap-company-articles.xml entry"
+    },
+    "CompanyArticlesListPage": {
+      "status": "PASS",
+      "route": "/:companySlug/makaleler",
+      "details": "Renders company info, articles list (6 cards shown), sidebar CTA, sub-pages links, hub links"
+    },
+    "CompanyArticlePage": {
+      "status": "PASS",
+      "route": "/:companySlug/makaleler/:articleSlug",
+      "details": "Renders full article content, related company pages, related hubs, similar companies, breadcrumb"
+    },
+    "Article taxonomy": {
+      "status": "PASS",
+      "details": "9 article types defined: deneme-bonusu-rehberi, hosgeldin-bonusu-rehberi, bonus-sartlari, giris-rehberi, mobil-giris-rehberi, odeme-rehberi, inceleme, karsilastirma, guvenilirlik-analizi"
+    },
+    "Article-to-company relationship": {
+      "status": "PASS",
+      "details": "Articles linked by company_slug, related_sub_pages shown on article page based on cluster"
+    },
+    "Article-to-hub relationship": {
+      "status": "PASS",
+      "details": "related_hubs shown based on article cluster (bonus-guide -> BONUS_HUB_PAGES, company-guide -> PAYMENT_HUB_PAGES)"
+    },
+    "CompanySubPage Makaleler link": {
+      "status": "PASS",
+      "details": "Sidebar has 'TULIPBET Makaleleri' link to /{companySlug}/makaleler"
+    },
+    "Existing routes": {
+      "status": "PASS",
+      "details": "Homepage (/), /deneme-bonusu, /:slug, /:companySlug/:pageType all working correctly"
+    }
+  },
+  "test_data": {
+    "company": "tulipbet",
+    "slug": "tulipbet-guncelgiris",
+    "base_slug": "tulipbet",
+    "articles": [
+      {"slug": "tulipbet-deneme-bonusu-rehberi", "type": "deneme-bonusu-rehberi", "cluster": "bonus-guide"},
+      {"slug": "tulipbet-giris-rehberi", "type": "giris-rehberi", "cluster": "company-guide"}
+    ]
+  },
+  "api_architecture": {
+    "collection": "company_articles",
+    "endpoints": 4,
+    "routes_added": ["/:companySlug/makaleler", "/:companySlug/makaleler/:articleSlug"],
+    "taxonomy_types": 9,
+    "internal_linking": "sub_pages + hub_links from backend"
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All APIs are real, no mocking used"
+  },
+  "test_credentials": null,
+  "seed_data_creation": "2 test articles created for tulipbet: tulipbet-deneme-bonusu-rehberi (bonus-guide) and tulipbet-giris-rehberi (company-guide)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "GG2026 Phase 5 Company Article System complete. company_articles collection stores articles linked by company_slug. 9 article_type values with cluster mapping (bonus-guide, company-guide). Article detail page shows related_sub_pages filtered by cluster. CompanySubPage sidebar now has 'Makaleler' link. sitemap-company-articles.xml generates URLs for both articles and listing pages for all 264 firms."
+}

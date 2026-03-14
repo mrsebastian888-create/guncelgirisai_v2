@@ -4272,6 +4272,10 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
     <loc>{base_url}/api/sitemap-seo-pages.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
+  <sitemap>
+    <loc>{base_url}/api/sitemap-company-articles.xml</loc>
+    <lastmod>{today}</lastmod>
+  </sitemap>
 </sitemapindex>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -5022,6 +5026,268 @@ async def sitemap_seo_pages(request: Request):
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
+
+
+# ============== GG2026 COMPANY ARTICLE SYSTEM ==============
+
+COMPANY_ARTICLE_TYPES = [
+    {"slug": "deneme-bonusu-rehberi", "label": "Deneme Bonusu Rehberi", "cluster": "bonus-guide"},
+    {"slug": "hosgeldin-bonusu-rehberi", "label": "Hosgeldin Bonusu Rehberi", "cluster": "bonus-guide"},
+    {"slug": "bonus-sartlari", "label": "Bonus Sartlari Rehberi", "cluster": "bonus-guide"},
+    {"slug": "giris-rehberi", "label": "Giris Rehberi", "cluster": "company-guide"},
+    {"slug": "mobil-giris-rehberi", "label": "Mobil Giris Rehberi", "cluster": "company-guide"},
+    {"slug": "odeme-rehberi", "label": "Odeme Yontemleri Rehberi", "cluster": "company-guide"},
+    {"slug": "inceleme", "label": "Detayli Inceleme", "cluster": "company-guide"},
+    {"slug": "karsilastirma", "label": "Karsilastirma", "cluster": "bonus-guide"},
+    {"slug": "guvenilirlik-analizi", "label": "Guvenilirlik Analizi", "cluster": "company-guide"},
+]
+
+
+@api_router.get("/company-articles/{base_slug}")
+async def list_company_articles(base_slug: str, limit: int = 20):
+    """List all articles for a company."""
+    site = await resolve_site_by_base_slug(base_slug)
+    name = site.get("name", "")
+    base = extract_base_slug(site.get("slug", base_slug))
+
+    # Find articles linked to this company
+    articles = await db.company_articles.find(
+        {"company_slug": base, "is_published": True},
+        {"_id": 0, "content": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+
+    # Also find general articles mentioning this company
+    general_articles = await db.articles.find(
+        {"is_published": True, "$or": [
+            {"title": {"$regex": name, "$options": "i"}},
+            {"tags": {"$in": [name.lower(), base]}},
+        ]},
+        {"_id": 0, "content": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+
+    # Company sub-page links for internal linking
+    sub_pages = []
+    for pt in COMPANY_PAGE_TYPES:
+        pt_meta = PAGE_TYPE_META[pt]
+        sub_pages.append({
+            "page_type": pt,
+            "url": f"/{base}/{pt}",
+            "label": pt_meta["h1_template"].format(name=name),
+            "cluster": pt_meta["cluster"],
+        })
+
+    # Hub links
+    hub_links = [
+        {"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in BONUS_HUB_PAGES.items()
+    ]
+    hub_links.extend([
+        {"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in PAYMENT_HUB_PAGES.items()
+    ])
+
+    breadcrumb = [
+        {"name": "Ana Sayfa", "url": "/"},
+        {"name": name, "url": f"/{base}"},
+        {"name": "Makaleler", "url": f"/{base}/makaleler"},
+    ]
+
+    return {
+        "site": {
+            "name": name,
+            "slug": site.get("slug", ""),
+            "base_slug": base,
+            "logo_url": site.get("logo_url", ""),
+            "bonus_amount": site.get("bonus_amount", ""),
+            "rating": site.get("rating", 4.5),
+            "affiliate_url": site.get("affiliate_url", ""),
+        },
+        "articles": articles,
+        "general_articles": general_articles[:5],
+        "article_types": COMPANY_ARTICLE_TYPES,
+        "sub_pages": sub_pages,
+        "hub_links": hub_links[:8],
+        "breadcrumb": breadcrumb,
+        "seo": {
+            "title": f"{name} Makaleleri ve Rehberleri 2026",
+            "description": f"{name} hakkinda detayli makaleler, bonus rehberleri ve giris kilavuzlari.",
+            "h1": f"{name} Makaleler",
+            "canonical": f"https://guncelgiris.ai/{base}/makaleler",
+        },
+    }
+
+
+@api_router.get("/company-articles/{base_slug}/{article_slug}")
+async def get_company_article(base_slug: str, article_slug: str):
+    """Get a specific company article."""
+    site = await resolve_site_by_base_slug(base_slug)
+    name = site.get("name", "")
+    base = extract_base_slug(site.get("slug", base_slug))
+
+    article = await db.company_articles.find_one(
+        {"company_slug": base, "slug": article_slug, "is_published": True},
+        {"_id": 0}
+    )
+    if not article:
+        raise HTTPException(status_code=404, detail="Makale bulunamadi")
+
+    # Increment view count
+    await db.company_articles.update_one(
+        {"company_slug": base, "slug": article_slug},
+        {"$inc": {"view_count": 1}}
+    )
+    article["view_count"] = article.get("view_count", 0) + 1
+
+    # Related company articles
+    related_articles = await db.company_articles.find(
+        {"company_slug": base, "slug": {"$ne": article_slug}, "is_published": True},
+        {"_id": 0, "content": 0}
+    ).sort("created_at", -1).limit(5).to_list(5)
+
+    # Related company sub-pages (based on article type cluster)
+    article_type_info = next((t for t in COMPANY_ARTICLE_TYPES if t["slug"] == article.get("article_type")), None)
+    cluster = article_type_info["cluster"] if article_type_info else "company-guide"
+    related_sub_pages = []
+    for pt in COMPANY_PAGE_TYPES:
+        pt_meta = PAGE_TYPE_META[pt]
+        if pt_meta["cluster"] == cluster:
+            related_sub_pages.append({
+                "page_type": pt,
+                "url": f"/{base}/{pt}",
+                "label": pt_meta["h1_template"].format(name=name),
+            })
+
+    # Related hub pages
+    related_hubs = []
+    if cluster == "bonus-guide":
+        related_hubs = [{"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in BONUS_HUB_PAGES.items()]
+    else:
+        related_hubs = [{"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in PAYMENT_HUB_PAGES.items()]
+
+    # Similar firms' articles
+    similar = await db.bonus_sites.find(
+        {"category": site.get("category", "Turkiye"), "name": {"$ne": name}, "is_active": True},
+        {"_id": 0, "name": 1, "slug": 1, "logo_url": 1, "bonus_amount": 1}
+    ).sort("rating", -1).limit(4).to_list(4)
+    similar_links = []
+    for s in similar:
+        s_base = extract_base_slug(s.get("slug", ""))
+        if s_base:
+            similar_links.append({
+                "name": s["name"],
+                "logo_url": s.get("logo_url", ""),
+                "articles_url": f"/{s_base}/makaleler",
+                "bonus_amount": s.get("bonus_amount", ""),
+            })
+
+    breadcrumb = [
+        {"name": "Ana Sayfa", "url": "/"},
+        {"name": name, "url": f"/{base}"},
+        {"name": "Makaleler", "url": f"/{base}/makaleler"},
+        {"name": article.get("title", ""), "url": f"/{base}/makaleler/{article_slug}"},
+    ]
+
+    return {
+        "site": {
+            "name": name,
+            "slug": site.get("slug", ""),
+            "base_slug": base,
+            "logo_url": site.get("logo_url", ""),
+            "bonus_amount": site.get("bonus_amount", ""),
+            "rating": site.get("rating", 4.5),
+            "affiliate_url": site.get("affiliate_url", ""),
+        },
+        "article": article,
+        "related_articles": related_articles,
+        "related_sub_pages": related_sub_pages,
+        "related_hubs": related_hubs[:5],
+        "similar_company_links": similar_links,
+        "breadcrumb": breadcrumb,
+        "seo": {
+            "title": article.get("seo_title") or article.get("title", ""),
+            "description": article.get("seo_description") or article.get("excerpt", ""),
+            "h1": article.get("title", ""),
+            "canonical": f"https://guncelgiris.ai/{base}/makaleler/{article_slug}",
+        },
+    }
+
+
+@api_router.post("/company-articles")
+async def create_company_article(data: Dict[str, Any]):
+    """Create a company-specific article."""
+    required = ["company_slug", "title", "content"]
+    for field in required:
+        if not data.get(field):
+            raise HTTPException(status_code=400, detail=f"{field} gerekli")
+
+    if not data.get("slug"):
+        data["slug"] = slugify(data["title"])
+    if not data.get("excerpt") and data.get("content"):
+        data["excerpt"] = data["content"][:200].strip() + "..."
+
+    article = {
+        "id": str(uuid.uuid4()),
+        "company_slug": data["company_slug"],
+        "title": data["title"],
+        "slug": data["slug"],
+        "excerpt": data.get("excerpt", ""),
+        "content": data["content"],
+        "article_type": data.get("article_type", "inceleme"),
+        "tags": data.get("tags", []),
+        "author": data.get("author", "Admin"),
+        "is_published": data.get("is_published", True),
+        "seo_title": data.get("seo_title", ""),
+        "seo_description": data.get("seo_description", ""),
+        "related_company_pages": data.get("related_company_pages", []),
+        "related_hub_pages": data.get("related_hub_pages", []),
+        "internal_links": data.get("internal_links", []),
+        "view_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.company_articles.insert_one({k: v for k, v in article.items() if k != "_id"})
+    return {k: v for k, v in article.items() if k != "_id"}
+
+
+@api_router.get("/sitemap-company-articles.xml")
+async def sitemap_company_articles(request: Request):
+    """Sitemap for company articles."""
+    base_url = "https://guncelgiris.ai"
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    articles = await db.company_articles.find(
+        {"is_published": True},
+        {"_id": 0, "company_slug": 1, "slug": 1, "updated_at": 1}
+    ).to_list(10000)
+
+    urls = []
+    for a in articles:
+        cs = a.get("company_slug", "")
+        s = a.get("slug", "")
+        if cs and s:
+            lastmod = str(a.get("updated_at", today))[:10]
+            urls.append(f"""  <url>
+    <loc>{base_url}/{cs}/makaleler/{s}</loc>
+    <lastmod>{lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>""")
+
+    # Also add listing pages per company
+    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
+    for f in firms:
+        full_slug = f.get("slug", "")
+        base = extract_base_slug(full_slug) if full_slug else ""
+        if base:
+            urls.append(f"""  <url>
+    <loc>{base_url}/{base}/makaleler</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>""")
+
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{chr(10).join(urls)}
+</urlset>"""
+    return Response(content=xml, media_type="application/xml")
 
 
 MIGRATION_SECRET = "dsbn-migrate-2026-guncelgiris"

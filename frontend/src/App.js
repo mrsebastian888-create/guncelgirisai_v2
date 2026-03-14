@@ -20,6 +20,8 @@ import CompaniesPage from "@/pages/CompaniesPage";
 import CompanySubPage from "@/pages/CompanySubPage";
 import BonusHubPage from "@/pages/BonusHubPage";
 import PaymentHubPage from "@/pages/PaymentHubPage";
+import CompanyArticlesListPage from "@/pages/CompanyArticlesListPage";
+import CompanyArticlePage from "@/pages/CompanyArticlePage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -99,6 +101,10 @@ function AppLayout({ isLoading }) {
               <Route path="/kripto-ile-bahis" element={<PaymentHubPage />} />
               <Route path="/bddk-onayli-odeme-yontemleri" element={<PaymentHubPage />} />
               <Route path="/guvenli-odeme-yontemleri" element={<PaymentHubPage />} />
+
+              {/* GG2026 SEO: Company Articles (must be before /:companySlug/:pageType) */}
+              <Route path="/:companySlug/makaleler" element={<CompanyArticlesListPage />} />
+              <Route path="/:companySlug/makaleler/:articleSlug" element={<CompanyArticlePage />} />
 
               {/* GG2026 SEO: Company Sub-Pages (must be before /:slug catch-all) */}
               <Route path="/:companySlug/:pageType" element={<CompanySubPage />} />
