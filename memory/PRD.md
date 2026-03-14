@@ -1,57 +1,38 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v30.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v31.0
 
 ## Original Problem Statement
-guncelgiris.ai sitesinin GG2026 SEO framework ile buyuk olcekli SEO buyumesine hazirlanmasi.
+guncelgiris.ai — GG2026 SEO framework, AI-powered content platform.
 
-## What's Been Implemented
+## Current: Video Player System (Mar 2026)
 
-### v23-v29: GG2026 Phase 1-7 (see CHANGELOG.md)
+### Video Player & Gallery
+- `/videolar` — YouTube-like video gallery with grid layout, category filters (Tumu/Genel/Bonus/Giris/Inceleme)
+- `/videolar/:videoId` — Full video player page with company CTA, related videos, VideoObject JSON-LD
+- Object storage integration (Emergent) for video uploads (50MB limit)
+- Video sources: upload (manual), ai_generated (Sora 2), external (URL)
+- MongoDB `video_library` collection with soft-delete, view tracking
+- Admin JWT-protected upload/register/delete endpoints
 
-### v30.0: Phase 8 - Admin Control System (Mar 2026) - CURRENT
+### Video API Endpoints
+- `GET /api/videos` — List (filter by company_slug, category)
+- `GET /api/videos/{id}` — Detail + related + company info
+- `GET /api/videos/{id}/file` — Stream from object storage
+- `POST /api/videos/upload` — File upload (admin)
+- `POST /api/videos/register` — Register external/AI video (admin)
+- `DELETE /api/videos/{id}` — Soft delete (admin)
 
-**8 Monitoring Subsystems:**
-1. **Page Type Toggles**: Enable/disable company sub-pages, hubs, articles, programmatic pages, guides (with counts)
-2. **AI Agent Toggles**: Enable/disable 5 agents with job stats and success rates
-3. **Publish Queue Visibility**: Queue status, today's activity, 7-day forecast, recent published
-4. **Company Priority Lists**: Sort order, coverage score (articles×10 + programmatic×5 + 10), per-firm stats
-5. **SERP Sync Status**: Provider configuration, fallback mode, recent SERP jobs
-6. **Article Generation Status**: Company vs general articles, AI generation coverage (firms with articles %)
-7. **Sitemap Health**: 10 sitemaps, total URL count, health status, warnings
-8. **Indexing Status**: Programmatic page indexable %, non-indexable reasons, recommendations
+## Full Architecture: GG2026 Phase 1-8 + Video System
+- Phase 1-2: URL structure + templates (2,640 company pages)
+- Phase 3-4: AI agents (5) + SERP intelligence (3 providers)
+- Phase 5: Company articles
+- Phase 6: Programmatic SEO engine (50K+ capacity)
+- Phase 7: Controlled publishing (queue + scheduler)
+- Phase 8: Admin control system (monitoring)
+- Video: Gallery + player + object storage
 
-**Settings System:**
-- MongoDB `admin_settings` collection (singleton _id='global')
-- Dot-path updates: `agents.keyword_intelligence`, `publishing.max_per_day`, etc.
-- Default settings seeded on first access
+**Total: 65+ API endpoints, 10 sitemaps, 4,500+ URLs**
 
-**12 Admin API Endpoints (JWT protected):**
-- `GET /api/admin/seo/dashboard` — Full dashboard (all 8 sections)
-- `GET/POST /api/admin/seo/settings` — Get/update toggles
-- `GET /api/admin/seo/page-types` — Page type status
-- `GET /api/admin/seo/agents` — Agent status
-- `GET /api/admin/seo/publishing` — Publish queue
-- `GET /api/admin/seo/companies` — Company priorities
-- `POST /api/admin/seo/companies/priority` — Update priority
-- `GET /api/admin/seo/serp` — SERP status
-- `GET /api/admin/seo/articles` — Article status
-- `GET /api/admin/seo/sitemap` — Sitemap health
-- `GET /api/admin/seo/indexing` — Indexing status
-
-## Full GG2026 Architecture Summary
-```
-Phase 1: URL structure (2,640 company sub-pages)
-Phase 2: Page templates + internal linking + FAQ + schemas
-Phase 3: 5 AI agents (21 endpoints)
-Phase 4: SERP Intelligence — 3 providers (6 endpoints)
-Phase 5: Company Articles (4 endpoints)
-Phase 6: Programmatic SEO Engine (6 endpoints)
-Phase 7: Controlled Publishing (9 endpoints)
-Phase 8: Admin Control System (12 endpoints)
-─────────────────────────────────────────────────
-Total: 58+ API endpoints, 10 sitemaps, 4,500+ URLs, 50K+ capacity
-```
-
-## Prioritized Backlog
-### P1: Phase 9+ (as user requests), Admin UI dashboard
-### P2: SERP provider keys, bulk content generation
-### P3: Telegram, AI Video, Backend refactoring
+## Next Steps
+- Wallpaper/Gorsel sistemi (AI gorsel uretimi + galeri)
+- Telegram Channel Post entegrasyonu (@guncelgirisai)
+- Video/makale/gorsel → otomatik Telegram post
