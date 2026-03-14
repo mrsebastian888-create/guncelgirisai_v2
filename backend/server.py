@@ -221,6 +221,10 @@ async def ping_mongo() -> tuple[bool, float]:
 
 # ============== LIFESPAN ==============
 
+# Publish scheduler daemon (Phase 7) — initialized before lifespan
+from agents.publish_scheduler import PublishSchedulerDaemon as _PSD
+publish_daemon = _PSD()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler"""
@@ -258,6 +262,10 @@ async def lifespan(app: FastAPI):
         ("companies", "featured_boolean", False),
         ("companies", "intelligence_score", False),
         ("companies", "updated_at", False),
+        ("publish_queue", "status", False),
+        ("publish_queue", "scheduled_date", False),
+        ("programmatic_pages", "slug", True),
+        ("programmatic_pages", "combination_type", False),
     ]
     for coll, field, uniq in index_defs:
         try:
@@ -316,6 +324,9 @@ async def lifespan(app: FastAPI):
 
     await company_intelligence_scheduler.start()
 
+    # Start publish scheduler daemon
+    await publish_daemon.start(db)
+
     # Auto-seed companies if empty (ensures data persists across deploys)
     try:
         company_count = await db.companies.count_documents({"is_approved": True})
@@ -332,6 +343,8 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down application...")
     await content_scheduler.stop()
     await company_intelligence_scheduler.stop()
+    # Stop publish scheduler
+    await publish_daemon.stop()
     await disconnect_from_mongo()
     logger.info("Application shutdown complete")
 
@@ -5431,6 +5444,96 @@ async def sitemap_programmatic(request: Request):
 {chr(10).join(urls)}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
+
+
+# ============== CONTROLLED PUBLISHING SYSTEM (Phase 7) ==============
+
+from agents.publish_scheduler import PublishQueue, DAY_CONTENT_MAP
+
+
+@api_router.get("/publish/status")
+async def publish_status():
+    """Get publish queue status, today's schedule, and 7-day forecast."""
+    queue = PublishQueue(db)
+    status = await queue.get_queue_status()
+    status["daemon"] = {
+        "running": publish_daemon.is_running,
+        "last_run": publish_daemon.last_run,
+        "last_result": publish_daemon.last_result,
+        "interval_minutes": publish_daemon.check_interval_minutes,
+    }
+    return status
+
+
+@api_router.post("/publish/enqueue")
+async def publish_enqueue(data: Dict[str, Any]):
+    """Add items to the publish queue.
+    Body: {"items": [{"slug": "...", "title": "...", "content_type": "...", "source": "...", "priority": 5}]}
+    """
+    items = data.get("items", [])
+    if not items:
+        raise HTTPException(status_code=400, detail="items listesi gerekli")
+    queue = PublishQueue(db)
+    return await queue.add_to_queue(items)
+
+
+@api_router.post("/publish/schedule")
+async def publish_schedule(data: Dict[str, Any] = None):
+    """Schedule pending items based on day-of-week rules."""
+    data = data or {}
+    min_per_day = data.get("min_per_day", 8)
+    max_per_day = data.get("max_per_day", 15)
+    queue = PublishQueue(db)
+    return await queue.schedule_items(min_per_day, max_per_day)
+
+
+@api_router.post("/publish/run")
+async def publish_run():
+    """Manually trigger publishing of today's scheduled items."""
+    queue = PublishQueue(db)
+    return await queue.publish_due()
+
+
+@api_router.post("/publish/manual")
+async def publish_manual(data: Dict[str, Any]):
+    """Override: immediately publish specific items.
+    Body: {"queue_ids": ["id1", "id2"]}
+    """
+    queue_ids = data.get("queue_ids", [])
+    if not queue_ids:
+        raise HTTPException(status_code=400, detail="queue_ids gerekli")
+    queue = PublishQueue(db)
+    return await queue.manual_publish(queue_ids)
+
+
+@api_router.get("/publish/queue")
+async def publish_queue_list(status: Optional[str] = None, limit: int = 50, offset: int = 0):
+    """List queue items with optional status filter."""
+    queue = PublishQueue(db)
+    return await queue.get_queue_items(status, limit, offset)
+
+
+@api_router.post("/publish/remove")
+async def publish_remove(data: Dict[str, Any]):
+    """Remove pending/scheduled items from queue.
+    Body: {"queue_ids": ["id1", "id2"]}
+    """
+    queue_ids = data.get("queue_ids", [])
+    queue = PublishQueue(db)
+    return await queue.remove_from_queue(queue_ids)
+
+
+@api_router.post("/publish/reschedule-failed")
+async def publish_reschedule_failed():
+    """Move failed items back to pending for rescheduling."""
+    queue = PublishQueue(db)
+    return await queue.reschedule_failed()
+
+
+@api_router.get("/publish/schedule-map")
+async def publish_schedule_map():
+    """Get the day-of-week content type schedule."""
+    return {"schedule": DAY_CONTENT_MAP}
 
 
 MIGRATION_SECRET = "dsbn-migrate-2026-guncelgiris"
