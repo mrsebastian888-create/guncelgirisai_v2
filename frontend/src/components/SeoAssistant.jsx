@@ -787,10 +787,6 @@ function ReportsTab() {
   const [filter, setFilter] = useState("all");
   const [expanded, setExpanded] = useState(null);
 
-  useEffect(() => {
-    fetchReports();
-  }, [filter]);
-
   const fetchReports = async () => {
     setLoading(true);
     try {
@@ -800,6 +796,10 @@ function ReportsTab() {
     } catch { toast.error("Raporlar yüklenemedi"); }
     finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    fetchReports();
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async (id) => {
     try {

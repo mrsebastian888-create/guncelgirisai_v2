@@ -81,18 +81,20 @@ uvicorn server:app --host 0.0.0.0 --port $PORT --workers 4
 Railway dashboard'unda "Variables" sekmesine gidin ve su degiskenleri ekleyin:
 
 ```
-MONGO_URL=mongodb+srv://dsbn_admin:<password>@dsbn-production.xxxxx.mongodb.net/?retryWrites=true&w=majority
+MONGO_URL=<mongodb-atlas-connection-string>
 DB_NAME=test_database
-EMERGENT_LLM_KEY=sk-emergent-3D99eDdBd4046D5050
+EMERGENT_LLM_KEY=<your-emergent-llm-key>
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD_HASH=$2b$12$ovlvmOQqBVH4h/ZWwdmEueaz/z6VzN9cxQjk0cZDwpeBmfiQPDmHe
-JWT_SECRET=99281b5f280c9023c297e72de3c69b9395cccbec773a5ca8c64ef9e9c8a2dafa
+ADMIN_PASSWORD_HASH=<bcrypt-hashed-password>
+JWT_SECRET=<strong-random-secret-min-32-chars>
 JWT_EXPIRE_HOURS=24
-CORS_ORIGINS=https://guncelgiris.ai,https://www.guncelgiris.ai,https://adminguncelgiris.company,https://www.adminguncelgiris.company
-ODDS_API_KEY=cf0633b81337cb40e3ddc0cdbae55b1e
-PERIGON_API_KEY=affiliate-news-ai
-GODADDY_API_KEY=fYWJAxVtCXrw_KH1Q3dLBVwT62Tgt8mgWMG
-GODADDY_API_SECRET=4CoSziun1BUX6jPMsNVvXo
+CORS_ORIGINS=https://guncelgiris.ai,https://www.guncelgiris.ai,https://adminguncelgiris.company
+ODDS_API_KEY=<your-odds-api-key>
+PERIGON_API_KEY=<your-perigon-api-key>
+GODADDY_API_KEY=<your-godaddy-api-key>
+GODADDY_API_SECRET=<your-godaddy-api-secret>
+MIGRATION_SECRET=<strong-random-migration-secret>
+TELEGRAM_WEBHOOK_BASE=<your-railway-backend-url>
 ```
 
 ### 2.5 Deploy ve URL

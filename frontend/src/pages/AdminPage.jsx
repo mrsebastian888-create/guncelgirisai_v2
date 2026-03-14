@@ -10,7 +10,7 @@ import {
   Search, Edit2, Save, X, Eye, ChevronDown, ChevronUp,
   Gift, Calendar, ArrowUp, ArrowDown, Layers, Image,
   Play, Pause, Clock, ListChecks, Zap, Download, Check, Building2,
-  Send, Bot, Users, Radio, MessageSquare
+  Send, Bot, Users, Radio, MessageSquare, Settings
 } from "lucide-react";
 import SeoAssistant from "@/components/SeoAssistant";
 import { Button } from "@/components/ui/button";
@@ -573,7 +573,7 @@ function CompaniesTab() {
 
   useEffect(() => {
     fetchCompanies();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDiscover = async () => {
     if (!query.trim()) return toast.error("Keşif sorgusu gerekli");
@@ -1008,7 +1008,7 @@ function TelegramTab() {
   const adminToken = localStorage.getItem("admin_token");
   const headers = { Authorization: `Bearer ${adminToken}` };
 
-  useEffect(() => { checkAuthAndFetch(); }, []);
+  useEffect(() => { checkAuthAndFetch(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkAuthAndFetch = async () => {
     setLoading(true);
@@ -1688,11 +1688,16 @@ function AutoContentScheduler({ onRefresh }) {
   const [loading, setLoading] = useState(false);
   const [interval, setInterval_] = useState("5");
 
+  const authHeaders = () => {
+    const token = localStorage.getItem("admin_token");
+    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  };
+
   const fetchQueue = async () => {
     try {
       const [qRes, sRes] = await Promise.all([
         axios.get(`${API}/content-queue?limit=50`),
-        axios.get(`${API}/scheduler/status`),
+        axios.get(`${API}/scheduler/status`, authHeaders()),
       ]);
       setQueue(qRes.data.items || []);
       setQueueStats(qRes.data.stats || {});
@@ -1705,7 +1710,7 @@ function AutoContentScheduler({ onRefresh }) {
     fetchQueue();
     const pollId = window.setInterval(fetchQueue, 15000);
     return () => window.clearInterval(pollId);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleBulkAdd = async () => {
     if (!bulkInput.trim()) return toast.error("Konu listesi boş");
@@ -1725,10 +1730,10 @@ function AutoContentScheduler({ onRefresh }) {
   const handleToggleScheduler = async () => {
     try {
       if (scheduler.is_running) {
-        await axios.post(`${API}/scheduler/stop`);
+        await axios.post(`${API}/scheduler/stop`, {}, authHeaders());
         toast.success("Zamanlayıcı durduruldu");
       } else {
-        await axios.post(`${API}/scheduler/start`);
+        await axios.post(`${API}/scheduler/start`, {}, authHeaders());
         toast.success("Zamanlayıcı başlatıldı");
       }
       fetchQueue();
@@ -1738,7 +1743,7 @@ function AutoContentScheduler({ onRefresh }) {
   const handleIntervalChange = async (val) => {
     setInterval_(val);
     try {
-      await axios.put(`${API}/scheduler/interval`, { minutes: parseInt(val) });
+      await axios.put(`${API}/scheduler/interval`, { minutes: parseInt(val) }, authHeaders());
       toast.success(`Süre ${val} dakika olarak ayarlandı`);
       fetchQueue();
     } catch { toast.error("Ayarlanamadı"); }
@@ -1747,7 +1752,7 @@ function AutoContentScheduler({ onRefresh }) {
   const handleRunNow = async () => {
     setLoading(true);
     try {
-      await axios.post(`${API}/scheduler/run-now`);
+      await axios.post(`${API}/scheduler/run-now`, {}, authHeaders());
       toast.success("Makale üretimi başlatıldı");
       setTimeout(() => { fetchQueue(); onRefresh(); }, 3000);
     } catch { toast.error("Üretilemedi"); }
@@ -1964,6 +1969,96 @@ function AutoContentScheduler({ onRefresh }) {
   );
 }
 
+/* ── SETTINGS TAB ────────────────────────────────── */
+function SettingsTab() {
+  const [wheelRedirectUrl, setWheelRedirectUrl] = useState("");
+  const [delayedPopupUrl, setDelayedPopupUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const adminToken = localStorage.getItem("admin_token");
+
+  useEffect(() => {
+    const headers = adminToken ? { Authorization: `Bearer ${adminToken}` } : {};
+    const fn = async () => {
+      try {
+        const res = await axios.get(`${API}/admin/settings`, { headers });
+        setWheelRedirectUrl(res.data.wheel_bonus_redirect_url || "");
+        setDelayedPopupUrl(res.data.delayed_popup_url || "");
+      } catch { toast.error("Ayarlar yüklenemedi"); }
+      finally { setLoading(false); }
+    };
+    fn();
+  }, [adminToken]);
+
+  const handleSave = async () => {
+    const token = localStorage.getItem("admin_token");
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+    setSaving(true);
+    try {
+      await axios.put(`${API}/admin/settings`, {
+        wheel_bonus_redirect_url: wheelRedirectUrl.trim(),
+        delayed_popup_url: delayedPopupUrl.trim(),
+      }, { headers: authHeaders });
+      toast.success("Ayarlar kaydedildi");
+    } catch { toast.error("Kaydedilemedi"); }
+    finally { setSaving(false); }
+  };
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-neon-green" /></div>;
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Gift className="w-5 h-5" /> Çark – Bonusu Al butonu</CardTitle>
+          <CardDescription>Çarkı çevirip bonus kazandıktan sonra &quot;Bonusu Al&quot; butonuna basıldığında kullanıcı bu URL&apos;ye yönlendirilir. Boş bırakırsanız rastgele bir bonus sitesi açılır.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="wheel-redirect-url">Yönlendirme URL&apos;si</Label>
+            <Input
+              id="wheel-redirect-url"
+              type="url"
+              placeholder="https://..."
+              value={wheelRedirectUrl}
+              onChange={(e) => setWheelRedirectUrl(e.target.value)}
+              className="max-w-xl"
+            />
+          </div>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            Kaydet
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="glass-card border-white/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5" /> 30 saniye sonra açılacak URL</CardTitle>
+          <CardDescription>Bir URL girerseniz, kullanıcı sitede 30 saniye kaldıktan sonra bu adres yeni sekmede otomatik açılır. Boş bırakırsanız bu özellik devre dışı kalır.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="delayed-popup-url">URL</Label>
+            <Input
+              id="delayed-popup-url"
+              type="url"
+              placeholder="https://..."
+              value={delayedPopupUrl}
+              onChange={(e) => setDelayedPopupUrl(e.target.value)}
+              className="max-w-xl"
+            />
+          </div>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+            Kaydet
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 /* ── MAIN ADMIN PAGE ─────────────────────────────── */
 const AdminPage = () => {
   const navigate = useNavigate();
@@ -1986,7 +2081,7 @@ const AdminPage = () => {
   const [generatedContent, setGeneratedContent] = useState("");
   const [aiTopic, setAiTopic] = useState("");
 
-  useEffect(() => { fetchData(); }, [selectedDomain]);
+  useEffect(() => { fetchData(); }, [selectedDomain]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = async () => {
     try {
@@ -2068,7 +2163,7 @@ const AdminPage = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="domains" className="space-y-6">
-          <TabsList className="grid grid-cols-9 w-full max-w-6xl">
+          <TabsList className="grid grid-cols-10 w-full max-w-6xl">
             <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-1.5" />Domainler</TabsTrigger>
             <TabsTrigger value="sites"><Gift className="w-4 h-4 mr-1.5" />Siteler</TabsTrigger>
             <TabsTrigger value="companies" data-testid="admin-companies-tab"><Building2 className="w-4 h-4 mr-1.5" />Companies</TabsTrigger>
@@ -2078,6 +2173,7 @@ const AdminPage = () => {
             <TabsTrigger value="articles"><FileText className="w-4 h-4 mr-1.5" />Makaleler</TabsTrigger>
             <TabsTrigger value="matches"><Activity className="w-4 h-4 mr-1.5" />Maçlar</TabsTrigger>
             <TabsTrigger value="telegram" data-testid="admin-telegram-tab"><Bot className="w-4 h-4 mr-1.5" />Telegram</TabsTrigger>
+            <TabsTrigger value="settings"><Settings className="w-4 h-4 mr-1.5" />Ayarlar</TabsTrigger>
           </TabsList>
 
           <TabsContent value="domains"><DomainsTab domains={domains} onRefresh={fetchData} /></TabsContent>
@@ -2094,6 +2190,7 @@ const AdminPage = () => {
           <TabsContent value="articles"><ArticlesTab articles={articles} onRefresh={fetchData} /></TabsContent>
           <TabsContent value="matches" className="space-y-6"><MatchesAdminTab /></TabsContent>
           <TabsContent value="telegram"><TelegramTab /></TabsContent>
+          <TabsContent value="settings"><SettingsTab /></TabsContent>
         </Tabs>
       </div>
     </div>

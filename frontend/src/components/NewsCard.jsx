@@ -4,9 +4,16 @@ import { Calendar, ArrowRight, ExternalLink } from "lucide-react";
 const NewsCard = ({ article, index = 0 }) => {
   const isLarge = index === 0;
 
-  // Perigon format (image, url external, published_at, topics, description)
-  // DB format (image_url, slug, created_at, tags, excerpt)
-  const imgSrc = article.image || article.image_url;
+  const PLACEHOLDER_IMAGES = [
+    "https://images.pexels.com/photos/46798/the-ball-stadion-football-the-pitch-46798.jpeg?auto=compress&cs=tinysrgb&w=600",
+    "https://images.pexels.com/photos/274422/pexels-photo-274422.jpeg?auto=compress&cs=tinysrgb&w=600",
+    "https://images.pexels.com/photos/1884574/pexels-photo-1884574.jpeg?auto=compress&cs=tinysrgb&w=600",
+    "https://images.pexels.com/photos/3621104/pexels-photo-3621104.jpeg?auto=compress&cs=tinysrgb&w=600",
+    "https://images.pexels.com/photos/209841/pexels-photo-209841.jpeg?auto=compress&cs=tinysrgb&w=600",
+    "https://images.pexels.com/photos/1618200/pexels-photo-1618200.jpeg?auto=compress&cs=tinysrgb&w=600",
+  ];
+
+  const imgSrc = article.image || article.image_url || PLACEHOLDER_IMAGES[index % PLACEHOLDER_IMAGES.length];
   const isExternal = Boolean(article.url && !article.slug);
   const href = isExternal ? article.url : `/makale/${article.slug}`;
   const dateStr = article.published_at || article.created_at;

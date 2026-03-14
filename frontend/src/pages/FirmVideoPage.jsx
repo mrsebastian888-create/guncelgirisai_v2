@@ -3,8 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { AlertTriangle, ExternalLink, PlayCircle, ChevronRight, Video, RefreshCw } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
-
-const API = process.env.REACT_APP_BACKEND_URL + "/api";
+import { API } from "@/App";
 
 const BONUS_TYPE_LABELS = {
   deneme: "Deneme Bonusu",
@@ -80,6 +79,8 @@ export default function FirmVideoPage() {
         title={`${site.name} Video Inceleme 2026 | ${site.bonus_amount} ${bonusLabel}`}
         description={`${site.name} icin firma ozel video inceleme sayfasi. Guncel giris, bonus detaylari ve hizli erisim.`}
         canonical={canonical_url}
+        image={site?.logo_url}
+        imageAlt={`${site?.name} video inceleme`}
         amphtml={amp_url}
         jsonLd={jsonLd}
       />

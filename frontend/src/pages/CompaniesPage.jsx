@@ -3,8 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { BarChart3, Building2, Filter, Search } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
-
-const API = process.env.REACT_APP_BACKEND_URL + "/api";
+import { API } from "@/App";
 
 const formatVisits = (value) => {
   const visits = Number(value || 0);
@@ -52,7 +51,7 @@ export default function CompaniesPage() {
       <SEOHead
         title="AI Company Intelligence | Şirket Analizleri ve Trafik Verileri"
         description="AI Company Intelligence merkezi: trafik, teknoloji, kanal ve skor bazlı şirket profilleri."
-        canonical="https://guncelgiris.ai/companies"
+        canonical={typeof window !== "undefined" ? `${window.location.origin}/companies` : undefined}
       />
 
       <section className="container mx-auto max-w-7xl px-4 md:px-6">

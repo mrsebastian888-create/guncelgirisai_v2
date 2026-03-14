@@ -113,7 +113,7 @@ class TestSeoDataEndpoint:
         
         data = response.json()
         assert data.get("type") == "page", f"Type should be 'page' for non-existent slug, got {data.get('type')}"
-        print(f"SEO data for non-existent slug returns type=page")
+        print("SEO data for non-existent slug returns type=page")
 
 
 class TestArticleSlugEndpoint:

@@ -23,20 +23,30 @@ const WelcomePopup = ({ onClose }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [winnerCount] = useState(Math.floor(Math.random() * 400) + 600);
   const [topSites, setTopSites] = useState([]);
-  const [countdown, setCountdown] = useState({ h: 23, m: 59, s: 59 });
+  const [wheelRedirectUrl, setWheelRedirectUrl] = useState("");
+  const [countdown, setCountdown] = useState(() => ({
+    h: Math.floor(Math.random() * 24),
+    m: Math.floor(Math.random() * 60),
+    s: Math.floor(Math.random() * 60),
+  }));
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const ageVerified = localStorage.getItem("age_verified_v2");
-    if (ageVerified) {
-      onClose?.();
-    } else {
+    const wheelShownThisSession = sessionStorage.getItem("wheel_shown");
+    if (!ageVerified) {
       setIsVisible(true);
+    } else if (!wheelShownThisSession) {
+      setStep(2);
+      setIsVisible(true);
+    } else {
+      onClose?.();
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     axios.get(`${API}/bonus-sites?limit=20`).then(r => setTopSites(r.data)).catch(() => {});
+    axios.get(`${API}/settings/public`).then(r => setWheelRedirectUrl(r.data.wheel_bonus_redirect_url || "")).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -47,7 +57,11 @@ const WelcomePopup = ({ onClose }) => {
         s--;
         if (s < 0) { s = 59; m--; }
         if (m < 0) { m = 59; h--; }
-        if (h < 0) { h = 23; m = 59; s = 59; }
+        if (h < 0) {
+          h = Math.floor(Math.random() * 24);
+          m = Math.floor(Math.random() * 60);
+          s = Math.floor(Math.random() * 60);
+        }
         return { h, m, s };
       });
     }, 1000);
@@ -150,12 +164,16 @@ const WelcomePopup = ({ onClose }) => {
 
   const handleClose = () => {
     localStorage.setItem("age_verified_v2", "true");
+    sessionStorage.setItem("wheel_shown", "true");
     setIsVisible(false);
     onClose?.();
   };
 
   const handleClaim = () => {
-    if (topSites.length > 0) {
+    const url = (wheelRedirectUrl || "").trim();
+    if (url) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else if (topSites.length > 0) {
       const site = topSites[Math.floor(Math.random() * topSites.length)];
       window.open(site.affiliate_url, "_blank", "noopener,noreferrer");
     }

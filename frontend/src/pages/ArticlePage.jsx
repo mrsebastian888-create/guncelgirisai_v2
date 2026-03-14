@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { API } from "@/App";
-import { Calendar, User, Tag, ArrowLeft, Share2, Eye, Gift } from "lucide-react";
+import { Calendar, User, Tag, ArrowLeft, Share2, Eye, Gift, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BonusCard from "@/components/BonusCard";
@@ -78,7 +78,7 @@ const ArticlePage = () => {
       "name": "Bonus Rehberi",
     },
     "datePublished": article.created_at,
-    "dateModified": article.updated_at || article.created_at,
+    "dateModified": article.last_updated || article.updated_at || article.created_at,
     "mainEntityOfPage": {
       "@type": "WebPage",
       "@id": `${window.location.origin}/makale/${article.slug}`,
@@ -104,10 +104,11 @@ const ArticlePage = () => {
           description={article.seo_description || article.excerpt}
           type="article"
           image={article.image_url}
+          imageAlt={article.title}
           canonical={`${window.location.origin}/makale/${article.slug}`}
           article={{
             publishedTime: article.created_at,
-            modifiedTime: article.updated_at,
+            modifiedTime: article.last_updated || article.updated_at,
             author: article.author,
             category: article.category,
             tags: article.tags,
@@ -170,14 +171,25 @@ const ArticlePage = () => {
                 <Calendar className="w-4 h-4" />
                 <span>{formatDate(article.created_at)}</span>
               </div>
+              {article.last_updated && (
+                <div className="flex items-center gap-2 text-neon-green/90">
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Son güncelleme: {formatDate(article.last_updated)}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4" />
                 <span>{article.view_count} görüntülenme</span>
               </div>
             </div>
+            {article.update_note && (
+              <div className="mb-6 p-4 rounded-lg bg-neon-green/10 border border-neon-green/20 text-sm text-muted-foreground">
+                <strong className="text-neon-green">Bu yazıda güncellenenler:</strong> {article.update_note}
+              </div>
+            )}
 
             {/* Tags */}
-            {article.tags.length > 0 && (
+            {article.tags?.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-8">
                 {article.tags.map((tag, index) => (
                   <Badge key={index} variant="outline" className="text-sm">
