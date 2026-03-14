@@ -1,75 +1,63 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v28.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v29.0
 
 ## Original Problem Statement
 guncelgiris.ai sitesinin GG2026 SEO framework ile buyuk olcekli SEO buyumesine hazirlanmasi.
 
 ## What's Been Implemented
 
-### v23-v27: GG2026 Phase 1-5 (see CHANGELOG.md)
+### v23-v28: GG2026 Phase 1-6 (see CHANGELOG.md)
 
-### v28.0: Phase 6 - Programmatic SEO Engine (Mar 2026) - CURRENT
+### v29.0: Phase 7 - Controlled Publishing System (Mar 2026) - CURRENT
 
-**Engine Components:**
-- **PageRegistry**: Central catalog for all programmatic pages (MongoDB `programmatic_pages`)
-- **SlugGenerator**: Builds valid slugs from dimension combinations
-- **TemplateSelector**: Maps 7 combination types to frontend templates
-- **CanonicalManager**: Enforces canonical rules, blocks reserved Phase 1-5 slugs
-- **DuplicatePrevention**: Blocks near-duplicate pages and existing route overlaps
-- **IndexingEligibility**: Checks min title/desc length, min firms for hub pages (3+)
-- **SitemapIntegration**: Dynamic `sitemap-programmatic.xml` for indexable pages
+**Queue-Based Publishing:**
+- `publish_queue` MongoDB collection: pending → scheduled → publishing → published/failed
+- Rate limiting: 8-15 pages per day (configurable)
+- Priority system: 1=highest, 10=lowest
+- Slug dedup: blocks pending/scheduled duplicates
+- Manual override: immediately publish any item
 
-**7 Combination Types:**
-- `company_x_bonus` — /{company}/{bonus_type}
-- `company_x_payment` — /{company}/{payment_method} (10 payment methods)
-- `company_x_year` — /{company}/{year}
-- `intent_x_category` — /en-guvenilir-bahis-siteleri, /canli-bahis-siteleri etc. (8 intents)
-- `license_x_category` — /curacao-lisansli-siteler etc. (3 licenses)
-- `country_x_category` — /turkiye-bahis-siteleri etc. (3 countries)
-- `guide_x_topic` — /rehber/bahis-nasil-yapilir etc. (6 topics)
+**Day-of-Week Content Schedule:**
+| Day | Content Type |
+|-----|-------------|
+| Monday | Hub pages (intent, license, country) |
+| Tuesday | Company pages (sub-pages, payment, year) |
+| Wednesday | Guides (rehber, guide topics) |
+| Thursday | Comparison pages (karsilastirma, intent×category) |
+| Friday | Bonus pages (deneme, hosgeldin, bonus rehberi) |
+| Saturday | Articles (makale, inceleme, giris rehberi) |
+| Sunday | Content updates (refresh, timestamp updates) |
 
-**Scale Capacity:** 50,000+ pages
-- 264 firms × 10 payments = 2,640
-- 264 firms × 1 year = 264
-- 8 intent + 3 license + 3 country + 6 guide = 20 hub pages
-- Total potential: ~3,000+ unique pages with built-in deduplication
+**Background Daemon:**
+- Auto-runs every 30 min
+- Auto-schedules pending items by day rules
+- Auto-publishes due items for today
+- Lifecycle integrated with FastAPI lifespan
 
-**New API Endpoints:**
-- `GET /api/programmatic/stats` — Engine statistics
-- `POST /api/programmatic/generate` — Generate combinations (dry_run or execute)
-- `POST /api/programmatic/register` — Register single page
-- `GET /api/programmatic/pages` — List pages (filterable)
-- `GET /api/programmatic/page/{slug}` — Get page data for rendering
-- `GET /api/sitemap-programmatic.xml` — Sitemap for indexable pages
+**9 API Endpoints:**
+- `GET /api/publish/status` — Queue stats + 7-day forecast + daemon status
+- `POST /api/publish/enqueue` — Add items to queue
+- `POST /api/publish/schedule` — Schedule pending items
+- `POST /api/publish/run` — Manually trigger today's publishing
+- `POST /api/publish/manual` — Override: publish specific items immediately
+- `GET /api/publish/queue` — List items with status filter + pagination
+- `POST /api/publish/remove` — Remove pending/scheduled items
+- `POST /api/publish/reschedule-failed` — Move failed → pending
+- `GET /api/publish/schedule-map` — Day content mapping
 
-**Frontend:**
-- `ProgrammaticPage.jsx` — Generic renderer for all programmatic pages
-- `SlugResolver.jsx` — Smart catch-all: checks programmatic first, falls back to FirmPage
-- `/rehber/:slug` route for guide pages
-
-## Architecture
+## Full GG2026 Architecture Summary
 ```
-/app/backend/
-├── agents/
-│   ├── programmatic_engine.py  # Core engine (7 components)
-│   ├── serp/                   # SERP providers
-│   └── ...agents
-├── server.py                   # Programmatic API + sitemap endpoints
-/app/frontend/src/pages/
-├── ProgrammaticPage.jsx        # Generic renderer
-├── SlugResolver.jsx            # Smart resolver
-└── ...existing pages
+Phase 1: URL structure (264 firms × 10 sub-pages = 2,640 URLs)
+Phase 2: Page templates + internal linking engine + FAQ + schemas
+Phase 3: 5 AI agents (keyword, content, linking, update, SEO) = 21 endpoints
+Phase 4: SERP Intelligence (Ahrefs/Semrush/DataForSEO) = 6 endpoints
+Phase 5: Company Articles (/{company}/makaleler/{slug}) = 4 endpoints
+Phase 6: Programmatic SEO Engine (7 combination types) = 6 endpoints
+Phase 7: Controlled Publishing (queue + scheduler + daemon) = 9 endpoints
+─────────────────────────────────────────────────────────
+Total: 46+ API endpoints, 50K+ page capacity, 10 sitemaps
 ```
-
-## Total System Scale
-- **264 firms** × 10 sub-pages = 2,640 company pages
-- **264 firms** × articles = unlimited article pages
-- **13 hub pages** (bonus + payment)
-- **20+ programmatic pages** (intent, license, country, guide)
-- **5 AI agents** with 21 endpoints
-- **3 SERP providers** with 6 endpoints
-- **10 sitemaps** in index
 
 ## Prioritized Backlog
-### P1: Phase 7+ (as user requests), Bulk programmatic page generation
-### P2: Admin UI, SERP provider keys, Telegram
-### P3: Backend refactoring
+### P1: Phase 8+ (as user requests)
+### P2: Admin UI for publishing dashboard, SERP provider keys
+### P3: Telegram, AI Video, Backend refactoring
