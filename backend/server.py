@@ -5536,6 +5536,115 @@ async def publish_schedule_map():
     return {"schedule": DAY_CONTENT_MAP}
 
 
+# ============== ADMIN CONTROL SYSTEM (Phase 8) ==============
+
+from agents.admin_control import AdminControlSystem
+
+
+@api_router.get("/admin/seo/dashboard")
+async def admin_seo_dashboard(request: Request):
+    """Full admin SEO dashboard — all monitoring data in one call."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_dashboard()
+
+
+@api_router.get("/admin/seo/settings")
+async def admin_seo_settings(request: Request):
+    """Get all admin SEO settings (toggles, limits)."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_settings()
+
+
+@api_router.post("/admin/seo/settings")
+async def admin_seo_update_setting(data: Dict[str, Any], request: Request):
+    """Update a specific setting. Body: {"path": "agents.keyword_intelligence", "value": false}"""
+    require_admin_request(request)
+    path = data.get("path", "")
+    value = data.get("value")
+    if not path:
+        raise HTTPException(status_code=400, detail="path gerekli")
+    ctrl = AdminControlSystem(db)
+    return await ctrl.update_settings(path, value)
+
+
+@api_router.get("/admin/seo/page-types")
+async def admin_seo_page_types(request: Request):
+    """Get page type toggles with counts."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_page_type_status()
+
+
+@api_router.get("/admin/seo/agents")
+async def admin_seo_agents(request: Request):
+    """Get AI agent toggles with job stats."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_agent_status()
+
+
+@api_router.get("/admin/seo/publishing")
+async def admin_seo_publishing(request: Request):
+    """Get publish queue overview."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_publish_overview()
+
+
+@api_router.get("/admin/seo/companies")
+async def admin_seo_companies(request: Request, limit: int = 30):
+    """Get company priority list with coverage stats."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_company_priorities(limit)
+
+
+@api_router.post("/admin/seo/companies/priority")
+async def admin_seo_company_priority(data: Dict[str, Any], request: Request):
+    """Update company priority. Body: {"base_slug": "onwin", "sort_order": 1}"""
+    require_admin_request(request)
+    base_slug = data.get("base_slug", "")
+    sort_order = data.get("sort_order", 999)
+    if not base_slug:
+        raise HTTPException(status_code=400, detail="base_slug gerekli")
+    ctrl = AdminControlSystem(db)
+    return await ctrl.update_company_priority(base_slug, sort_order)
+
+
+@api_router.get("/admin/seo/serp")
+async def admin_seo_serp(request: Request):
+    """Get SERP provider sync status."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_serp_status()
+
+
+@api_router.get("/admin/seo/articles")
+async def admin_seo_articles(request: Request):
+    """Get article generation and coverage status."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_article_status()
+
+
+@api_router.get("/admin/seo/sitemap")
+async def admin_seo_sitemap(request: Request):
+    """Get sitemap health monitoring."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_sitemap_health()
+
+
+@api_router.get("/admin/seo/indexing")
+async def admin_seo_indexing(request: Request):
+    """Get indexing status monitoring."""
+    require_admin_request(request)
+    ctrl = AdminControlSystem(db)
+    return await ctrl.get_indexing_status()
+
+
 MIGRATION_SECRET = "dsbn-migrate-2026-guncelgiris"
 
 @api_router.post("/migrate/bulk-import")
