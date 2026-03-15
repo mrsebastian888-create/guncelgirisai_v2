@@ -91,7 +91,7 @@ def generate_article(name, bonus_amount, bonus_type, license_info):
         f"{name} para cekme", f"{name} guvenilir mi",
         f"{name} lisans", f"{name} musteri hizmetleri",
         f"{name} sikayet", f"deneme bonusu veren siteler {year}",
-        f"guncel giris adresleri", f"guvenilir bahis siteleri",
+        "guncel giris adresleri", "guvenilir bahis siteleri",
     ]
     
     payments = random.sample(PAYMENT_METHODS, k=random.randint(4, 6))
@@ -321,7 +321,7 @@ async def main():
     await db.firm_stats.update_one({"type": "global"}, {"$set": {"total_firm_count": total, "turkey_firm_count": tr, "europe_firm_count": eu, "last_update_timestamp": now.isoformat()}}, upsert=True)
     
     print(f"\n{'='*60}")
-    print(f"RAPOR")
+    print("RAPOR")
     print(f"{'='*60}")
     print(f"Eklenen:      {stats['added']}")
     print(f"Duplike:      {stats['skipped']}")

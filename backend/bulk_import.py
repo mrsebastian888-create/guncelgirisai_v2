@@ -90,7 +90,7 @@ def generate_article(name, category, bonus_amount, bonus_type):
         f"{name} uyelik", f"{name} kayit", f"{name} para yatirma",
         f"{name} para cekme", f"{name} guvenilir mi",
         f"{name} lisans", f"{name} musteri hizmetleri",
-        f"deneme bonusu veren siteler", f"guncel giris adresleri",
+        "deneme bonusu veren siteler", "guncel giris adresleri",
         f"guvenilir bahis siteleri {year}"
     ]
     
@@ -320,7 +320,7 @@ async def main():
                 })
     
     print(f"\n{'='*60}")
-    print(f"SONUC RAPORU")
+    print("SONUC RAPORU")
     print(f"{'='*60}")
     print(f"Eklenen firma:     {stats['added']}")
     print(f"Atlanan (duplike):  {stats['skipped']}")

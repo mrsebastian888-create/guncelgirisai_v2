@@ -107,7 +107,7 @@ def generate_article(name, bonus_amount, bonus_type, license_info):
         f"{name} para cekme", f"{name} guvenilir mi",
         f"{name} lisans", f"{name} musteri hizmetleri",
         f"deneme bonusu veren siteler {year}", f"guncel giris adresleri {year}",
-        f"avrupa bahis siteleri", f"lisansli casino siteleri",
+        "avrupa bahis siteleri", "lisansli casino siteleri",
     ]
     
     payments = random.sample(PAYMENT_METHODS, k=random.randint(4, 6))
@@ -320,7 +320,6 @@ async def main():
         topic = parts[1].strip()
         existing_q = await db.content_queue.find_one({"company": comp, "topic": topic, "status": {"$in": ["pending", "processing"]}})
         if not existing_q:
-            from pydantic import BaseModel
             item_id = str(uuid.uuid4())
             await db.content_queue.insert_one({
                 "id": item_id,
@@ -368,7 +367,7 @@ async def main():
     )
     
     print(f"\n{'='*60}")
-    print(f"ADMIN RAPOR - AVRUPA FIRMA EKLEME")
+    print("ADMIN RAPOR - AVRUPA FIRMA EKLEME")
     print(f"{'='*60}")
     print(f"Eklenen firma:       {stats['added']}")
     print(f"Atlanan (duplike):   {stats['skipped']}")

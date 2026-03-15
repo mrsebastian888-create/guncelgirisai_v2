@@ -4,7 +4,7 @@ Production-Ready Backend with Hardening
 Version: 3.0.0
 """
 
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, status, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Request, status, BackgroundTasks
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -21,7 +21,7 @@ import subprocess
 import asyncio
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 from collections import defaultdict
 import httpx
@@ -222,7 +222,7 @@ async def ping_mongo() -> tuple[bool, float]:
 # ============== LIFESPAN ==============
 
 # Publish scheduler daemon (Phase 7) — initialized before lifespan
-from agents.publish_scheduler import PublishSchedulerDaemon as _PSD
+from agents.publish_scheduler import PublishSchedulerDaemon as _PSD  # noqa: E402
 publish_daemon = _PSD()
 
 @asynccontextmanager
@@ -5393,7 +5393,7 @@ async def sitemap_company_articles(request: Request):
 
 # ============== PROGRAMMATIC SEO ENGINE (Phase 6) ==============
 
-from agents.programmatic_engine import PageRegistry, COMBINATION_TYPES, INTENT_CATEGORIES, LICENSE_CATEGORIES, COUNTRY_CATEGORIES, GUIDE_TOPICS, PAYMENT_METHODS
+from agents.programmatic_engine import PageRegistry, INTENT_CATEGORIES, LICENSE_CATEGORIES  # noqa: E402
 
 
 @api_router.get("/programmatic/stats")
@@ -5532,7 +5532,7 @@ async def sitemap_programmatic(request: Request):
 
 # ============== CONTROLLED PUBLISHING SYSTEM (Phase 7) ==============
 
-from agents.publish_scheduler import PublishQueue, DAY_CONTENT_MAP
+from agents.publish_scheduler import PublishQueue, DAY_CONTENT_MAP  # noqa: E402
 
 
 @api_router.get("/publish/status")
@@ -5622,8 +5622,8 @@ async def publish_schedule_map():
 
 # ============== VIDEO LIBRARY SYSTEM ==============
 
-from fastapi import File, UploadFile
-from agents.video_library import VideoLibrary, init_storage as init_video_storage
+from fastapi import File, UploadFile  # noqa: E402
+from agents.video_library import VideoLibrary  # noqa: E402
 
 
 @api_router.get("/videos/batch-status")
@@ -6100,7 +6100,7 @@ async def resolve_shortlink(slug: str):
 
 # ============== WALLPAPER LIBRARY SYSTEM ==============
 
-from agents.wallpaper_library import WallpaperLibrary, build_seo_slug
+from agents.wallpaper_library import WallpaperLibrary  # noqa: E402
 
 _batch_wallpaper_state = {"running": False, "total": 0, "completed": 0, "failed": 0, "current": "", "results": []}
 
@@ -6248,7 +6248,7 @@ async def delete_wallpaper(seo_slug: str, request: Request):
 
 # ============== ADMIN CONTROL SYSTEM (Phase 8) ==============
 
-from agents.admin_control import AdminControlSystem
+from agents.admin_control import AdminControlSystem  # noqa: E402
 
 
 @api_router.get("/admin/seo/dashboard")
@@ -6481,9 +6481,9 @@ async def get_seo_data(slug: str):
 
 # ============== TELEGRAM BOT MANAGEMENT ==============
 
-from telegram_bot_manager import (
-    firm_name_to_bot_username, telegram_api_call, set_bot_webhook,
-    delete_bot_webhook, get_bot_info, send_telegram_message,
+from telegram_bot_manager import (  # noqa: E402
+    firm_name_to_bot_username, set_bot_webhook,
+    delete_bot_webhook, send_telegram_message,
     set_bot_commands, set_bot_profile, build_start_message, build_bonus_message,
     build_link_message, build_destek_message,
     create_bot_via_botfather_with_session,
@@ -7093,7 +7093,7 @@ async def seed_database():
 
 # Include router
 # GG2026 AI Agent Router
-from agents.router import router as agents_router
+from agents.router import router as agents_router  # noqa: E402
 api_router.include_router(agents_router)
 
 app.include_router(api_router)

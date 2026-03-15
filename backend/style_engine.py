@@ -4,8 +4,7 @@ STYLE ENGINE - AI Content Style Management
 """
 
 import random
-from typing import Dict, List, Optional
-from datetime import datetime
+from typing import Dict, List
 
 # ============== STYLE DEFINITIONS ==============
 
