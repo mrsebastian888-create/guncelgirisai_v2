@@ -5,6 +5,12 @@ import axios from "axios";
 import SEOHead from "@/components/SEOHead";
 import { API } from "@/App";
 
+// Prod'da kisa link base URL (tiklanipta yonlendirmenin calismasi icin bu domain backend veya SPA'ya gitmeli)
+const SHORTLINK_BASE =
+  typeof window !== "undefined"
+    ? (process.env.REACT_APP_SITE_URL || window.location.origin).replace(/\/$/, "")
+    : "https://guncelgiris.ai";
+
 export default function LinkShortenerPage() {
   const [links, setLinks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +23,7 @@ export default function LinkShortenerPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [search, setSearch] = useState("");
 
-  const BASE = "https://guncelgiris.ai";
+  const BASE = SHORTLINK_BASE;
 
   const fetchLinks = useCallback(async () => {
     try {
@@ -123,7 +129,7 @@ export default function LinkShortenerPage() {
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Ozel Slug</label>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:block">guncelgiris.ai/</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:block">{(typeof window !== "undefined" ? (SHORTLINK_BASE.replace(/^https?:\/\//i, "").split("/")[0] || "guncelgiris.ai") : "guncelgiris.ai")}/</span>
                 <input
                   type="text"
                   value={slug}

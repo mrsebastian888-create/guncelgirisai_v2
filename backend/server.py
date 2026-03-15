@@ -5985,6 +5985,10 @@ SHORTENER_RESERVED = {
     "mac", "bonus", "rehber", "link-kisaltici",
     "deneme-bonusu-veren-siteler", "guncel-deneme-bonusu",
     "yatirimsiz-deneme-bonusu", "bonus-veren-siteler",
+    "saglayicilar", "iletisim", "odeme-yontemleri", "mobil-odeme-ile-bahis",
+    "kredi-karti-ile-bahis", "papel-ile-bahis", "havale-ile-bahis",
+    "kripto-ile-bahis", "bddk-onayli-odeme-yontemleri", "guvenli-odeme-yontemleri",
+    "makaleler",
     "odeme-yontemleri", "mobil-odeme-ile-bahis", "kredi-karti-ile-bahis",
     "papel-ile-bahis", "havale-ile-bahis", "kripto-ile-bahis",
     "bddk-onayli-odeme-yontemleri", "guvenli-odeme-yontemleri",
@@ -7100,11 +7104,13 @@ api_router.include_router(agents_router)
 app.include_router(api_router)
 
 
-# Shortlink redirect: guncelgiris.ai/y.min -> original_url (backend'e dogrudan istek gelirse)
+# Shortlink redirect: /slug -> 302 original_url (backend'e dogrudan istek gelirse)
+_SHORTLINK_SKIP = {"api", "health", "version", "docs", "openapi.json", "redoc", "db-check"} | SHORTENER_RESERVED
+
 @app.get("/{slug}", include_in_schema=False)
 async def shortlink_redirect(slug: str):
     """If slug is a short link, redirect to original URL. Else 404."""
-    if "/" in slug or slug in ("api", "health", "version", "docs", "openapi.json", "redoc", "db-check"):
+    if "/" in slug or slug in _SHORTLINK_SKIP:
         raise HTTPException(status_code=404, detail="Not found")
     link = await db.short_links.find_one({"slug": slug, "is_deleted": False}, {"original_url": 1})
     if not link or not link.get("original_url"):

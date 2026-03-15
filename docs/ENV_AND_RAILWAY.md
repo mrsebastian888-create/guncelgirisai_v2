@@ -119,6 +119,18 @@ API backend’i **farklı bir URL’de** çalışıyorsa (örn. `https://api.gun
 
 Frontend ve backend **aynı domain** altında (tek servis veya reverse proxy ile `/api` backend’e yönleniyorsa) `REACT_APP_BACKEND_URL` **koyma**; uygulama göreli `/api` kullanır.
 
+### Link kısaltıcı (prod’da çalışması için)
+
+Kısa link (örn. `guncelgiris.ai/yutub`) tıklanınca hedef URL’e yönlendirme için:
+
+1. **Backend:** Atlas’ta `short_links` koleksiyonu kullanılıyor; `MONGO_URL` / `DB_NAME` doğru olsun. Backend’de `GET /{slug}` route’u shortlink varsa 302 redirect döner.
+2. **Domain nereye gidiyor?**
+   - **guncelgiris.ai → Backend:** Kullanıcı `guncelgiris.ai/yutub` açar, istek backend’e gider, backend 302 ile yönlendirir. Ekstra ayar gerekmez.
+   - **guncelgiris.ai → Frontend:** İstek önce frontend’e gider. Frontend’in bilinmeyen path’lerde `index.html` döndürmesi (SPA fallback) gerekir; projede `serve -s` ve `public/_redirects`, `vercel.json` var. Ayrıca frontend’in API isteklerini backend’e atması için **`REACT_APP_BACKEND_URL`** frontend deploy’da tanımlı olmalı (örn. Railway frontend env). Böylece React yüklenir, SlugResolver `API/shortlinks/resolve/{slug}` çağırır, gelen `original_url`’e yönlendirir.
+3. **Kısa link base URL:** Sayfada gösterilen kısa link, **`REACT_APP_SITE_URL`** ile ayarlanır (yoksa `window.location.origin`). Prod’da aynı domain için genelde gerekmez; farklı domain (örn. kısa link için ayrı domain) kullanacaksan frontend’e `REACT_APP_SITE_URL=https://guncelgiris.ai` verebilirsin.
+
+Özet: Prod’da kısa linkin çalışması için backend’in erişilebilir olması ve (domain frontend’e gidiyorsa) frontend’te **REACT_APP_BACKEND_URL** tanımlı olması yeterli.
+
 ---
 
 ## Hangi API key’ler ne işe yarıyor?
