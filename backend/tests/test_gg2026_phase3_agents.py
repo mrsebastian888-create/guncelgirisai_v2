@@ -12,7 +12,6 @@ Tests all 21 agent API endpoints:
 import pytest
 import requests
 import os
-import time
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 
@@ -26,7 +25,7 @@ class TestAgentStatusAndJobs:
         
         data = response.json()
         assert data["status"] == "operational"
-        assert data["llm_configured"] == True
+        assert data["llm_configured"]
         assert len(data["agents"]) == 5
         
         # Verify all 5 agents are present
@@ -138,7 +137,7 @@ class TestInternalLinkingAgentNonLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "internal_linking"
         assert data["action"] == "audit_clusters"
         assert "job_id" in data
@@ -159,7 +158,7 @@ class TestInternalLinkingAgentNonLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "internal_linking"
         assert data["action"] == "orphans"
         assert "job_id" in data
@@ -187,7 +186,7 @@ class TestUpdateAgentNonLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "update"
         assert data["action"] == "scan"
         assert "job_id" in data
@@ -212,7 +211,7 @@ class TestUpdateAgentNonLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "update"
         assert data["action"] == "timestamps"
         assert "job_id" in data
@@ -235,7 +234,7 @@ class TestTechnicalSEOAgentNonLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "technical_seo"
         assert data["action"] == "canonicals"
         assert "job_id" in data
@@ -255,7 +254,7 @@ class TestTechnicalSEOAgentNonLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "technical_seo"
         assert data["action"] == "sitemap_audit"
         assert "job_id" in data
@@ -288,7 +287,7 @@ class TestKeywordAgentLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "keyword_intelligence"
         assert data["action"] == "cluster"
         assert "job_id" in data
@@ -316,7 +315,7 @@ class TestKeywordAgentLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "keyword_intelligence"
         assert data["action"] == "intent"
         assert "job_id" in data
@@ -346,7 +345,7 @@ class TestInternalLinkingAgentLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "internal_linking"
         assert data["action"] == "suggest"
         assert "job_id" in data
@@ -417,7 +416,7 @@ class TestExistingRoutes:
         data = response.json()
         assert "site" in data
         assert "page_type" in data
-        print(f"PASS: /api/firma-sub/tulipbet/guncel-giris - Existing route works")
+        print("PASS: /api/firma-sub/tulipbet/guncel-giris - Existing route works")
     
     def test_api_agents_status_as_health(self):
         """Agent status endpoint works as backend health indicator"""
@@ -446,7 +445,7 @@ class TestContentGeneratorAgentLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "content_generator"
         assert data["action"] == "company_page"
         assert "job_id" in data
@@ -480,7 +479,7 @@ class TestTechnicalSEOAgentLLM:
         assert response.status_code == 200
         
         data = response.json()
-        assert data["success"] == True
+        assert data["success"]
         assert data["agent"] == "technical_seo"
         assert data["action"] == "titles"
         assert "job_id" in data

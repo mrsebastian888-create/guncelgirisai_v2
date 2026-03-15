@@ -6,8 +6,6 @@ Tests for GET /api/godaddy/domains and POST /api/godaddy/import endpoints
 import pytest
 import requests
 import os
-import time
-import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
@@ -68,7 +66,7 @@ class TestGoDaddyAPI:
             expected_fields = ["domain", "status", "expires", "renewable", "renew_auto", "locked", "privacy", "nameServers", "created_at", "already_added"]
             for field in expected_fields:
                 assert field in domain, f"Missing field: {field}"
-            print(f"✓ All expected fields present in domain response")
+            print("✓ All expected fields present in domain response")
         else:
             pytest.skip("No domains in GoDaddy account to verify fields")
     
@@ -206,7 +204,7 @@ class TestGoDaddyImportIntegration:
             try:
                 self.session.delete(f"{BASE_URL}/api/domains/{self.created_domain_id}")
                 print(f"Cleaned up test domain: {self.created_domain_id}")
-            except:
+            except Exception:
                 pass
     
     def test_imported_domain_appears_in_platform(self):

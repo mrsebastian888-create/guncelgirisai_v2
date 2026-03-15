@@ -13,7 +13,7 @@ import uuid
 import asyncio
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 logger = logging.getLogger("publish_scheduler")

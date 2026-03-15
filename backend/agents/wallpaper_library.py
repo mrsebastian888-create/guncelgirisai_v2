@@ -7,9 +7,8 @@ import os
 import uuid
 import logging
 import requests
-import asyncio
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 logger = logging.getLogger("wallpaper_library")

@@ -14,7 +14,7 @@ Provides:
 """
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 logger = logging.getLogger("admin_control")

@@ -118,7 +118,7 @@ class TestVideoDetail:
         ]
         for field in required_fields:
             assert field in video, f"Video detail should have '{field}'"
-        print(f"✓ Video detail has all required fields")
+        print("✓ Video detail has all required fields")
     
     def test_video_detail_increments_view_count(self):
         """GET /api/videos/{videoId} should increment view_count"""
@@ -363,7 +363,7 @@ class TestVideoFile:
                 if not video.get("storage_path"):
                     file_response = requests.get(f"{BASE_URL}/api/videos/{video['video_id']}/file")
                     assert file_response.status_code == 404, "External video file should return 404"
-                    print(f"✓ External video file returns 404 (no storage_path)")
+                    print("✓ External video file returns 404 (no storage_path)")
                     return
         pytest.skip("No external videos to test")
 
@@ -391,7 +391,7 @@ class TestExistingRoutesRegression:
         assert response.status_code == 200
         data = response.json()
         assert "site" in data
-        print(f"✓ Tulipbet guncel giris API works")
+        print("✓ Tulipbet guncel giris API works")
 
 
 if __name__ == "__main__":

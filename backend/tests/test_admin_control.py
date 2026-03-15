@@ -28,7 +28,7 @@ class TestAuth:
         assert "token" in data, "Response missing token"
         assert data["username"] == ADMIN_USERNAME
         assert "expires_in" in data
-        print(f"✓ Admin login successful, token obtained")
+        print("✓ Admin login successful, token obtained")
 
     def test_login_invalid_credentials(self):
         """Test login with wrong password returns 401"""
@@ -37,7 +37,7 @@ class TestAuth:
             json={"username": ADMIN_USERNAME, "password": "wrongpassword"},
         )
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
-        print(f"✓ Invalid credentials returns 401 as expected")
+        print("✓ Invalid credentials returns 401 as expected")
 
 
 @pytest.fixture(scope="class")
@@ -86,7 +86,7 @@ class TestAuthProtection:
             json={"path": "agents.keyword_intelligence", "value": False},
         )
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
-        print(f"✓ POST /api/admin/seo/settings returns 401 without auth")
+        print("✓ POST /api/admin/seo/settings returns 401 without auth")
 
     def test_companies_priority_post_requires_auth(self):
         """POST /api/admin/seo/companies/priority requires auth"""
@@ -95,7 +95,7 @@ class TestAuthProtection:
             json={"base_slug": "test", "sort_order": 1},
         )
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
-        print(f"✓ POST /api/admin/seo/companies/priority returns 401 without auth")
+        print("✓ POST /api/admin/seo/companies/priority returns 401 without auth")
 
 
 class TestAdminSEODashboard:
@@ -149,13 +149,13 @@ class TestAdminSEOSettings:
         assert "min_per_day" in pub_settings
         assert "max_per_day" in pub_settings
 
-        print(f"✓ Settings structure verified with page_types, agents, publishing, serp sections")
+        print("✓ Settings structure verified with page_types, agents, publishing, serp sections")
 
     def test_update_settings_by_dot_path(self, admin_headers):
         """POST settings toggles by dot-path"""
         # First get current value
         response = requests.get(f"{BASE_URL}/api/admin/seo/settings", headers=admin_headers)
-        original_value = response.json()["agents"]["keyword_intelligence"]
+        response.json()["agents"]["keyword_intelligence"]
 
         # Toggle it off
         response = requests.post(
@@ -165,7 +165,7 @@ class TestAdminSEOSettings:
         )
         assert response.status_code == 200, f"Settings update failed: {response.text}"
         data = response.json()
-        assert data["agents"]["keyword_intelligence"] == False, "Toggle did not update to False"
+        assert not data["agents"]["keyword_intelligence"], "Toggle did not update to False"
 
         # Toggle it back
         response = requests.post(
@@ -174,9 +174,9 @@ class TestAdminSEOSettings:
             json={"path": "agents.keyword_intelligence", "value": True},
         )
         assert response.status_code == 200
-        assert response.json()["agents"]["keyword_intelligence"] == True
+        assert response.json()["agents"]["keyword_intelligence"]
 
-        print(f"✓ Settings update by dot-path (agents.keyword_intelligence) works correctly")
+        print("✓ Settings update by dot-path (agents.keyword_intelligence) works correctly")
 
     def test_update_settings_missing_path(self, admin_headers):
         """POST settings without path returns 400"""
@@ -186,7 +186,7 @@ class TestAdminSEOSettings:
             json={"value": False},
         )
         assert response.status_code == 400, f"Expected 400, got {response.status_code}"
-        print(f"✓ POST /api/admin/seo/settings without path returns 400")
+        print("✓ POST /api/admin/seo/settings without path returns 400")
 
 
 class TestAdminSEOPageTypes:
@@ -245,7 +245,7 @@ class TestAdminSEOAgents:
             assert "failed" in agent
             assert "success_rate" in agent
 
-        print(f"✓ Agents endpoint returns 5 agents with enabled, job stats, success_rate")
+        print("✓ Agents endpoint returns 5 agents with enabled, job stats, success_rate")
 
 
 class TestAdminSEOPublishing:
@@ -275,7 +275,7 @@ class TestAdminSEOPublishing:
         assert "scheduled" in today
         assert "limit" in today
 
-        print(f"✓ Publishing overview with by_status, today stats, recent_published")
+        print("✓ Publishing overview with by_status, today stats, recent_published")
 
 
 class TestAdminSEOCompanies:
@@ -345,7 +345,7 @@ class TestAdminSEOCompanies:
             json={"sort_order": 1},
         )
         assert response.status_code == 400, f"Expected 400, got {response.status_code}"
-        print(f"✓ POST /api/admin/seo/companies/priority without base_slug returns 400")
+        print("✓ POST /api/admin/seo/companies/priority without base_slug returns 400")
 
 
 class TestAdminSEOSerp:
@@ -481,7 +481,7 @@ class TestExistingRoutesUnbroken:
         assert response.status_code == 200, f"bonus-sites broken: {response.status_code}"
         data = response.json()
         assert "sites" in data or isinstance(data, list)
-        print(f"✓ GET /api/bonus-sites still works")
+        print("✓ GET /api/bonus-sites still works")
 
     def test_publish_status_endpoint(self, admin_headers):
         """GET /api/publish/status still works"""
@@ -489,20 +489,20 @@ class TestExistingRoutesUnbroken:
         assert response.status_code == 200, f"publish/status broken: {response.status_code}"
         data = response.json()
         assert "total" in data or "queue" in data or "daemon" in data
-        print(f"✓ GET /api/publish/status still works")
+        print("✓ GET /api/publish/status still works")
 
     def test_programmatic_stats_endpoint(self, admin_headers):
         """GET /api/programmatic/stats still works"""
         response = requests.get(f"{BASE_URL}/api/programmatic/stats", headers=admin_headers)
         assert response.status_code == 200, f"programmatic/stats broken: {response.status_code}"
-        print(f"✓ GET /api/programmatic/stats still works")
+        print("✓ GET /api/programmatic/stats still works")
 
     def test_db_check_endpoint(self):
         """GET /api/db-check still works"""
         # Using /db-check as health is not routed through /api
         response = requests.get(f"{BASE_URL}/api/bonus-sites")
         assert response.status_code == 200, f"API health check failed: {response.status_code}"
-        print(f"✓ API endpoints healthy (bonus-sites returns 200)")
+        print("✓ API endpoints healthy (bonus-sites returns 200)")
 
 
 if __name__ == "__main__":

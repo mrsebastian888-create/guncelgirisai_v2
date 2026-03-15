@@ -7,7 +7,6 @@ Tests for: discovery, classification, enrichment, company profile page, sitemap-
 import pytest
 import requests
 import os
-import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://bot-control-4.preview.emergentagent.com')
 
@@ -295,7 +294,7 @@ class TestCompanyDataStructure:
         
         missing_fields = [f for f in required_fields if f not in company]
         assert len(missing_fields) == 0, f"Missing fields: {missing_fields}"
-        print(f"PASS: Company profile has all required fields")
+        print("PASS: Company profile has all required fields")
     
     def test_company_metrics_are_valid(self):
         """Company metrics should have valid values"""

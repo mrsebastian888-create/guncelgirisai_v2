@@ -87,7 +87,7 @@ class TestCategories:
         cat_ids = [c["id"] for c in data]
         assert hasattr(pytest, 'test_category_id'), "Test category should exist from previous test"
         assert pytest.test_category_id in cat_ids, "New category should be in the list"
-        print(f"✓ GET /api/categories - New category verified in list")
+        print("✓ GET /api/categories - New category verified in list")
         
     def test_update_category(self, api_client):
         """PUT /api/categories/{id} - update category"""
@@ -200,7 +200,7 @@ class TestBonusSitesReorder:
         if hasattr(pytest, 'bonus_site_ids') and len(pytest.bonus_site_ids) > 1:
             # The first site should now have a sort_order value
             print(f"✓ Bonus sites order verified - first site: {data[0]['name']}")
-        print(f"✓ GET /api/bonus-sites - Sort order persisted")
+        print("✓ GET /api/bonus-sites - Sort order persisted")
 
 
 class TestDomainSiteData:
@@ -226,7 +226,7 @@ class TestDomainSiteData:
         assert "total_articles" in stats, "Stats should have total_articles"
         assert "total_bonus_sites" in stats, "Stats should have total_bonus_sites"
         
-        print(f"✓ GET /api/site/guncelgiris.ai - Domain data retrieved")
+        print("✓ GET /api/site/guncelgiris.ai - Domain data retrieved")
         print(f"  - Articles: {stats['total_articles']}")
         print(f"  - Bonus Sites: {stats['total_bonus_sites']}")
         print(f"  - Is Ready: {data['is_ready']}")
@@ -235,7 +235,7 @@ class TestDomainSiteData:
         """GET /api/site/nonexistent.com - returns 404"""
         response = api_client.get(f"{API_URL}/site/nonexistent-domain-xyz.com")
         assert response.status_code == 404, f"Expected 404, got {response.status_code}"
-        print(f"✓ GET /api/site/nonexistent.com - Returns 404 as expected")
+        print("✓ GET /api/site/nonexistent.com - Returns 404 as expected")
 
 
 class TestDomainCreation:
@@ -263,7 +263,7 @@ class TestDomainCreation:
         # Store for cleanup
         pytest.test_domain_id = data["id"]
         print(f"✓ POST /api/domains - Domain created: {data['domain_name']}")
-        print(f"  - Note: AI content generation runs in background")
+        print("  - Note: AI content generation runs in background")
         
     def test_cleanup_test_domain(self, api_client):
         """Cleanup: Delete test domain"""
@@ -286,7 +286,7 @@ class TestAdminTabs:
         
         data = response.json()
         assert "token" in data, "Should return JWT token"
-        print(f"✓ POST /api/auth/login - Admin login successful")
+        print("✓ POST /api/auth/login - Admin login successful")
         
     def test_stats_dashboard(self, api_client):
         """GET /api/stats/dashboard - returns admin dashboard stats"""

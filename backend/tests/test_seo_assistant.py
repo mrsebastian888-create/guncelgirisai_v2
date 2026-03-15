@@ -5,7 +5,6 @@ Tests /api/seo/* endpoints for the Advanced SEO Assistant feature
 import pytest
 import requests
 import os
-import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
@@ -58,7 +57,7 @@ class TestKeywordResearch:
         
         # Should return either structured JSON or raw_analysis
         assert "keywords" in data or "raw_analysis" in data
-        print(f"✓ Keyword research returned valid response")
+        print("✓ Keyword research returned valid response")
         
         # If structured, verify format
         if "keywords" in data and isinstance(data["keywords"], list) and len(data["keywords"]) > 0:
@@ -305,7 +304,7 @@ class TestAdminLogin:
         assert "token" in data
         assert "username" in data
         assert data["username"] == "admin"
-        print(f"✓ Admin login successful, token received")
+        print("✓ Admin login successful, token received")
         return data["token"]
     
     def test_admin_login_invalid_password(self):
@@ -359,7 +358,7 @@ class TestHomepageEndpoints:
             data = response.json()
             assert data.get("status") == "ok"
             print("✓ Health check passed (JSON)")
-        except:
+        except Exception:
             # Preview environment returns HTML frontend
             print("✓ Health check passed (HTML fallback - frontend served)")
 

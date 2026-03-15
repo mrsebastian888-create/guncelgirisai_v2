@@ -17,7 +17,6 @@ import pytest
 import requests
 import os
 import xml.etree.ElementTree as ET
-import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
@@ -28,7 +27,7 @@ class TestProgrammaticStats:
         """Stats endpoint should return 200 with valid structure"""
         response = requests.get(f"{BASE_URL}/api/programmatic/stats")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
-        print(f"✓ GET /api/programmatic/stats returns 200")
+        print("✓ GET /api/programmatic/stats returns 200")
         
     def test_stats_contains_required_fields(self):
         """Stats should contain total_pages, indexable_pages, by_combination_type, available_types"""
@@ -70,7 +69,7 @@ class TestProgrammaticGenerate:
         assert response.status_code == 200
         data = response.json()
         
-        assert data.get("dry_run") == True, "Should indicate dry_run mode"
+        assert data.get("dry_run"), "Should indicate dry_run mode"
         assert "pages_to_create" in data, "Should have pages_to_create count"
         
         print(f"✓ Dry run preview: {data.get('pages_to_create', 0)} pages to create")
@@ -111,7 +110,7 @@ class TestProgrammaticRegister:
         })
         assert response.status_code == 200
         data = response.json()
-        assert data.get("registered") == False, "Should fail for invalid type"
+        assert not data.get("registered"), "Should fail for invalid type"
         assert "error" in data, "Should have error message"
         print("✓ Invalid combination_type rejected in register")
         
@@ -239,9 +238,9 @@ class TestCanonicalRules:
         data = response.json()
         
         # Should fail due to canonical conflict
-        assert data.get("registered") == False, "Reserved slug should be blocked"
+        assert not data.get("registered"), "Reserved slug should be blocked"
         assert "error" in data or "conflict" in str(data).lower(), "Should indicate conflict"
-        print(f"✓ Reserved slug 'deneme-bonusu' blocked")
+        print("✓ Reserved slug 'deneme-bonusu' blocked")
 
 
 class TestIndexingEligibility:
@@ -264,9 +263,9 @@ class TestIndexingEligibility:
             page = data.get("page", {})
             # Title is very short, should be non-indexable or have eligibility reason
             if not page.get("is_indexable"):
-                print(f"✓ Short title page correctly marked non-indexable")
+                print("✓ Short title page correctly marked non-indexable")
             else:
-                print(f"✓ Page registered (may depend on min title length config)")
+                print("✓ Page registered (may depend on min title length config)")
         else:
             # Could fail for other reasons
             print(f"✓ Short title registration result: {data.get('error', 'blocked')}")
