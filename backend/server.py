@@ -5840,6 +5840,142 @@ async def batch_generate_videos(data: Dict[str, Any], request: Request, backgrou
     return {"started": True, "total": len(videos), "batch_size": 5, "message": f"{len(videos)} video generation started"}
 
 
+# ============== LOGO FINDER SYSTEM ==============
+
+_logo_batch_state = {"running": False, "total": 0, "completed": 0, "failed": 0, "current": "", "results": []}
+
+
+async def _find_logo_for_firm(firm_name: str) -> Optional[str]:
+    """Search for company logo via CDN favicon services with domain guessing."""
+    import requests as _req
+
+    base = firm_name.lower().replace(" ", "").replace("'", "").replace("!", "")
+    # Turkish char cleanup
+    for old, new in [('ı', 'i'), ('ş', 's'), ('ğ', 'g'), ('ü', 'u'), ('ö', 'o'), ('ç', 'c'),
+                     ('İ', 'i'), ('Ş', 's'), ('Ğ', 'g'), ('Ü', 'u'), ('Ö', 'o'), ('Ç', 'c')]:
+        base = base.replace(old, new)
+
+    # Try multiple domain patterns
+    domain_candidates = [
+        f"{base}.com",
+        f"{base}.bet",
+        f"{base}.pro",
+        f"{base}.casino",
+        f"{base}.net",
+        f"{base}1.com",
+        f"{base}2.com",
+        f"{base}giris.com",
+        f"{base}30.com",
+        f"{base}50.com",
+    ]
+
+    def _search():
+        for domain in domain_candidates:
+            try:
+                url = f"https://www.google.com/s2/favicons?domain={domain}&sz=128"
+                r = _req.head(url, timeout=5, allow_redirects=True)
+                size = int(r.headers.get("content-length", 0))
+                if size > 800:  # Real favicon (default globe icon is ~726 bytes)
+                    return url
+            except Exception:
+                continue
+        return None
+
+    return await asyncio.to_thread(_search)
+
+
+async def _logo_batch_task(firms: list):
+    """Find and update logos for firms, one at a time with delay to avoid rate limits."""
+    global _logo_batch_state
+    _logo_batch_state = {"running": True, "total": len(firms), "completed": 0, "failed": 0, "current": "", "results": []}
+
+    for firm in firms:
+        name = firm["name"]
+        slug = firm["slug"]
+        _logo_batch_state["current"] = name
+        try:
+            logo_url = await _find_logo_for_firm(name)
+            if logo_url:
+                await db.bonus_sites.update_one(
+                    {"slug": slug},
+                    {"$set": {"logo_url": logo_url, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                )
+                _logo_batch_state["completed"] += 1
+                _logo_batch_state["results"].append({"name": name, "status": "found", "logo_url": logo_url[:80]})
+            else:
+                _logo_batch_state["failed"] += 1
+                _logo_batch_state["results"].append({"name": name, "status": "not_found"})
+        except Exception as e:
+            _logo_batch_state["failed"] += 1
+            _logo_batch_state["results"].append({"name": name, "status": "error", "error": str(e)[:60]})
+        # Delay between requests
+        await asyncio.sleep(1)
+
+    _logo_batch_state["running"] = False
+    _logo_batch_state["current"] = ""
+    logger.info(f"Logo batch complete: {_logo_batch_state['completed']}/{_logo_batch_state['total']}")
+
+
+@api_router.get("/logos/batch-status")
+async def logo_batch_status():
+    """Check logo finder progress."""
+    return _logo_batch_state
+
+
+@api_router.post("/logos/find-all")
+async def find_all_logos(data: Dict[str, Any] = {}, request: Request = None, background_tasks: BackgroundTasks = None):
+    """Find and update logos for all firms (or specific category).
+    Body: {"category": "Turkiye"} or {} for all
+    """
+    require_admin_request(request)
+    if _logo_batch_state.get("running"):
+        return {"error": "Batch already running", "state": _logo_batch_state}
+
+    query: Dict[str, Any] = {"is_active": True}
+    category = data.get("category")
+    if category:
+        query["category"] = category
+
+    firms = await db.bonus_sites.find(query, {"_id": 0, "name": 1, "slug": 1, "logo_url": 1}).sort("sort_order", 1).to_list(500)
+
+    # Filter out firms that already have real logos (not placeholders)
+    placeholder_patterns = ["pexels.com", "unsplash.com", "placehold", "ui-avatars.com", "example.com"]
+    needs_logo = []
+    for f in firms:
+        current = f.get("logo_url", "")
+        is_placeholder = any(p in current for p in placeholder_patterns) or not current
+        if is_placeholder:
+            needs_logo.append(f)
+
+    if not needs_logo:
+        return {"message": "All firms already have real logos", "total": len(firms)}
+
+    background_tasks.add_task(_logo_batch_task, needs_logo)
+    return {"started": True, "total": len(needs_logo), "skipped": len(firms) - len(needs_logo), "message": f"{len(needs_logo)} firma icin logo aranacak"}
+
+
+@api_router.post("/logos/find-single")
+async def find_single_logo(data: Dict[str, Any], request: Request = None):
+    """Find and update logo for a single firm."""
+    require_admin_request(request)
+    slug = data.get("slug", "")
+    if not slug:
+        raise HTTPException(status_code=400, detail="slug gerekli")
+
+    firm = await db.bonus_sites.find_one({"slug": slug}, {"_id": 0, "name": 1, "slug": 1})
+    if not firm:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+
+    logo_url = await _find_logo_for_firm(firm["name"])
+    if logo_url:
+        await db.bonus_sites.update_one(
+            {"slug": slug},
+            {"$set": {"logo_url": logo_url, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        return {"found": True, "name": firm["name"], "logo_url": logo_url}
+    return {"found": False, "name": firm["name"]}
+
+
 # ============== URL SHORTENER SYSTEM ==============
 
 SHORTENER_RESERVED = {
