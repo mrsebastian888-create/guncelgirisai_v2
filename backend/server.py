@@ -5763,6 +5763,154 @@ async def batch_generate_videos(data: Dict[str, Any], request: Request, backgrou
     return {"started": True, "total": len(videos), "batch_size": 5, "message": f"{len(videos)} video generation started"}
 
 
+# ============== WALLPAPER LIBRARY SYSTEM ==============
+
+from agents.wallpaper_library import WallpaperLibrary, build_seo_slug
+
+_batch_wallpaper_state = {"running": False, "total": 0, "completed": 0, "failed": 0, "current": "", "results": []}
+
+
+@api_router.get("/wallpapers/batch-status")
+async def batch_wallpaper_status():
+    """Check batch wallpaper generation progress."""
+    return _batch_wallpaper_state
+
+
+@api_router.get("/wallpapers")
+async def list_wallpapers(company_slug: Optional[str] = None, category: Optional[str] = None, limit: int = 30, offset: int = 0):
+    """List wallpapers for gallery."""
+    lib = WallpaperLibrary(db)
+    return await lib.list_wallpapers(company_slug, category, limit, offset)
+
+
+@api_router.get("/wallpapers/{seo_slug}")
+async def get_wallpaper(seo_slug: str):
+    """Get wallpaper detail by SEO slug."""
+    lib = WallpaperLibrary(db)
+    wp = await lib.get_wallpaper(seo_slug)
+    if not wp:
+        raise HTTPException(status_code=404, detail="Wallpaper not found")
+
+    company = None
+    if wp.get("company_slug"):
+        company = await db.bonus_sites.find_one(
+            {"slug": {"$regex": f"^{re.escape(wp['company_slug'])}"}},
+            {"_id": 0, "name": 1, "slug": 1, "logo_url": 1, "bonus_amount": 1, "affiliate_url": 1, "rating": 1}
+        )
+
+    related = []
+    if wp.get("company_slug"):
+        r = await lib.list_wallpapers(company_slug=wp["company_slug"], limit=6)
+        related = [w for w in r["wallpapers"] if w["seo_slug"] != seo_slug][:5]
+
+    return {"wallpaper": wp, "company": company, "related": related}
+
+
+@api_router.get("/wallpapers/{seo_slug}/file")
+async def get_wallpaper_file(seo_slug: str):
+    """Serve wallpaper image file. SEO-friendly filename in Content-Disposition."""
+    lib = WallpaperLibrary(db)
+    result = await lib.get_file(seo_slug)
+    if not result:
+        raise HTTPException(status_code=404, detail="Wallpaper file not found")
+    data, content_type, filename = result
+    await db.wallpaper_library.update_one({"seo_slug": seo_slug}, {"$inc": {"download_count": 1}})
+    return Response(
+        content=data, media_type=content_type,
+        headers={"Content-Disposition": f'inline; filename="{filename}"'}
+    )
+
+
+@api_router.post("/wallpapers/generate")
+async def generate_wallpaper(data: Dict[str, Any], request: Request):
+    """Generate a single wallpaper."""
+    require_admin_request(request)
+    lib = WallpaperLibrary(db)
+    return await lib.generate_wallpaper(
+        company_slug=data.get("company_slug", ""),
+        company_name=data.get("company_name", ""),
+        bonus_amount=data.get("bonus_amount", ""),
+        bonus_type=data.get("bonus_type", "deneme"),
+        custom_prompt=data.get("prompt"),
+    )
+
+
+async def _batch_wallpaper_task(jobs: list):
+    """Process wallpaper generation in batches of 5."""
+    global _batch_wallpaper_state
+    _batch_wallpaper_state = {"running": True, "total": len(jobs), "completed": 0, "failed": 0, "current": "", "results": []}
+    batch_size = 2
+    lib = WallpaperLibrary(db)
+    for i in range(0, len(jobs), batch_size):
+        batch = jobs[i:i + batch_size]
+
+        async def _gen(job):
+            _batch_wallpaper_state["current"] = job["company_name"]
+            try:
+                result = await lib.generate_wallpaper(**job)
+                if result.get("generated"):
+                    _batch_wallpaper_state["completed"] += 1
+                    _batch_wallpaper_state["results"].append({"company": job["company_name"], "status": "success", "seo_slug": result["wallpaper"]["seo_slug"]})
+                elif result.get("reason") == "already_exists":
+                    _batch_wallpaper_state["completed"] += 1
+                    _batch_wallpaper_state["results"].append({"company": job["company_name"], "status": "exists", "seo_slug": result["seo_slug"]})
+                else:
+                    _batch_wallpaper_state["failed"] += 1
+                    _batch_wallpaper_state["results"].append({"company": job["company_name"], "status": "failed", "error": result.get("error", "unknown")})
+            except Exception as e:
+                _batch_wallpaper_state["failed"] += 1
+                _batch_wallpaper_state["results"].append({"company": job["company_name"], "status": "failed", "error": str(e)})
+
+        tasks = [_gen(job) for job in batch]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info(f"Wallpaper batch {i // batch_size + 1}: {_batch_wallpaper_state['completed']}/{_batch_wallpaper_state['total']}")
+
+    _batch_wallpaper_state["running"] = False
+    _batch_wallpaper_state["current"] = ""
+
+
+@api_router.post("/wallpapers/batch-generate")
+async def batch_generate_wallpapers(data: Dict[str, Any], request: Request, background_tasks: BackgroundTasks):
+    """Batch generate wallpapers for multiple companies.
+    Body: {"company_slugs": ["onwin","casibom"]} or {"all_turkiye": true}
+    """
+    require_admin_request(request)
+    if _batch_wallpaper_state.get("running"):
+        return {"error": "Batch already running", "state": _batch_wallpaper_state}
+
+    jobs = []
+    if data.get("all_turkiye"):
+        firms = await db.bonus_sites.find(
+            {"is_active": True, "category": "Turkiye"}, {"_id": 0, "name": 1, "slug": 1, "bonus_amount": 1, "bonus_type": 1}
+        ).sort("sort_order", 1).to_list(300)
+        for f in firms:
+            base = f["slug"].replace("-guncelgiris", "") if f.get("slug", "").endswith("-guncelgiris") else f.get("slug", "")
+            if base:
+                jobs.append({"company_slug": base, "company_name": f["name"], "bonus_amount": f["bonus_amount"], "bonus_type": f.get("bonus_type", "deneme")})
+    else:
+        slugs = data.get("company_slugs", [])
+        for slug in slugs:
+            firm = await db.bonus_sites.find_one({"slug": {"$regex": f"^{re.escape(slug)}"}}, {"_id": 0, "name": 1, "slug": 1, "bonus_amount": 1, "bonus_type": 1})
+            if firm:
+                jobs.append({"company_slug": slug, "company_name": firm["name"], "bonus_amount": firm["bonus_amount"], "bonus_type": firm.get("bonus_type", "deneme")})
+
+    if not jobs:
+        raise HTTPException(status_code=400, detail="No companies found")
+
+    background_tasks.add_task(_batch_wallpaper_task, jobs)
+    return {"started": True, "total": len(jobs), "batch_size": 5}
+
+
+@api_router.delete("/wallpapers/{seo_slug}")
+async def delete_wallpaper(seo_slug: str, request: Request):
+    require_admin_request(request)
+    lib = WallpaperLibrary(db)
+    deleted = await lib.delete_wallpaper(seo_slug)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Wallpaper not found")
+    return {"deleted": True, "seo_slug": seo_slug}
+
+
 # ============== ADMIN CONTROL SYSTEM (Phase 8) ==============
 
 from agents.admin_control import AdminControlSystem

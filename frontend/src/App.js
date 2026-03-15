@@ -26,6 +26,8 @@ import CompanyArticlePage from "@/pages/CompanyArticlePage";
 import ProgrammaticPage from "@/pages/ProgrammaticPage";
 import VideoGalleryPage from "@/pages/VideoGalleryPage";
 import VideoPlayerPage from "@/pages/VideoPlayerPage";
+import WallpaperGalleryPage from "@/pages/WallpaperGalleryPage";
+import WallpaperDetailPage from "@/pages/WallpaperDetailPage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -93,6 +95,10 @@ function AppLayout({ isLoading }) {
               {/* Video Gallery & Player */}
               <Route path="/videolar" element={<VideoGalleryPage />} />
               <Route path="/videolar/:videoId" element={<VideoPlayerPage />} />
+
+              {/* Wallpaper Gallery */}
+              <Route path="/gorseller" element={<WallpaperGalleryPage />} />
+              <Route path="/gorseller/:seoSlug" element={<WallpaperDetailPage />} />
 
               {/* GG2026 SEO: Bonus Hub Pages */}
               <Route path="/deneme-bonusu-veren-siteler" element={<BonusHubPage />} />

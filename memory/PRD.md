@@ -1,38 +1,33 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v31.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v32.0
 
 ## Original Problem Statement
 guncelgiris.ai — GG2026 SEO framework, AI-powered content platform.
 
-## Current: Video Player System (Mar 2026)
+## Current: Video Player + Wallpaper System (Mar 2026)
 
-### Video Player & Gallery
-- `/videolar` — YouTube-like video gallery with grid layout, category filters (Tumu/Genel/Bonus/Giris/Inceleme)
-- `/videolar/:videoId` — Full video player page with company CTA, related videos, VideoObject JSON-LD
-- Object storage integration (Emergent) for video uploads (50MB limit)
-- Video sources: upload (manual), ai_generated (Sora 2), external (URL)
-- MongoDB `video_library` collection with soft-delete, view tracking
-- Admin JWT-protected upload/register/delete endpoints
+### Video Player System
+- `/videolar` — YouTube-like grid gallery, category filters, AI badge
+- `/videolar/:videoId` — Video player + company CTA + related videos
+- Object storage (Emergent), 50MB upload limit
+- Batch generation: `POST /api/videos/batch-generate`
+- **34 firma videosu uretildi** (Sora 2)
 
-### Video API Endpoints
-- `GET /api/videos` — List (filter by company_slug, category)
-- `GET /api/videos/{id}` — Detail + related + company info
-- `GET /api/videos/{id}/file` — Stream from object storage
-- `POST /api/videos/upload` — File upload (admin)
-- `POST /api/videos/register` — Register external/AI video (admin)
-- `DELETE /api/videos/{id}` — Soft delete (admin)
+### Wallpaper/Gorsel System
+- `/gorseller` — Pinterest-style wallpaper gallery
+- `/gorseller/:seoSlug` — Detail page + download + company CTA
+- SEO-friendly URLs: `casibom-deneme-bonusu-2026`
+- SEO-friendly filenames: `casibom-deneme-bonusu-2026.png`
+- Alt text + title otomatik
+- GPT Image 1 ile AI gorsel uretimi
+- Batch generation: `POST /api/wallpapers/batch-generate`
+- **10 firma gorseli uretildi** (ilk 10 Turkiye firması)
 
-## Full Architecture: GG2026 Phase 1-8 + Video System
-- Phase 1-2: URL structure + templates (2,640 company pages)
-- Phase 3-4: AI agents (5) + SERP intelligence (3 providers)
-- Phase 5: Company articles
-- Phase 6: Programmatic SEO engine (50K+ capacity)
-- Phase 7: Controlled publishing (queue + scheduler)
-- Phase 8: Admin control system (monitoring)
-- Video: Gallery + player + object storage
-
-**Total: 65+ API endpoints, 10 sitemaps, 4,500+ URLs**
+### DB Collections
+- `video_library` — Video metadata + storage paths
+- `wallpaper_library` — Wallpaper metadata + SEO slugs + storage paths
 
 ## Next Steps
-- Wallpaper/Gorsel sistemi (AI gorsel uretimi + galeri)
-- Telegram Channel Post entegrasyonu (@guncelgirisai)
-- Video/makale/gorsel → otomatik Telegram post
+- Kalan 90 Turkiye firmasi icin wallpaper uretimi (batch)
+- Basarisiz videolar icin retry (rate limit bekle)
+- Telegram @guncelgirisai kanal entegrasyonu
+- Firma sayfalarinda video + gorsel bolumleri
