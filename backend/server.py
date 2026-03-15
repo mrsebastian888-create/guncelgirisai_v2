@@ -5549,6 +5549,12 @@ from fastapi import File, UploadFile
 from agents.video_library import VideoLibrary, init_storage as init_video_storage
 
 
+@api_router.get("/videos/batch-status")
+async def batch_video_status():
+    """Check batch video generation progress."""
+    return _batch_video_state
+
+
 @api_router.get("/videos")
 async def list_videos(company_slug: Optional[str] = None, category: Optional[str] = None, limit: int = 30, offset: int = 0):
     """List videos for gallery page."""
@@ -5645,6 +5651,116 @@ async def delete_video(video_id: str, request: Request):
     if not deleted:
         raise HTTPException(status_code=404, detail="Video not found")
     return {"deleted": True, "video_id": video_id}
+
+
+# Batch video generation state
+_batch_video_state = {"running": False, "total": 0, "completed": 0, "failed": 0, "current": "", "results": []}
+
+
+async def _generate_single_video_cloud(company_slug: str, company_name: str, prompt: str, bonus_amount: str, category: str, tags: list):
+    """Generate one Sora 2 video, upload to cloud, register in library."""
+    global _batch_video_state
+    _batch_video_state["current"] = company_name
+    try:
+        from emergentintegrations.llm.openai.video_generation import OpenAIVideoGeneration
+
+        firm_slug = slugify(company_name) or company_slug
+        filename = f"{firm_slug}-{int(time.time())}.mp4"
+        output_path = GENERATED_VIDEOS_DIR / filename
+
+        def _run():
+            vg = OpenAIVideoGeneration(api_key=EMERGENT_LLM_KEY)
+            video_bytes = vg.text_to_video(prompt=prompt, model="sora-2", size="1280x720", duration=12, max_wait_time=900)
+            if not video_bytes:
+                return None
+            vg.save_video(video_bytes, str(output_path))
+            return video_bytes
+
+        video_bytes = await asyncio.to_thread(_run)
+        if not video_bytes:
+            _batch_video_state["failed"] += 1
+            _batch_video_state["results"].append({"company": company_name, "status": "failed", "error": "No video bytes returned"})
+            return
+
+        # Upload to object storage
+        from agents.video_library import put_object, VideoLibrary
+        video_id = str(uuid.uuid4())
+        storage_path = f"guncelgiris/videos/{video_id}.mp4"
+        file_data = output_path.read_bytes()
+        put_object(storage_path, file_data, "video/mp4")
+
+        # Register in video library
+        lib = VideoLibrary(db)
+        record = {
+            "title": f"{company_name} Tanitim Videosu 2026",
+            "description": f"{company_name} {bonus_amount} bonus firsati. Guncel giris ve detayli inceleme.",
+            "company_slug": company_slug,
+            "company_name": company_name,
+            "category": category,
+            "tags": tags,
+            "source": "ai_generated",
+            "duration_seconds": 12,
+            "thumbnail_url": "",
+            "is_featured": True,
+        }
+        await lib.upload_video(file_data, filename, "video/mp4", record)
+
+        # Also update bonus_sites with video info
+        await db.bonus_sites.update_one(
+            {"slug": {"$regex": f"^{company_slug}"}},
+            {"$set": {
+                "ai_video_status": "ready",
+                "ai_video_url": f"/api/generated-videos/{filename}",
+                "video_url": f"/api/generated-videos/{filename}",
+                "ai_video_generated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }}
+        )
+
+        # Clean local file (already in cloud)
+        try:
+            output_path.unlink()
+        except Exception:
+            pass
+
+        _batch_video_state["completed"] += 1
+        _batch_video_state["results"].append({"company": company_name, "status": "success", "video_id": video_id})
+        logger.info(f"Video generated for {company_name}: {video_id}")
+    except Exception as e:
+        _batch_video_state["failed"] += 1
+        _batch_video_state["results"].append({"company": company_name, "status": "failed", "error": str(e)})
+        logger.error(f"Video generation failed for {company_name}: {e}")
+
+
+async def _batch_video_task(jobs: list):
+    """Process video generation jobs in batches of 5."""
+    global _batch_video_state
+    _batch_video_state = {"running": True, "total": len(jobs), "completed": 0, "failed": 0, "current": "", "results": []}
+    batch_size = 5
+    for i in range(0, len(jobs), batch_size):
+        batch = jobs[i:i + batch_size]
+        tasks = [_generate_single_video_cloud(**job) for job in batch]
+        await asyncio.gather(*tasks, return_exceptions=True)
+        logger.info(f"Batch {i // batch_size + 1} complete: {_batch_video_state['completed']}/{_batch_video_state['total']}")
+    _batch_video_state["running"] = False
+    _batch_video_state["current"] = ""
+
+
+@api_router.post("/videos/batch-generate")
+async def batch_generate_videos(data: Dict[str, Any], request: Request, background_tasks: BackgroundTasks):
+    """Start batch video generation with custom prompts.
+    Body: {"videos": [{"company_slug": "...", "company_name": "...", "prompt": "...", "bonus_amount": "...", "category": "...", "tags": [...]}]}
+    """
+    require_admin_request(request)
+    if _batch_video_state.get("running"):
+        return {"error": "Batch already running", "state": _batch_video_state}
+
+    videos = data.get("videos", [])
+    if not videos:
+        raise HTTPException(status_code=400, detail="videos list required")
+
+    background_tasks.add_task(_batch_video_task, videos)
+    return {"started": True, "total": len(videos), "batch_size": 5, "message": f"{len(videos)} video generation started"}
 
 
 # ============== ADMIN CONTROL SYSTEM (Phase 8) ==============
