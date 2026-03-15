@@ -2837,6 +2837,83 @@ async def bulk_generate_content(domain_id: Optional[str] = None, count: int = 5)
     
     return {"generated": len([r for r in results if r.get("status") == "created"]), "results": results}
 
+
+@api_router.post("/auto-content/full-auto")
+async def full_auto_generate(data: Dict[str, Any] = {}, background_tasks: BackgroundTasks = None):
+    """Fully automatic: AI generates topics first, then writes articles for each.
+    No manual topic input needed — just press start.
+    Body (optional): {"count": 5, "niche": "bahis", "company_focus": ""}
+    """
+    count = data.get("count", 5)
+    niche = data.get("niche", "bahis ve bonus siteleri")
+    company_focus = data.get("company_focus", "")
+
+    # Get existing article titles to avoid duplicates
+    existing = await db.articles.find(
+        {"is_published": True}, {"_id": 0, "title": 1}
+    ).limit(200).to_list(200)
+    existing_titles = [a["title"].lower() for a in existing]
+
+    # Get firm names for context
+    firms = await db.bonus_sites.find(
+        {"is_active": True}, {"_id": 0, "name": 1, "bonus_amount": 1}
+    ).limit(30).to_list(30)
+    firms_ctx = ", ".join([f"{f['name']} ({f['bonus_amount']})" for f in firms[:15]])
+
+    # Step 1: AI generates topics
+    topic_prompt = f"""Sen bir SEO icerik stratejistisin. "{niche}" alaninda {count} adet makale konusu uret.
+{"Firma odagi: " + company_focus if company_focus else ""}
+Mevcut firmalar: {firms_ctx}
+
+Her konunun benzersiz, SEO degerli ve kullanici icin faydali olmasi gerekiyor.
+Mevcut makaleler (bunlari TEKRARLAMA): {', '.join(existing_titles[:20])}
+
+SADECE konu basliklarini JSON array olarak dondur:
+["Konu 1", "Konu 2", "Konu 3"]"""
+
+    try:
+        raw_topics = await generate_ai_content(topic_prompt, "Sen bir SEO icerik stratejistisin. Sadece JSON array dondur.")
+        import json as _json
+        match = re.search(r'\[[\s\S]*?\]', raw_topics)
+        topics = _json.loads(match.group(0)) if match else []
+    except Exception as e:
+        logger.error(f"Topic generation failed: {e}")
+        # Fallback topics
+        topics = [
+            "En Iyi Deneme Bonusu Veren Siteler 2026 Guncel Liste",
+            "Hosgeldin Bonusu Nedir ve Nasil Kullanilir",
+            "Bahis Sitelerinde Guvenli Odeme Yontemleri Rehberi",
+            "Canli Bahis Taktikleri ve Kazanma Stratejileri 2026",
+            "Yatirimsiz Deneme Bonusu Veren Siteler Tam Liste",
+        ]
+
+    topics = topics[:count]
+
+    # Step 2: Generate articles for each topic in background
+    async def _auto_generate_task():
+        results = []
+        for topic in topics:
+            # Skip if similar exists
+            if any(topic.lower() in et for et in existing_titles):
+                results.append({"topic": topic, "status": "skipped", "reason": "similar exists"})
+                continue
+            try:
+                result = await auto_generate_article(None, topic)
+                results.append({"topic": topic, **result})
+            except Exception as e:
+                results.append({"topic": topic, "status": "failed", "error": str(e)})
+            await asyncio.sleep(2)
+        logger.info(f"Full auto generation complete: {len([r for r in results if r.get('status')=='created'])}/{len(results)} articles created")
+
+    background_tasks.add_task(_auto_generate_task)
+
+    return {
+        "started": True,
+        "topics_generated": len(topics),
+        "topics": topics,
+        "message": f"{len(topics)} konu uretildi ve makale yazimi arka planda baslatildi",
+    }
+
 # ============== CONTENT QUEUE & SCHEDULER ==============
 
 @api_router.post("/content-queue/bulk-add")
