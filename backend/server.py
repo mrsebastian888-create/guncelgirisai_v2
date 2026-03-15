@@ -5,7 +5,7 @@ Version: 3.0.0
 """
 
 from fastapi import FastAPI, APIRouter, HTTPException, Request, status, BackgroundTasks
-from fastapi.responses import JSONResponse, PlainTextResponse, Response, HTMLResponse, FileResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response, HTMLResponse, FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -7098,3 +7098,16 @@ from agents.router import router as agents_router  # noqa: E402
 api_router.include_router(agents_router)
 
 app.include_router(api_router)
+
+
+# Shortlink redirect: guncelgiris.ai/y.min -> original_url (backend'e dogrudan istek gelirse)
+@app.get("/{slug}", include_in_schema=False)
+async def shortlink_redirect(slug: str):
+    """If slug is a short link, redirect to original URL. Else 404."""
+    if "/" in slug or slug in ("api", "health", "version", "docs", "openapi.json", "redoc", "db-check"):
+        raise HTTPException(status_code=404, detail="Not found")
+    link = await db.short_links.find_one({"slug": slug, "is_deleted": False}, {"original_url": 1})
+    if not link or not link.get("original_url"):
+        raise HTTPException(status_code=404, detail="Short link not found")
+    await db.short_links.update_one({"slug": slug}, {"$inc": {"click_count": 1}})
+    return RedirectResponse(url=link["original_url"], status_code=302)
