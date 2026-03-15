@@ -5763,6 +5763,128 @@ async def batch_generate_videos(data: Dict[str, Any], request: Request, backgrou
     return {"started": True, "total": len(videos), "batch_size": 5, "message": f"{len(videos)} video generation started"}
 
 
+# ============== URL SHORTENER SYSTEM ==============
+
+SHORTENER_RESERVED = {
+    "admin", "admin-login", "api", "deneme-bonusu", "hosgeldin-bonusu",
+    "spor-haberleri", "companies", "videolar", "gorseller", "makale",
+    "mac", "bonus", "rehber", "link-kisaltici",
+    "deneme-bonusu-veren-siteler", "guncel-deneme-bonusu",
+    "yatirimsiz-deneme-bonusu", "bonus-veren-siteler",
+    "odeme-yontemleri", "mobil-odeme-ile-bahis", "kredi-karti-ile-bahis",
+    "papel-ile-bahis", "havale-ile-bahis", "kripto-ile-bahis",
+    "bddk-onayli-odeme-yontemleri", "guvenli-odeme-yontemleri",
+}
+
+
+@api_router.get("/shortlinks")
+async def list_shortlinks(limit: int = 100):
+    """List all short links."""
+    links = await db.short_links.find({"is_deleted": False}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return {"links": links, "total": len(links)}
+
+
+@api_router.post("/shortlinks")
+async def create_shortlink(data: Dict[str, Any]):
+    """Create a new short link."""
+    original_url = (data.get("original_url") or "").strip()
+    slug = (data.get("slug") or "").strip().lower()
+
+    if not original_url:
+        raise HTTPException(status_code=400, detail="original_url gerekli")
+    if not slug:
+        raise HTTPException(status_code=400, detail="slug gerekli")
+
+    # Validate URL
+    if not original_url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Gecersiz URL formatı. http:// veya https:// ile baslamali")
+
+    # Validate slug format
+    if not re.match(r'^[a-z0-9-]+$', slug):
+        raise HTTPException(status_code=400, detail="Slug sadece kucuk harf, rakam ve tire icermelidir")
+    if len(slug) < 2 or len(slug) > 50:
+        raise HTTPException(status_code=400, detail="Slug 2-50 karakter arasi olmalidir")
+
+    # Check reserved slugs
+    if slug in SHORTENER_RESERVED:
+        raise HTTPException(status_code=400, detail=f"'{slug}' sistem tarafindan kullanilmaktadir")
+
+    # Check duplicate
+    existing = await db.short_links.find_one({"slug": slug, "is_deleted": False}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=409, detail=f"'{slug}' slug zaten kullanılıyor")
+
+    # Check if slug conflicts with a firm
+    firm = await db.bonus_sites.find_one({"slug": {"$regex": f"^{re.escape(slug)}"}}, {"_id": 0, "name": 1})
+    if firm:
+        raise HTTPException(status_code=409, detail=f"'{slug}' bir firma slug'ı ile cakisiyor ({firm['name']})")
+
+    link = {
+        "id": str(uuid.uuid4()),
+        "original_url": original_url,
+        "slug": slug,
+        "click_count": 0,
+        "is_deleted": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.short_links.insert_one({k: v for k, v in link.items() if k != "_id"})
+    return link
+
+
+@api_router.put("/shortlinks/{link_id}")
+async def update_shortlink(link_id: str, data: Dict[str, Any]):
+    """Update a short link."""
+    update_fields = {}
+    if "original_url" in data:
+        url = data["original_url"].strip()
+        if not url.startswith(("http://", "https://")):
+            raise HTTPException(status_code=400, detail="Gecersiz URL")
+        update_fields["original_url"] = url
+    if "slug" in data:
+        new_slug = data["slug"].strip().lower()
+        if not re.match(r'^[a-z0-9-]+$', new_slug):
+            raise HTTPException(status_code=400, detail="Gecersiz slug formati")
+        if new_slug in SHORTENER_RESERVED:
+            raise HTTPException(status_code=400, detail=f"'{new_slug}' rezerve edilmis")
+        dup = await db.short_links.find_one({"slug": new_slug, "id": {"$ne": link_id}, "is_deleted": False})
+        if dup:
+            raise HTTPException(status_code=409, detail=f"'{new_slug}' zaten kullaniliyor")
+        update_fields["slug"] = new_slug
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="Guncellenecek alan yok")
+    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.short_links.update_one({"id": link_id}, {"$set": update_fields})
+    updated = await db.short_links.find_one({"id": link_id}, {"_id": 0})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Link bulunamadi")
+    return updated
+
+
+@api_router.delete("/shortlinks/{link_id}")
+async def delete_shortlink(link_id: str):
+    """Soft delete a short link."""
+    result = await db.short_links.update_one(
+        {"id": link_id, "is_deleted": False},
+        {"$set": {"is_deleted": True, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Link bulunamadi")
+    return {"deleted": True, "id": link_id}
+
+
+@api_router.get("/shortlinks/resolve/{slug}")
+async def resolve_shortlink(slug: str):
+    """Check if a slug is a short link. Returns the original URL if found."""
+    link = await db.short_links.find_one({"slug": slug, "is_deleted": False}, {"_id": 0})
+    if not link:
+        raise HTTPException(status_code=404, detail="Short link bulunamadi")
+    # Increment click count
+    await db.short_links.update_one({"slug": slug}, {"$inc": {"click_count": 1}})
+    link["click_count"] = link.get("click_count", 0) + 1
+    return link
+
+
 # ============== WALLPAPER LIBRARY SYSTEM ==============
 
 from agents.wallpaper_library import WallpaperLibrary, build_seo_slug

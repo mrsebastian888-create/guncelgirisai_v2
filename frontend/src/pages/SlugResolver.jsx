@@ -6,27 +6,36 @@ import FirmPage from "@/pages/FirmPage";
 import { API } from "@/App";
 
 /**
- * Smart resolver: checks if a top-level slug is a programmatic page.
- * If yes → renders ProgrammaticPage. If no → falls back to FirmPage.
+ * Smart resolver: checks short link → programmatic → firm page.
+ * Short links redirect immediately via window.location.
  */
 export default function SlugResolver() {
   const { slug } = useParams();
-  const [pageType, setPageType] = useState(null); // "programmatic" | "firm" | null
+  const [pageType, setPageType] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
     setPageType(null);
-    // Try programmatic page first (fast check)
-    axios.get(`${API}/programmatic/page/${slug}`)
-      .then(() => {
-        setPageType("programmatic");
-        setLoading(false);
+
+    // 1. Check short link first
+    axios.get(`${API}/shortlinks/resolve/${slug}`)
+      .then(res => {
+        // Redirect to original URL
+        window.location.href = res.data.original_url;
       })
       .catch(() => {
-        // Not a programmatic page → it's a firm page
-        setPageType("firm");
-        setLoading(false);
+        // 2. Not a short link → check programmatic
+        axios.get(`${API}/programmatic/page/${slug}`)
+          .then(() => {
+            setPageType("programmatic");
+            setLoading(false);
+          })
+          .catch(() => {
+            // 3. Not programmatic → firm page
+            setPageType("firm");
+            setLoading(false);
+          });
       });
   }, [slug]);
 

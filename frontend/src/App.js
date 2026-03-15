@@ -28,6 +28,7 @@ import VideoGalleryPage from "@/pages/VideoGalleryPage";
 import VideoPlayerPage from "@/pages/VideoPlayerPage";
 import WallpaperGalleryPage from "@/pages/WallpaperGalleryPage";
 import WallpaperDetailPage from "@/pages/WallpaperDetailPage";
+import LinkShortenerPage from "@/pages/LinkShortenerPage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -87,6 +88,7 @@ function AppLayout({ isLoading }) {
               <Route path="/hosgeldin-bonusu" element={<BonusGuidePage type="hosgeldin" />} />
               <Route path="/bonus/:type" element={<BonusGuidePage />} />
               <Route path="/spor-haberleri" element={<SportsNewsPage />} />
+              <Route path="/link-kisaltici" element={<LinkShortenerPage />} />
               <Route path="/makale/:slug" element={<ArticlePage />} />
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
               <Route path="/companies" element={<CompaniesPage />} />

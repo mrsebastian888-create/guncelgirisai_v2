@@ -1,33 +1,29 @@
-# Dynamic Sports & Bonus Authority Network (DSBN) - v32.0
+# Dynamic Sports & Bonus Authority Network (DSBN) - v33.0
 
-## Original Problem Statement
-guncelgiris.ai — GG2026 SEO framework, AI-powered content platform.
+## Latest: Link Shortener + Video/Wallpaper Production
 
-## Current: Video Player + Wallpaper System (Mar 2026)
+### Link Shortener (`/link-kisaltici`)
+- Custom short URLs: `guncelgiris.ai/{slug}` → original URL redirect
+- CRUD: create, edit, delete with validation
+- Slug validation: letters, numbers, hyphens only
+- Duplicate + reserved slug protection
+- Click tracking
+- SlugResolver checks short links → programmatic → firm pages
+- Navbar: "Link Kisaltici" added
 
-### Video Player System
-- `/videolar` — YouTube-like grid gallery, category filters, AI badge
-- `/videolar/:videoId` — Video player + company CTA + related videos
-- Object storage (Emergent), 50MB upload limit
-- Batch generation: `POST /api/videos/batch-generate`
-- **34 firma videosu uretildi** (Sora 2)
+### Content Production Status
+- **100 wallpapers** (100/100 Turkiye) ✅
+- **55+ videos** (Sora 2, ongoing)
+- **GG2026 Phase 1-8** all operational ✅
 
-### Wallpaper/Gorsel System
-- `/gorseller` — Pinterest-style wallpaper gallery
-- `/gorseller/:seoSlug` — Detail page + download + company CTA
-- SEO-friendly URLs: `casibom-deneme-bonusu-2026`
-- SEO-friendly filenames: `casibom-deneme-bonusu-2026.png`
-- Alt text + title otomatik
-- GPT Image 1 ile AI gorsel uretimi
-- Batch generation: `POST /api/wallpapers/batch-generate`
-- **10 firma gorseli uretildi** (ilk 10 Turkiye firması)
-
-### DB Collections
-- `video_library` — Video metadata + storage paths
-- `wallpaper_library` — Wallpaper metadata + SEO slugs + storage paths
+### API Endpoints (Link Shortener)
+- `GET /api/shortlinks` — List all
+- `POST /api/shortlinks` — Create (validates URL, slug, duplicates)
+- `PUT /api/shortlinks/{id}` — Update
+- `DELETE /api/shortlinks/{id}` — Soft delete
+- `GET /api/shortlinks/resolve/{slug}` — Resolve + click count
 
 ## Next Steps
-- Kalan 90 Turkiye firmasi icin wallpaper uretimi (batch)
-- Basarisiz videolar icin retry (rate limit bekle)
-- Telegram @guncelgirisai kanal entegrasyonu
-- Firma sayfalarinda video + gorsel bolumleri
+- Remaining video production (45+ firms)
+- Telegram @guncelgirisai channel integration
+- Firma sayfalarinda video + gorsel sections
