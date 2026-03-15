@@ -3,8 +3,8 @@ GG2026 AI Agent API Router
 Exposes all 5 agents as /api/agents/* endpoints.
 """
 from fastapi import APIRouter, HTTPException, Request
-from typing import Dict, Any, List, Optional
-from pydantic import BaseModel, Field
+from typing import Dict, List, Optional
+from pydantic import BaseModel
 
 from .keyword_agent import KeywordIntelligenceAgent
 from .content_agent import ContentGeneratorAgent
@@ -249,7 +249,7 @@ async def seo_sitemap_audit(request: Request):
 
 # ── SERP Intelligence Layer ──────────────────
 
-from .serp import SERPManager
+from .serp import SERPManager  # noqa: E402
 
 class SERPValidateRequest(BaseModel):
     keywords: List[str]

@@ -3,8 +3,7 @@ Agent 1 — Keyword Intelligence Agent
 Responsibilities: keyword clustering, search intent grouping,
 SERP opportunity detection, topic discovery.
 """
-import re
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from .base import BaseAgent
 
 

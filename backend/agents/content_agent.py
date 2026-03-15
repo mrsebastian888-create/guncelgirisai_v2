@@ -3,7 +3,7 @@ Agent 2 — Content Generator Agent
 Responsibilities: generate company page drafts, hub page drafts,
 guide content, article content.
 """
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from .base import BaseAgent
 
 

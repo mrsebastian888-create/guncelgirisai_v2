@@ -4,7 +4,7 @@ All providers (Ahrefs, Semrush, DataForSEO) implement this interface.
 """
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import List
 from .models import KeywordData, RankingOpportunity, CompetitorGap, SERPDifficulty, SERPProviderStatus
 
 

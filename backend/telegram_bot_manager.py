@@ -10,7 +10,6 @@ import re
 import os
 import logging
 import httpx
-from datetime import datetime, timezone
 from typing import Optional
 from pathlib import Path
 
@@ -154,7 +153,7 @@ def build_start_message(firm: dict) -> str:
 
     msg = f"{'━' * 28}\n"
     msg += f"  <b>{name}</b>\n"
-    msg += f"  Güncel Giriş Botu 2026\n"
+    msg += "  Güncel Giriş Botu 2026\n"
     msg += f"{'━' * 28}\n\n"
 
     msg += "Hoş geldiniz! Bu bot ile <b>güncel giriş adresi</b>, "
@@ -304,7 +303,6 @@ async def create_bot_via_botfather(api_id: int, api_hash: str, firm_name: str, b
     """Create a bot via BotFather using Telethon. Returns bot token or None."""
     try:
         from telethon import TelegramClient
-        from telethon.errors import SessionPasswordNeededError
 
         session_file = SESSION_PATH
         client = TelegramClient(session_file, api_id, api_hash)

@@ -119,7 +119,7 @@ export default function LoginPage() {
             data-testid="login-submit-btn"
             className="w-full rounded-lg py-2.5 font-semibold text-sm transition-all active:scale-95 disabled:opacity-60"
             style={{
-              background: "var(--neon-green)",
+              background: "hsl(var(--neon-green))",
               color: "#000",
             }}
           >

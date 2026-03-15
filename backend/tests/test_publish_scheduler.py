@@ -7,7 +7,6 @@ import pytest
 import requests
 import os
 import uuid
-from datetime import datetime, timezone
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 
@@ -202,7 +201,7 @@ class TestPublishEnqueue:
         assert data2["added"] == 0, f"Expected added=0 (dup), got {data2['added']}"
         assert data2["skipped"] == 1, f"Expected skipped=1, got {data2['skipped']}"
         
-        print(f"✓ Duplicate slug correctly skipped: added=0, skipped=1")
+        print("✓ Duplicate slug correctly skipped: added=0, skipped=1")
 
     def test_enqueue_with_all_content_types(self, api_client):
         """Enqueue items with various content types"""
@@ -318,7 +317,7 @@ class TestPublishManual:
             
             print(f"✓ Manual override published item: queue_id={queue_id}")
         else:
-            print(f"⚠ Could not find enqueued item to test manual publish (item may have been scheduled)")
+            print("⚠ Could not find enqueued item to test manual publish (item may have been scheduled)")
 
 
 # ==================== GET /api/publish/queue ====================
@@ -400,7 +399,7 @@ class TestPublishRemove:
             
             print(f"✓ Remove endpoint works: removed={data['removed']}")
         else:
-            print(f"⚠ Item was scheduled before removal test could run")
+            print("⚠ Item was scheduled before removal test could run")
 
 
 # ==================== POST /api/publish/reschedule-failed ====================
@@ -584,7 +583,7 @@ class TestDaemonStatus:
         data = response.json()
         
         daemon = data.get("daemon", {})
-        assert daemon.get("running") == True, f"Daemon should be running, got {daemon}"
+        assert daemon.get("running"), f"Daemon should be running, got {daemon}"
         
         print(f"✓ Daemon running=True, interval={daemon.get('interval_minutes')} min")
 

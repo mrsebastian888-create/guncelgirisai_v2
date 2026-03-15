@@ -2,7 +2,6 @@
 GG2026 Phase 5: Company Article System Backend Tests
 Tests company-articles endpoints, sitemap, and article-to-company/hub relationships
 """
-import pytest
 import requests
 import os
 import uuid

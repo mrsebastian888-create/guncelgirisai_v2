@@ -3,7 +3,7 @@ Agent 3 — Internal Linking Agent
 Responsibilities: suggest relevant internal links, maintain topical clusters,
 prevent orphan pages.
 """
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .base import BaseAgent
 
 

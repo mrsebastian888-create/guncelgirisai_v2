@@ -2,20 +2,10 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin-login
-Disallow: /api/
-Allow: /api/sitemap.xml
-Allow: /api/sitemap-pages.xml
-Allow: /api/sitemap-firms.xml
-Allow: /api/sitemap-articles.xml
-Allow: /api/sitemap-amp.xml
-Allow: /api/amp/
 
 User-agent: Googlebot
-Allow: /api/sitemap.xml
-Allow: /api/sitemap-pages.xml
-Allow: /api/sitemap-firms.xml
-Allow: /api/sitemap-articles.xml
-Allow: /api/sitemap-amp.xml
-Allow: /api/amp/
+Allow: /
+Disallow: /admin
+Disallow: /admin-login
 
-Sitemap: https://guncelgiris.ai/api/sitemap.xml
+Sitemap: https://www.guncelgiris.ai/sitemap.xml

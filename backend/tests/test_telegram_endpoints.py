@@ -316,7 +316,7 @@ class TestWebhookPublic:
         
         data = resp.json()
         assert "ok" in data, "Webhook should return 'ok' field"
-        assert data["ok"] == True, "Webhook should return ok=True"
+        assert data["ok"], "Webhook should return ok=True"
     
     def test_webhook_handles_message_without_chat(self):
         """POST /api/telegram/webhook/{bot_id} handles message without chat."""

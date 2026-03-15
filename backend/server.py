@@ -4,7 +4,7 @@ Production-Ready Backend with Hardening
 Version: 3.0.0
 """
 
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request, Depends, status, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, Request, status, BackgroundTasks
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -21,7 +21,7 @@ import subprocess
 import asyncio
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 from collections import defaultdict
 import httpx
@@ -31,6 +31,7 @@ from urllib.parse import quote_plus, urlparse
 from passlib.context import CryptContext
 import jwt as pyjwt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from openai import AsyncAzureOpenAI
 
 # ============== CONFIGURATION ==============
 
@@ -59,6 +60,10 @@ DB_NAME = get_required_env("DB_NAME")
 
 # Optional environment variables
 EMERGENT_LLM_KEY = get_optional_env("EMERGENT_LLM_KEY")
+AZURE_OPENAI_KEY = get_optional_env("AZURE_OPENAI_KEY")
+AZURE_OPENAI_ENDPOINT = get_optional_env("AZURE_OPENAI_ENDPOINT")
+AZURE_OPENAI_DEPLOYMENT = get_optional_env("AZURE_OPENAI_DEPLOYMENT")
+AZURE_OPENAI_API_VERSION = get_optional_env("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
 FOOTBALL_API_KEY = get_optional_env("FOOTBALL_DATA_API_KEY", "demo")
 CLOUDFLARE_API_TOKEN = get_optional_env("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_ACCOUNT_ID = get_optional_env("CLOUDFLARE_ACCOUNT_ID")
@@ -81,6 +86,9 @@ BUILTWITH_API_KEY = get_optional_env("BUILTWITH_API_KEY", "")
 TELEGRAM_API_ID = int(get_optional_env("TELEGRAM_API_ID", "0"))
 TELEGRAM_API_HASH = get_optional_env("TELEGRAM_API_HASH", "")
 TELEGRAM_WEBHOOK_BASE = get_optional_env("TELEGRAM_WEBHOOK_BASE", "")
+
+# SEO: frontend site URL for sitemap <loc>; must match canonical domain (prefer https://www.guncelgiris.ai)
+FRONTEND_BASE_URL = get_optional_env("FRONTEND_BASE_URL", "https://www.guncelgiris.ai").rstrip("/")
 
 # ============== SPORTS CACHE ==============
 
@@ -222,7 +230,7 @@ async def ping_mongo() -> tuple[bool, float]:
 # ============== LIFESPAN ==============
 
 # Publish scheduler daemon (Phase 7) — initialized before lifespan
-from agents.publish_scheduler import PublishSchedulerDaemon as _PSD
+from agents.publish_scheduler import PublishSchedulerDaemon as _PSD  # noqa: E402
 publish_daemon = _PSD()
 
 @asynccontextmanager
@@ -658,6 +666,10 @@ class Article(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     content_updated_at: Optional[str] = None
+    # SEO expansion: pillar | support | faq | comparison | glossary | freshness | trust
+    page_type: Optional[str] = None
+    last_updated: Optional[str] = None
+    update_note: Optional[str] = None
 
 class Category(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -781,6 +793,9 @@ class ContentQueueItem(BaseModel):
     error: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     completed_at: Optional[str] = None
+    # SEO pillar/support pages: when set, article uses this slug and category=rehber
+    target_slug: Optional[str] = None
+    page_type: Optional[str] = None  # pillar | support | faq | comparison
 
 # ============== CONTENT SCHEDULER ==============
 
@@ -860,6 +875,7 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
         item_id = item["id"]
         company = item.get("company", "")
         topic = item.get("topic", "")
+        target_slug = item.get("target_slug")
         subject = f"{company} {topic}".strip() if company and topic else (company or topic)
         
         await db.content_queue.update_one({"id": item_id}, {"$set": {"status": "processing"}})
@@ -871,23 +887,28 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
             title_clean = subject.title()
             seo_title = f"{title_clean} - Detaylı Rehber 2026"[:60]
             seo_desc = f"{title_clean} hakkında kapsamlı ve güncel uzman rehberi. En iyi fırsatlar, karşılaştırmalar ve stratejiler."[:160]
-            
-            article = Article(
-                title=title_clean,
-                slug=slugify(subject),
-                excerpt=f"{title_clean} hakkında uzman görüşleri, karşılaştırmalar ve güncel rehber.",
-                content=content,
-                category="en-iyi-firmalar",
-                tags=[slugify(t) for t in subject.split()[:5]],
-                seo_title=seo_title,
-                seo_description=seo_desc,
-                is_ai_generated=True,
-                is_auto_generated=True,
-                is_published=True,
-                author="Uzman Editör",
-                content_hash=hashlib.md5(content.encode()).hexdigest(),
-                content_updated_at=datetime.now(timezone.utc).isoformat(),
-            )
+            article_slug = target_slug if target_slug else slugify(subject)
+            article_category = "rehber" if target_slug else "en-iyi-firmalar"
+            now_iso = datetime.now(timezone.utc).isoformat()
+            article_kw = {
+                "title": title_clean,
+                "slug": article_slug,
+                "excerpt": f"{title_clean} hakkında uzman görüşleri, karşılaştırmalar ve güncel rehber.",
+                "content": content,
+                "category": article_category,
+                "tags": [slugify(t) for t in subject.split()[:5]],
+                "seo_title": seo_title,
+                "seo_description": seo_desc,
+                "is_ai_generated": True,
+                "is_auto_generated": True,
+                "is_published": True,
+                "author": "Uzman Editör",
+                "content_hash": hashlib.md5(content.encode()).hexdigest(),
+                "content_updated_at": now_iso,
+                "page_type": item.get("page_type"),
+                "last_updated": now_iso,
+            }
+            article = Article(**article_kw)
             
             await db.articles.insert_one(article.model_dump())
             await db.content_queue.update_one({"id": item_id}, {"$set": {
@@ -927,16 +948,19 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
         failed = len(results) - success
         logger.info(f"Batch complete: {success} success, {failed} failed")
 
-    async def bulk_generate(self, count: int = 20):
+    async def bulk_generate(self, count: int = 1000):
         """Start bulk generation in background."""
         if self.is_bulk_running:
             return {"error": "Bulk generation already running"}
         self.is_bulk_running = True
         asyncio.create_task(self._bulk_generate_task(count))
-        return {"status": "started", "target_count": count, "message": f"{count} makale arka planda uretiliyor"}
+        pending = await db.content_queue.count_documents({"status": "pending"})
+        target = min(count, pending)
+        return {"status": "started", "target_count": target, "message": f"{target} makale arka planda uretiliyor (15 paralel)"}
 
     async def _bulk_generate_task(self, count: int):
         """Background task for bulk article generation."""
+        PARALLEL = 15
         try:
             bonus_sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "name": 1, "bonus_amount": 1, "bonus_type": 1, "affiliate_url": 1, "rating": 1, "features": 1}).to_list(20)
             sites_info = "\n".join([f"- {s['name']}: {s.get('bonus_amount','')} bonus, {s.get('rating',4.5)} puan, Özellikler: {', '.join(s.get('features',[]))}" for s in bonus_sites])
@@ -946,14 +970,14 @@ Makale içinde uygun yerlere şu placeholder'ları ekle:
                 logger.info("Bulk generate: queue empty")
                 return
             
-            logger.info(f"Bulk generate started: {len(items)} articles (5 parallel)")
-            for i in range(0, len(items), 5):
-                batch = items[i:i+5]
+            logger.info(f"Bulk generate started: {len(items)} articles ({PARALLEL} parallel)")
+            for i in range(0, len(items), PARALLEL):
+                batch = items[i:i+PARALLEL]
                 tasks = [self._generate_single_article(item, sites_info) for item in batch]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 success = sum(1 for r in results if r is True)
-                logger.info(f"Bulk batch {i//5 + 1}/{(len(items)+4)//5}: {success}/{len(batch)} success | Total: {self.total_generated}")
-                await asyncio.sleep(1)
+                logger.info(f"Bulk batch {i//PARALLEL + 1}/{(len(items)+PARALLEL-1)//PARALLEL}: {success}/{len(batch)} success | Total: {self.total_generated}")
+                await asyncio.sleep(0.5)
             
             logger.info(f"Bulk generate complete. Total generated this session: {self.total_generated}")
         except Exception as e:
@@ -983,16 +1007,44 @@ def calculate_performance_score(perf: dict) -> float:
     return score
 
 async def generate_ai_content(prompt: str, system_message: str = "Sen profesyonel bir Türkçe içerik yazarısın.") -> str:
-    """Generate AI content using Emergent integrations with retry"""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
-    
+    """Generate AI content using Azure OpenAI (if configured) or Emergent integrations with retry."""
+
+    # 1) Try Azure OpenAI first if environment variables are set
+    if AZURE_OPENAI_KEY and AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_DEPLOYMENT:
+        try:
+            azure_client = AsyncAzureOpenAI(
+                api_key=AZURE_OPENAI_KEY,
+                azure_endpoint=AZURE_OPENAI_ENDPOINT,
+                api_version=AZURE_OPENAI_API_VERSION,
+            )
+            azure_response = await azure_client.chat.completions.create(
+                model=AZURE_OPENAI_DEPLOYMENT,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt},
+                ],
+            )
+            message_content = azure_response.choices[0].message.content
+            # Newer SDKs can return list-of-parts; normalize to string
+            if isinstance(message_content, list):
+                text_parts = [p.get("text", "") for p in message_content if isinstance(p, dict) and p.get("type") == "text"]
+                return "".join(text_parts).strip()
+            return message_content
+        except Exception as e:
+            logger.warning(f"Azure OpenAI failed, falling back to Emergent LLM: {e}")
+
+    # 2) Fallback to Emergent LLM (OpenAI gpt-4o-mini / gpt-4o)
     models = [("openai", "gpt-4o-mini"), ("openai", "gpt-4o")]
     max_retries = 2
     
     for provider, model in models:
         for attempt in range(max_retries):
             try:
-                chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=str(uuid.uuid4()), system_message=system_message).with_model(provider, model)
+                chat = LlmChat(
+                    api_key=EMERGENT_LLM_KEY,
+                    session_id=str(uuid.uuid4()),
+                    system_message=system_message,
+                ).with_model(provider, model)
                 result = await chat.send_message(UserMessage(text=prompt))
                 return result
             except Exception as e:
@@ -2163,6 +2215,178 @@ async def get_firma_video_detail(slug: str):
     }
 
 
+# ─── GG2026: resolve slug, hub, programmatic, firma-sub, company-articles ───
+
+BONUS_HUB_SLUGS = [
+    "deneme-bonusu-veren-siteler", "guncel-deneme-bonusu",
+    "yatirimsiz-deneme-bonusu", "bonus-veren-siteler",
+]
+PAYMENT_HUB_SLUGS = [
+    "odeme-yontemleri", "mobil-odeme-ile-bahis", "kredi-karti-ile-bahis",
+    "papel-ile-bahis", "havale-ile-bahis", "kripto-ile-bahis",
+    "bddk-onayli-odeme-yontemleri", "guvenli-odeme-yontemleri",
+]
+VALID_FIRMA_SUB_PAGE_TYPES = [
+    "guncel-giris", "guncel-adresi", "yeni-giris-adresi", "mobil-giris",
+    "deneme-bonusu", "deneme-bonusu-2026", "hosgeldin-bonusu",
+    "yatirimsiz-deneme-bonusu", "bonus-sartlari", "odeme-yontemleri",
+]
+
+
+@api_router.get("/resolve-slug/{slug}")
+async def resolve_slug(slug: str):
+    """Return page type for top-level slug: programmatic | bonus_hub | payment_hub | firm."""
+    slug = (slug or "").strip().strip("/")
+    if not slug:
+        raise HTTPException(status_code=404, detail="Slug gerekli")
+    try:
+        from agents.programmatic_engine import ProgrammaticEngine
+        engine = ProgrammaticEngine(db)
+        if await engine.get_page(slug):
+            return {"type": "programmatic"}
+    except Exception:
+        pass
+    if slug in BONUS_HUB_SLUGS:
+        return {"type": "bonus_hub"}
+    if slug in PAYMENT_HUB_SLUGS:
+        return {"type": "payment_hub"}
+    firm = await db.bonus_sites.find_one({"slug": slug, "is_active": True}, {"_id": 1})
+    if firm:
+        return {"type": "firm"}
+    raise HTTPException(status_code=404, detail="Sayfa bulunamadi")
+
+
+async def _build_hub_response(slug: str, hub_type: str, title_key: str, base_url: str) -> Dict[str, Any]:
+    """Build hub page response with seo, breadcrumb, sites, company_links, related_hubs."""
+    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).sort("sort_order", 1).limit(30).to_list(30)
+    title = title_key if hub_type == "bonus" else slug.replace("-", " ").title()
+    seo = {"title": f"{title} 2026 | Guncel Giris", "description": f"{title} listesi. Guvenilir siteler.", "h1": title}
+    breadcrumb = [{"name": "Ana Sayfa", "url": "/"}, {"name": title, "url": f"/{slug}"}]
+    company_links = []
+    for s in sites[:15]:
+        firm_slug = s.get("slug", "")
+        company_links.append({
+            "name": s.get("name", ""),
+            "slug": firm_slug,
+            "guncel_giris_url": f"/{firm_slug}/guncel-giris" if firm_slug else "",
+            "deneme_bonusu_url": f"/{firm_slug}/deneme-bonusu" if firm_slug else "",
+            "odeme_yontemleri_url": f"/{firm_slug}/odeme-yontemleri" if firm_slug else "",
+        })
+    related_hubs = {"bonus": ["deneme-bonusu-veren-siteler", "bonus-veren-siteler"], "payment": ["odeme-yontemleri", "kripto-ile-bahis"]}
+    return {"seo": seo, "breadcrumb": breadcrumb, "sites": sites, "company_links": company_links, "related_hubs": related_hubs}
+
+
+@api_router.get("/hub/bonus/{hub_slug}")
+async def get_hub_bonus(hub_slug: str):
+    """Bonus hub page data."""
+    if hub_slug not in BONUS_HUB_SLUGS:
+        raise HTTPException(status_code=404, detail="Hub bulunamadi")
+    base_url = FRONTEND_BASE_URL.rstrip("/")
+    return await _build_hub_response(hub_slug, "bonus", "Deneme Bonusu Veren Siteler", base_url)
+
+
+@api_router.get("/hub/payment/{hub_slug}")
+async def get_hub_payment(hub_slug: str):
+    """Payment hub page data."""
+    if hub_slug not in PAYMENT_HUB_SLUGS:
+        raise HTTPException(status_code=404, detail="Hub bulunamadi")
+    base_url = FRONTEND_BASE_URL.rstrip("/")
+    return await _build_hub_response(hub_slug, "payment", "Odeme Yontemleri", base_url)
+
+
+@api_router.get("/programmatic/page/{slug}")
+async def get_programmatic_page(slug: str):
+    """Get single programmatic page by slug."""
+    from agents.programmatic_engine import ProgrammaticEngine
+    engine = ProgrammaticEngine(db)
+    page = await engine.get_page(slug.strip("/"))
+    if not page:
+        raise HTTPException(status_code=404, detail="Sayfa bulunamadi")
+    return page
+
+
+@api_router.get("/programmatic/pages")
+async def list_programmatic_pages(combination_type: str = None, limit: int = 50, offset: int = 0):
+    """List programmatic pages."""
+    from agents.programmatic_engine import ProgrammaticEngine
+    engine = ProgrammaticEngine(db)
+    return await engine.list_pages(combination_type=combination_type, limit=limit, offset=offset)
+
+
+@api_router.get("/programmatic/stats")
+async def get_programmatic_stats():
+    """Programmatic registry stats."""
+    from agents.programmatic_engine import ProgrammaticEngine
+    engine = ProgrammaticEngine(db)
+    return await engine.get_stats()
+
+
+@api_router.get("/firma-sub/{company_slug}/{page_type}")
+async def get_firma_sub(company_slug: str, page_type: str):
+    """Company sub-page (e.g. guncel-giris, deneme-bonusu) for CompanySubPage."""
+    if page_type not in VALID_FIRMA_SUB_PAGE_TYPES:
+        raise HTTPException(status_code=404, detail="Gecersiz sayfa tipi")
+    site = await db.bonus_sites.find_one(
+        {"$or": [{"slug": company_slug}, {"slug": f"{company_slug}-guncelgiris"}]},
+        {"_id": 0}
+    )
+    if not site:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    cluster = "company-guide" if page_type in ["guncel-giris", "guncel-adresi", "yeni-giris-adresi", "mobil-giris", "odeme-yontemleri"] else "bonus-guide"
+    faq = [
+        {"question": "Nasil giris yapilir?", "answer": "Sitedeki guncel adresi kullanarak uye olup giris yapabilirsiniz."},
+        {"question": "Bonus nasil alinir?", "answer": "Uyelik sonrasi canli destek uzerinden bonus talebinde bulunun."},
+    ]
+    hub_links = [{"name": "Deneme Bonusu", "url": "/deneme-bonusu-veren-siteler"}, {"name": "Odeme Yontemleri", "url": "/odeme-yontemleri"}]
+    related = await db.bonus_sites.find({"is_active": True, "slug": {"$ne": site.get("slug")}}, {"_id": 0, "name": 1, "slug": 1}).limit(6).to_list(6)
+    related_companies = [{"name": r.get("name", ""), "slug": r.get("slug", ""), "url": f"/{r.get('slug', '')}"} for r in related]
+    return {
+        "cluster": cluster,
+        "site": {**site, "bonus_amount": site.get("bonus_amount", ""), "turnover_requirement": site.get("turnover_requirement", 10)},
+        "seo": {"title": f"{site.get('name', '')} {page_type.replace('-', ' ').title()} 2026", "description": f"{site.get('name', '')} sayfasi."},
+        "breadcrumb": [{"name": "Ana Sayfa", "url": "/"}, {"name": site.get("name", ""), "url": f"/{site.get('slug', '')}"}, {"name": page_type.replace("-", " ").title(), "url": ""}],
+        "internal_links": [],
+        "similar_same_page": [],
+        "faq": faq,
+        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "hub_links": hub_links,
+        "related_companies": related_companies,
+    }
+
+
+@api_router.get("/company-articles/{company_slug}")
+async def get_company_articles_list(company_slug: str):
+    """List company articles for CompanyArticlesListPage."""
+    site = await db.bonus_sites.find_one({"$or": [{"slug": company_slug}, {"slug": f"{company_slug}-guncelgiris"}]}, {"_id": 0})
+    if not site:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    articles = await db.company_articles.find({"company_slug": company_slug, "is_published": True}, {"_id": 0}).sort("published_at", -1).to_list(100)
+    general_articles = await db.articles.find({"is_published": True}, {"_id": 0, "slug": 1, "title": 1}).limit(5).to_list(5)
+    sub_pages = [{"name": "Guncel Giris", "url": f"/companies/{company_slug}/guncel-giris"}, {"name": "Deneme Bonusu", "url": f"/companies/{company_slug}/deneme-bonusu"}]
+    hub_links = [{"name": "Deneme Bonusu Veren Siteler", "url": "/deneme-bonusu-veren-siteler"}, {"name": "Odeme Yontemleri", "url": "/odeme-yontemleri"}]
+    breadcrumb = [{"name": "Ana Sayfa", "url": "/"}, {"name": site.get("name", ""), "url": f"/companies/{company_slug}"}, {"name": "Makaleler", "url": ""}]
+    seo = {"title": f"{site.get('name', '')} Makaleler 2026", "description": f"{site.get('name', '')} rehber ve makaleler."}
+    return {"site": site, "articles": articles, "general_articles": general_articles, "sub_pages": sub_pages, "hub_links": hub_links, "breadcrumb": breadcrumb, "seo": seo}
+
+
+@api_router.get("/company-articles/{company_slug}/{article_slug}")
+async def get_company_article_detail(company_slug: str, article_slug: str):
+    """Single company article for CompanyArticlePage."""
+    site = await db.bonus_sites.find_one({"$or": [{"slug": company_slug}, {"slug": f"{company_slug}-guncelgiris"}]}, {"_id": 0})
+    if not site:
+        raise HTTPException(status_code=404, detail="Firma bulunamadi")
+    article = await db.company_articles.find_one({"company_slug": company_slug, "slug": article_slug, "is_published": True}, {"_id": 0})
+    if not article:
+        raise HTTPException(status_code=404, detail="Makale bulunamadi")
+    related = await db.company_articles.find({"company_slug": company_slug, "slug": {"$ne": article_slug}, "is_published": True}, {"_id": 0}).limit(5).to_list(5)
+    related_sub_pages = [{"name": "Guncel Giris", "url": f"/companies/{company_slug}/guncel-giris"}, {"name": "Deneme Bonusu", "url": f"/companies/{company_slug}/deneme-bonusu"}]
+    related_hubs = [{"name": "Deneme Bonusu", "url": "/deneme-bonusu-veren-siteler"}]
+    similar_company_links = []
+    breadcrumb = [{"name": "Ana Sayfa", "url": "/"}, {"name": site.get("name", ""), "url": f"/companies/{company_slug}"}, {"name": "Makaleler", "url": f"/companies/{company_slug}/makaleler"}, {"name": article.get("title", article_slug), "url": ""}]
+    seo = {"title": article.get("seo_title") or article.get("title", ""), "description": article.get("meta_description") or article.get("excerpt", "")}
+    return {"site": site, "article": article, "related_articles": related, "related_sub_pages": related_sub_pages, "related_hubs": related_hubs, "similar_company_links": similar_company_links, "breadcrumb": breadcrumb, "seo": seo}
+
+
 class VideoGenerationRequest(BaseModel):
     model: str = "sora-2"
     size: str = "1280x720"
@@ -2928,27 +3152,34 @@ async def add_to_content_queue(data: Dict[str, Any]):
     # Parse bulk input - each line is a topic
     lines = [line.strip() for line in items_text.strip().split("\n") if line.strip()]
     
+    page_type = data.get("page_type")  # optional: pillar | support | faq | comparison
     added = []
     for line in lines:
-        # Check if line has company|topic format
+        # Formats: "topic", "company|topic", or "company|topic|target_slug"
         if "|" in line:
-            parts = line.split("|", 1)
+            parts = line.split("|", 2)
             comp = parts[0].strip()
             topic = parts[1].strip()
+            target_slug = parts[2].strip() if len(parts) > 2 and parts[2].strip() else None
         else:
             comp = company
             topic = line
+            target_slug = None
         
-        # Check for duplicates
-        existing = await db.content_queue.find_one({
-            "company": comp, "topic": topic, "status": {"$in": ["pending", "processing"]}
-        })
+        # Check for duplicates (by topic+company or by target_slug if SEO page)
+        dup_query = {"status": {"$in": ["pending", "processing"]}}
+        if target_slug:
+            dup_query["target_slug"] = target_slug
+        else:
+            dup_query["company"] = comp
+            dup_query["topic"] = topic
+        existing = await db.content_queue.find_one(dup_query)
         if existing:
             continue
         
-        item = ContentQueueItem(company=comp, topic=topic)
+        item = ContentQueueItem(company=comp, topic=topic, target_slug=target_slug, page_type=page_type)
         await db.content_queue.insert_one(item.model_dump())
-        added.append({"id": item.id, "company": comp, "topic": topic})
+        added.append({"id": item.id, "company": comp, "topic": topic, "target_slug": target_slug})
     
     return {"added": len(added), "items": added}
 
@@ -2981,20 +3212,23 @@ async def clear_content_queue(status: str = "completed"):
     return {"deleted": result.deleted_count}
 
 @api_router.post("/scheduler/start")
-async def start_scheduler():
+async def start_scheduler(request: Request):
     """Start the content scheduler"""
+    require_admin_request(request)
     await content_scheduler.start()
     return {"status": "started", "interval_minutes": content_scheduler.interval_minutes, "batch_size": content_scheduler.batch_size}
 
 @api_router.post("/scheduler/stop")
-async def stop_scheduler():
+async def stop_scheduler(request: Request):
     """Stop the content scheduler"""
+    require_admin_request(request)
     await content_scheduler.stop()
     return {"status": "stopped"}
 
 @api_router.get("/scheduler/status")
-async def get_scheduler_status():
+async def get_scheduler_status(request: Request):
     """Get scheduler status"""
+    require_admin_request(request)
     pending = await db.content_queue.count_documents({"status": "pending"})
     completed = await db.content_queue.count_documents({"status": "completed"})
     failed = await db.content_queue.count_documents({"status": "failed"})
@@ -3011,15 +3245,17 @@ async def get_scheduler_status():
     }
 
 @api_router.post("/scheduler/bulk-generate")
-async def bulk_generate_articles(data: Dict[str, Any] = {}):
+async def bulk_generate_articles(request: Request, data: Dict[str, Any] = {}):
     """Bulk generate articles from queue."""
-    count = data.get("count", 50)
+    require_admin_request(request)
+    count = data.get("count", 1000)
     result = await content_scheduler.bulk_generate(count)
     return result
 
 @api_router.put("/scheduler/interval")
-async def set_scheduler_interval(data: Dict[str, Any]):
+async def set_scheduler_interval(request: Request, data: Dict[str, Any]):
     """Set scheduler interval in minutes"""
+    require_admin_request(request)
     minutes = data.get("minutes", 5)
     if minutes < 1:
         raise HTTPException(status_code=400, detail="Minimum 1 dakika")
@@ -3031,15 +3267,16 @@ async def set_scheduler_interval(data: Dict[str, Any]):
     return {"interval_minutes": minutes}
 
 @api_router.post("/scheduler/run-now")
-async def run_scheduler_now():
+async def run_scheduler_now(request: Request):
     """Run scheduler immediately once (async in background)"""
+    require_admin_request(request)
     pending = await db.content_queue.count_documents({"status": "pending"})
     if pending == 0:
         return {"status": "empty", "message": "Kuyrukta bekleyen konu yok"}
     
     # Run in background without awaiting
     loop = asyncio.get_event_loop()
-    loop.create_task(content_scheduler._process_next())
+    loop.create_task(content_scheduler._process_batch())
     return {"status": "started", "message": "Makale üretimi arka planda başlatıldı", "pending": pending}
 
 
@@ -3834,8 +4071,9 @@ async def tracking_redirect(partner_id: str, match_id: str, request: Request):
     return RedirectResponse(url=url, status_code=302)
 
 @api_router.get("/admin/api-status")
-async def get_api_status():
+async def get_api_status(request: Request):
     """Admin: API health and cache info"""
+    require_admin_request(request)
     age = time.time() - _scores_cache.get("ts", 0)
     return {
         "odds_api_configured": bool(ODDS_API_KEY),
@@ -3857,20 +4095,23 @@ class AiToggleRequest(BaseModel):
     enabled: bool
 
 @api_router.post("/admin/featured-match")
-async def set_featured_match(req: FeaturedMatchRequest):
+async def set_featured_match(req: FeaturedMatchRequest, request: Request):
+    require_admin_request(request)
     global _featured_match_override
     _featured_match_override = req.match_id
     return {"ok": True, "featured_match_id": _featured_match_override}
 
 @api_router.post("/admin/ai-toggle")
-async def toggle_ai_insight(req: AiToggleRequest):
+async def toggle_ai_insight(req: AiToggleRequest, request: Request):
+    require_admin_request(request)
     global _ai_insight_enabled
     _ai_insight_enabled = req.enabled
     return {"ok": True, "ai_insight_enabled": _ai_insight_enabled}
 
 @api_router.post("/admin/refresh-scores")
-async def refresh_scores():
+async def refresh_scores(request: Request):
     """Force refresh scores cache"""
+    require_admin_request(request)
     _scores_cache["ts"] = 0  # invalidate cache
     matches, _ = await _get_scores_cached()
     return {"ok": True, "count": len(matches)}
@@ -3889,6 +4130,41 @@ async def get_dashboard_stats(domain_id: Optional[str] = None):
         "featured_companies": await db.companies.count_documents({"is_active": True, "featured_boolean": True}),
         "telegram_bots": await db.telegram_bots.count_documents({}),
     }
+
+# ============== SITE SETTINGS (public + admin) ==============
+SITE_SETTINGS_ID = "site"
+
+@api_router.get("/settings/public")
+async def get_public_settings():
+    """Public settings for frontend (e.g. wheel bonus redirect URL, delayed popup). No auth."""
+    doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
+    return {
+        "wheel_bonus_redirect_url": (doc or {}).get("wheel_bonus_redirect_url") or "",
+        "delayed_popup_url": (doc or {}).get("delayed_popup_url") or "",
+    }
+
+class SiteSettingsUpdate(BaseModel):
+    wheel_bonus_redirect_url: Optional[str] = ""
+    delayed_popup_url: Optional[str] = ""
+
+@api_router.get("/admin/settings")
+async def get_admin_settings(request: Request):
+    """Admin: get full site settings"""
+    require_admin_request(request)
+    doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
+    return doc or {"_id": SITE_SETTINGS_ID, "wheel_bonus_redirect_url": "", "delayed_popup_url": ""}
+
+@api_router.put("/admin/settings")
+async def update_admin_settings(req: SiteSettingsUpdate, request: Request):
+    """Admin: update site settings"""
+    require_admin_request(request)
+    update = {"$set": {
+        "wheel_bonus_redirect_url": (req.wheel_bonus_redirect_url or "").strip(),
+        "delayed_popup_url": (req.delayed_popup_url or "").strip(),
+    }}
+    await db.settings.update_one({"_id": SITE_SETTINGS_ID}, update, upsert=True)
+    doc = await db.settings.find_one({"_id": SITE_SETTINGS_ID})
+    return doc or {"_id": SITE_SETTINGS_ID, "wheel_bonus_redirect_url": "", "delayed_popup_url": ""}
 
 # ============== AUTH ==============
 
@@ -3948,10 +4224,6 @@ async def admin_login(req: LoginRequest):
         stored = await db.users.find_one({"username": req.username}, {"_id": 0})
         if stored and stored.get("plain_hash"):
             verified = stored["plain_hash"] == hashlib.sha256(req.password.encode()).hexdigest()
-    
-    # Last resort: hardcoded check for initial setup
-    if not verified and req.password == "123123..":
-        verified = True
     
     if not verified:
         raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
@@ -4331,50 +4603,45 @@ async def admin_delete_company(company_id: str, request: Request):
 
 @api_router.get("/sitemap.xml")
 async def sitemap_xml(request: Request, domain: Optional[str] = None):
-    """Generate sitemap index pointing to sub-sitemaps"""
-    base_url = "https://guncelgiris.ai"
+    """Generate sitemap index pointing to sub-sitemaps (sub-sitemap URLs must be on this API host)."""
+    api_base = str(request.base_url).rstrip("/")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>{base_url}/api/sitemap-pages.xml</loc>
+    <loc>{api_base}/api/sitemap-pages.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-firms.xml</loc>
+    <loc>{api_base}/api/sitemap-firms.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-companies.xml</loc>
+    <loc>{api_base}/api/sitemap-companies.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-videos.xml</loc>
+    <loc>{api_base}/api/sitemap-videos.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-articles.xml</loc>
+    <loc>{api_base}/api/sitemap-articles.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-amp.xml</loc>
+    <loc>{api_base}/api/sitemap-amp.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-amp-videos.xml</loc>
+    <loc>{api_base}/api/sitemap-amp-videos.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-seo-pages.xml</loc>
+    <loc>{api_base}/api/sitemap-company-articles.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
   <sitemap>
-    <loc>{base_url}/api/sitemap-company-articles.xml</loc>
-    <lastmod>{today}</lastmod>
-  </sitemap>
-  <sitemap>
-    <loc>{base_url}/api/sitemap-programmatic.xml</loc>
+    <loc>{api_base}/api/sitemap-programmatic.xml</loc>
     <lastmod>{today}</lastmod>
   </sitemap>
 </sitemapindex>"""
@@ -4383,16 +4650,17 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
 @api_router.get("/sitemap-pages.xml")
 async def sitemap_pages(request: Request):
     """Static pages + categories sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     categories = await db.categories.find({}, {"_id": 0, "slug": 1}).to_list(100)
-    
     urls = []
     static_pages = [
         {"loc": "/", "priority": "1.0", "changefreq": "daily"},
         {"loc": "/deneme-bonusu", "priority": "0.9", "changefreq": "daily"},
         {"loc": "/hosgeldin-bonusu", "priority": "0.9", "changefreq": "daily"},
         {"loc": "/spor-haberleri", "priority": "0.8", "changefreq": "hourly"},
+        {"loc": "/companies", "priority": "0.8", "changefreq": "daily"},
+        {"loc": "/saglayicilar", "priority": "0.7", "changefreq": "weekly"},
     ]
     for page in static_pages:
         urls.append(f"""  <url>
@@ -4419,7 +4687,7 @@ async def sitemap_pages(request: Request):
 @api_router.get("/sitemap-firms.xml")
 async def sitemap_firms(request: Request):
     """All 264 firm pages sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1, "name": 1}).to_list(500)
     
@@ -4445,7 +4713,7 @@ async def sitemap_firms(request: Request):
 @api_router.get("/sitemap-companies.xml")
 async def sitemap_companies(request: Request):
     """All approved company profile pages sitemap (/companies/{slug})."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     companies = await db.companies.find(
         {"is_active": True, "is_approved": True},
@@ -4474,7 +4742,7 @@ async def sitemap_companies(request: Request):
 @api_router.get("/sitemap-videos.xml")
 async def sitemap_videos(request: Request):
     """Firm video pages sitemap (/{slug}/video)."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
 
@@ -4499,7 +4767,7 @@ async def sitemap_videos(request: Request):
 @api_router.get("/sitemap-articles.xml")
 async def sitemap_articles(request: Request):
     """All published articles sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     articles = await db.articles.find(
         {"is_published": True},
         {"_id": 0, "slug": 1, "updated_at": 1, "created_at": 1}
@@ -4525,7 +4793,7 @@ async def sitemap_articles(request: Request):
 @api_router.get("/sitemap-amp.xml")
 async def sitemap_amp(request: Request):
     """AMP pages sitemap for all firms"""
-    base_url = "https://guncelgiris.ai"
+    base_url = str(request.base_url).rstrip("/")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
     
@@ -4551,7 +4819,7 @@ async def sitemap_amp(request: Request):
 @api_router.get("/sitemap-amp-videos.xml")
 async def sitemap_amp_videos(request: Request):
     """AMP video pages sitemap (/api/amp-video/{slug})."""
-    base_url = "https://guncelgiris.ai"
+    base_url = str(request.base_url).rstrip("/")
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
 
@@ -4574,1652 +4842,82 @@ async def sitemap_amp_videos(request: Request):
     return Response(content=xml, media_type="application/xml")
 
 
-# ============== GG2026 SEO FRAMEWORK ==============
-
-# Valid company sub-page types
-COMPANY_PAGE_TYPES = [
-    "guncel-giris", "guncel-adresi", "yeni-giris-adresi", "mobil-giris",
-    "deneme-bonusu", "deneme-bonusu-2026", "hosgeldin-bonusu",
-    "yatirimsiz-deneme-bonusu", "bonus-sartlari", "odeme-yontemleri"
-]
-
-# Page type metadata for SEO
-PAGE_TYPE_META = {
-    "guncel-giris": {
-        "title_suffix": "Guncel Giris Adresi 2026",
-        "description_template": "{name} guncel giris adresi 2026. Yeni ve calisan giris linki ile siteye hemen eris.",
-        "h1_template": "{name} Guncel Giris",
-        "cluster": "company-guide",
-    },
-    "guncel-adresi": {
-        "title_suffix": "Guncel Adresi 2026",
-        "description_template": "{name} guncel adresi. Engelsiz erisim icin en son guncellenen adres bilgisi.",
-        "h1_template": "{name} Guncel Adresi",
-        "cluster": "company-guide",
-    },
-    "yeni-giris-adresi": {
-        "title_suffix": "Yeni Giris Adresi 2026",
-        "description_template": "{name} yeni giris adresi 2026. Guncel link ve alternatif erisim yontemleri.",
-        "h1_template": "{name} Yeni Giris Adresi",
-        "cluster": "company-guide",
-    },
-    "mobil-giris": {
-        "title_suffix": "Mobil Giris 2026",
-        "description_template": "{name} mobil giris adresi. Telefondan ve tabletten kolay erisim.",
-        "h1_template": "{name} Mobil Giris",
-        "cluster": "company-guide",
-    },
-    "deneme-bonusu": {
-        "title_suffix": "Deneme Bonusu 2026",
-        "description_template": "{name} deneme bonusu 2026. {bonus_amount} degerinde yatirim sartsiz deneme bonusu firsati.",
-        "h1_template": "{name} Deneme Bonusu",
-        "cluster": "bonus-guide",
-    },
-    "deneme-bonusu-2026": {
-        "title_suffix": "Deneme Bonusu 2026 Guncel",
-        "description_template": "{name} 2026 yili guncel deneme bonusu. En son bonus firsatlari ve kosullari.",
-        "h1_template": "{name} Deneme Bonusu 2026",
-        "cluster": "bonus-guide",
-    },
-    "hosgeldin-bonusu": {
-        "title_suffix": "Hosgeldin Bonusu 2026",
-        "description_template": "{name} hosgeldin bonusu. Ilk uyeliginize ozel {bonus_amount} bonus firsati.",
-        "h1_template": "{name} Hosgeldin Bonusu",
-        "cluster": "bonus-guide",
-    },
-    "yatirimsiz-deneme-bonusu": {
-        "title_suffix": "Yatirimsiz Deneme Bonusu 2026",
-        "description_template": "{name} yatirimsiz deneme bonusu. Para yatirmadan bonus kazanma firsati.",
-        "h1_template": "{name} Yatirimsiz Deneme Bonusu",
-        "cluster": "bonus-guide",
-    },
-    "bonus-sartlari": {
-        "title_suffix": "Bonus Sartlari ve Kurallari",
-        "description_template": "{name} bonus sartlari. Cevrim kosullari, minimum yatirim ve cekim limitleri.",
-        "h1_template": "{name} Bonus Sartlari",
-        "cluster": "bonus-guide",
-    },
-    "odeme-yontemleri": {
-        "title_suffix": "Odeme Yontemleri 2026",
-        "description_template": "{name} odeme yontemleri. Papara, havale, kripto ve diger para yatirma-cekme secenekleri.",
-        "h1_template": "{name} Odeme Yontemleri",
-        "cluster": "company-guide",
-    },
-}
-
-# Hub page definitions
-BONUS_HUB_PAGES = {
-    "deneme-bonusu-veren-siteler": {
-        "title": "Deneme Bonusu Veren Siteler 2026",
-        "description": "2026 yilinin en guncel deneme bonusu veren guvenilir bahis siteleri listesi. Yatirimsiz bonus firsatlarini kacirmayin.",
-        "h1": "Deneme Bonusu Veren Siteler",
-        "filter_type": "deneme",
-        "cluster": "bonus-guide",
-    },
-    "guncel-deneme-bonusu": {
-        "title": "Guncel Deneme Bonusu 2026",
-        "description": "Guncel deneme bonusu veren siteler. En son guncellenen bonus listesi ve firsatlar.",
-        "h1": "Guncel Deneme Bonusu",
-        "filter_type": "deneme",
-        "cluster": "bonus-guide",
-    },
-    "yatirimsiz-deneme-bonusu": {
-        "title": "Yatirimsiz Deneme Bonusu Veren Siteler 2026",
-        "description": "Yatirimsiz deneme bonusu veren siteler 2026. Para yatirmadan bonus al, risksiz oyna.",
-        "h1": "Yatirimsiz Deneme Bonusu",
-        "filter_type": "deneme",
-        "cluster": "bonus-guide",
-    },
-    "hosgeldin-bonusu": {
-        "title": "Hosgeldin Bonusu Veren Siteler 2026",
-        "description": "En yuksek hosgeldin bonusu veren bahis siteleri. Ilk uyeliginize ozel firsatlar.",
-        "h1": "Hosgeldin Bonusu Veren Siteler",
-        "filter_type": "hosgeldin",
-        "cluster": "bonus-guide",
-    },
-    "bonus-veren-siteler": {
-        "title": "Bonus Veren Siteler 2026 - Tum Bonus Firsatlari",
-        "description": "2026 yilinda bonus veren tum guvenilir bahis siteleri. Deneme, hosgeldin ve yatirim bonuslari.",
-        "h1": "Bonus Veren Siteler",
-        "filter_type": None,
-        "cluster": "bonus-guide",
-    },
-}
-
-PAYMENT_HUB_PAGES = {
-    "odeme-yontemleri": {
-        "title": "Bahis Siteleri Odeme Yontemleri 2026",
-        "description": "Bahis sitelerinde kullanilan odeme yontemleri. Papara, havale, kripto ve daha fazlasi.",
-        "h1": "Odeme Yontemleri",
-        "payment_method": None,
-    },
-    "mobil-odeme-ile-bahis": {
-        "title": "Mobil Odeme ile Bahis 2026",
-        "description": "Mobil odeme ile bahis yapilan siteler. Telefon faturasi ve mobil cuzdan ile para yatirma.",
-        "h1": "Mobil Odeme ile Bahis",
-        "payment_method": "mobil",
-    },
-    "kredi-karti-ile-bahis": {
-        "title": "Kredi Karti ile Bahis 2026",
-        "description": "Kredi karti ile para yatirilan bahis siteleri. Visa ve Mastercard kabul eden platformlar.",
-        "h1": "Kredi Karti ile Bahis",
-        "payment_method": "kredi-karti",
-    },
-    "papel-ile-bahis": {
-        "title": "Papara ile Bahis 2026",
-        "description": "Papara ile para yatirilan bahis siteleri. Hizli ve guvenli Papara odeme secenekleri.",
-        "h1": "Papara ile Bahis",
-        "payment_method": "papara",
-    },
-    "havale-ile-bahis": {
-        "title": "Havale ile Bahis 2026",
-        "description": "Banka havale ile para yatirilan bahis siteleri. EFT ve havale kabul eden platformlar.",
-        "h1": "Havale ile Bahis",
-        "payment_method": "havale",
-    },
-    "kripto-ile-bahis": {
-        "title": "Kripto ile Bahis 2026",
-        "description": "Kripto para ile bahis yapilan siteler. Bitcoin, USDT ve diger kripto odeme secenekleri.",
-        "h1": "Kripto ile Bahis",
-        "payment_method": "kripto",
-    },
-    "bddk-onayli-odeme-yontemleri": {
-        "title": "BDDK Onayli Odeme Yontemleri 2026",
-        "description": "BDDK onayli odeme yontemleri ile guvenli bahis. Lisansli odeme kuruluslari.",
-        "h1": "BDDK Onayli Odeme Yontemleri",
-        "payment_method": "bddk",
-    },
-    "guvenli-odeme-yontemleri": {
-        "title": "Guvenli Odeme Yontemleri 2026",
-        "description": "En guvenli odeme yontemleri ile bahis. SSL sertifikali ve lisansli platformlar.",
-        "h1": "Guvenli Odeme Yontemleri",
-        "payment_method": "guvenli",
-    },
-}
-
-
-# FAQ data per page type
-PAGE_TYPE_FAQ = {
-    "guncel-giris": [
-        {"q": "{name} guncel giris adresi nedir?", "a": "{name} guncel giris adresi, sitenin en son calisan erisim linkidir. DNS engellerinden dolayi adresler periyodik olarak degisebilir."},
-        {"q": "{name} giris adresi neden degisiyor?", "a": "BTK kararlari nedeniyle bazi sitelerin domain adresleri engellenebilir. Site yonetimi yeni bir domain uzerinden hizmet vermeye devam eder."},
-        {"q": "{name} sitesine nasil guvenli erisim saglarim?", "a": "Bu sayfadaki guncel linki kullanarak erisim saglayabilirsiniz. Her zaman SSL sertifikali (https) baglanti kullandiginizdan emin olun."},
-        {"q": "{name} giris yaparken nelere dikkat etmeliyim?", "a": "Resmi link disindaki adreslere girmekten kacinin. Kullanici adi ve sifrenizi sadece resmi sitede kullanin. 7/24 canli destek hatti ile iletisime geciniz."},
-    ],
-    "guncel-adresi": [
-        {"q": "{name} guncel adresi nasil ogrenirim?", "a": "Bu sayfada {name} sitesinin en son guncellenen adresi paylasılmaktadir. Sayfayi yer imlerinize ekleyerek her zaman guncel adrese ulasabilirsiniz."},
-        {"q": "{name} adresi ne siklikla degisir?", "a": "Adres degisikligi duzenli bir takvime bagli degildir. Engellemeler sonrasi hizla yeni adres yayinlanir."},
-        {"q": "{name} eski adresim calisiyor mu?", "a": "Eski adresler genellikle yeni adrese yonlendirilir, ancak bu her zaman gecerli olmayabilir. En guncel adresi kullanmaniz onerilir."},
-    ],
-    "yeni-giris-adresi": [
-        {"q": "{name} yeni giris adresi nereden bulunur?", "a": "Bu sayfa {name} yeni giris adresini guncel olarak paylasir. Sayfayi takip ederek adres degisikliklerinden aninda haberdar olun."},
-        {"q": "Yeni adresle eski hesabima girebilir miyim?", "a": "Evet, tum kullanici bilgileriniz ve bakiyeniz yeni adres uzerinden de gecerlidir. Hesap bilgileriniz degismez."},
-        {"q": "{name} alternatif giris yontemleri var mi?", "a": "VPN kullanimi veya mobil uygulama uzerinden de siteye erisim mumkundur. Detaylar icin canli destek ile iletisime gecebilirsiniz."},
-    ],
-    "mobil-giris": [
-        {"q": "{name} mobil giris nasil yapilir?", "a": "Telefonunuzun tarayicisinda guncel giris adresini acarak mobil uyumlu arayuze erisebilirsiniz. Ayrica mobil uygulama secenegi de mevcuttur."},
-        {"q": "{name} mobil uygulamasi var mi?", "a": "Cogu bahis sitesi mobil uyumlu web arayuzu sunar. Bazi siteler ayrica iOS ve Android icin uygulama da sunmaktadir."},
-        {"q": "Mobil giris ile masaustu arasinda fark var mi?", "a": "Hayir, tum islemler (bahis, para yatirma/cekme, bonus talebi) mobil arayuz uzerinden de ayni sekilde yapilabilir."},
-    ],
-    "deneme-bonusu": [
-        {"q": "{name} deneme bonusu nasil alinir?", "a": "{name} sitesine uye olduktan sonra canli destek uzerinden deneme bonusu talebinde bulunabilirsiniz."},
-        {"q": "{name} deneme bonusu cevrim sarti nedir?", "a": "Deneme bonusu icin genellikle bonus miktarinin belirli bir kati kadar cevrim yapmaniz gerekmektedir. Detaylar site kurallarinda belirtilmistir."},
-        {"q": "Deneme bonusu ile kazandigimi cekebilir miyim?", "a": "Evet, cevrim sartlarini tamamladiktan sonra kazancinizi cekebilirsiniz. Maksimum cekim limitleri uygulanabilir."},
-        {"q": "{name} deneme bonusu kac TL?", "a": "{name} guncel deneme bonusu {bonus_amount} degerindedir. Bonus miktari kampanya donemlerine gore degisiklik gosterebilir."},
-    ],
-    "deneme-bonusu-2026": [
-        {"q": "2026 yilinda {name} deneme bonusu veriyor mu?", "a": "Evet, {name} 2026 yilinda da deneme bonusu sunmaya devam etmektedir. Guncel miktar {bonus_amount} olarak belirlenmistir."},
-        {"q": "2026 deneme bonusu sartlari degisti mi?", "a": "Bonus sartlari donemsel olarak guncellenebilir. En guncel bilgiler icin bu sayfayi ve {name} bonus sartlari sayfasini kontrol edin."},
-        {"q": "{name} 2026 bonusu ne zaman gecerli?", "a": "Bonus genellikle uyelik sonrasi 72 saat icerisinde talep edilmelidir. Gecerlilik suresi site kurallarinda belirtilmistir."},
-    ],
-    "hosgeldin-bonusu": [
-        {"q": "{name} hosgeldin bonusu nedir?", "a": "Hosgeldin bonusu, ilk kez uye olan kullanicilara sunulan ozel bonus firsatidir. Genellikle ilk yatiriminizin belirli bir yuzdesini bonus olarak alirsiniz."},
-        {"q": "{name} hosgeldin bonusu ne kadar?", "a": "{name} hosgeldin bonusu {bonus_amount} degerindedir. Bu miktar ilk yatiriminiza gore degisebilir."},
-        {"q": "Hosgeldin bonusu ile deneme bonusu ayni mi?", "a": "Hayir. Deneme bonusu yatirim gerektirmezken, hosgeldin bonusu ilk yatiriminiza eklenen ekstra bakiyedir."},
-        {"q": "Hosgeldin bonusu sadece bir kez mi alinir?", "a": "Evet, hosgeldin bonusu sadece yeni uyelik ve ilk yatirim icin gecerlidir. Her hesap icin bir kez kullanilabilir."},
-    ],
-    "yatirimsiz-deneme-bonusu": [
-        {"q": "{name} yatirimsiz bonus veriyor mu?", "a": "Evet, {name} yeni uyelerine yatirim gerektirmeden deneme bonusu sunmaktadir. Uyelik sonrasi canli destekten talep edebilirsiniz."},
-        {"q": "Yatirimsiz bonus ile ne kadar kazanabilirim?", "a": "Kazanc miktari cevrim sartlari ve maksimum cekim limitine baglidir. Genel olarak bonus miktarinin 5-10 katina kadar cekim yapilabilir."},
-        {"q": "Yatirimsiz bonus icin belge gerekiyor mu?", "a": "Bazi siteler kimlik dogrulama isteyebilir. Bonus talebi sirasinda canli destek size gereken adimlar hakkinda bilgi verecektir."},
-    ],
-    "bonus-sartlari": [
-        {"q": "{name} bonus cevrim sarti nedir?", "a": "{name} cevrim sarti {turnover}x olarak belirlenmistir. Yani bonus miktarinin {turnover} kati kadar bahis yapmaniz gerekmektedir."},
-        {"q": "Cevrim sartini nasil tamamlarim?", "a": "Spor bahisleri veya casino oyunlari oynayarak cevrim sartinizi tamamlayabilirsiniz. Minimum oran gereksinimleri uygulanabilir."},
-        {"q": "{name} bonusu iptal edilebilir mi?", "a": "Bonus kurallarinin ihlali durumunda bonus iptal edilebilir. Kurallari dikkatlice okumak onemlidir."},
-        {"q": "Birden fazla bonus kullanabilir miyim?", "a": "Genellikle ayni anda birden fazla bonus aktif edilemez. Bir bonus tamamlandiktan sonra yeni bonus talep edebilirsiniz."},
-    ],
-    "odeme-yontemleri": [
-        {"q": "{name} hangi odeme yontemlerini kabul ediyor?", "a": "{name} Papara, banka havale/EFT, kripto para, kredi karti ve diger populer odeme yontemlerini kabul etmektedir."},
-        {"q": "{name} para yatirma alt limiti nedir?", "a": "Minimum yatirim tutari genellikle 50 TL'dir. Odeme yontemine gore bu miktar degisiklik gosterebilir."},
-        {"q": "{name} para cekme suresi ne kadar?", "a": "Para cekme islemleri genellikle 15 dakika ile 24 saat arasinda tamamlanir. Papara ve kripto islemleri daha hizlidir."},
-        {"q": "{name} odeme guvenligi nasil saglanir?", "a": "{name} tum finansal islemlerde SSL sifreleme kullanmaktadir. Kisisel ve finansal bilgileriniz guvenli bir sekilde korunur."},
-    ],
-}
-
-# Hub page linking targets (for internal linking engine)
-HUB_COMPANY_PAGE_MAPPING = {
-    "bonus-guide": {
-        "hubs": ["deneme-bonusu-veren-siteler", "guncel-deneme-bonusu", "yatirimsiz-deneme-bonusu", "bonus-veren-siteler"],
-        "company_pages": ["deneme-bonusu", "hosgeldin-bonusu", "yatirimsiz-deneme-bonusu", "bonus-sartlari"],
-    },
-    "company-guide": {
-        "hubs": [],
-        "company_pages": ["guncel-giris", "guncel-adresi", "yeni-giris-adresi", "mobil-giris"],
-    },
-    "payment": {
-        "hubs": ["odeme-yontemleri", "papel-ile-bahis", "kripto-ile-bahis", "guvenli-odeme-yontemleri"],
-        "company_pages": ["odeme-yontemleri"],
-    },
-}
-
-
-def extract_base_slug(full_slug: str) -> str:
-    """Extract base company name slug from full slug like 'onwin-guncelgiris' -> 'onwin'"""
-    if full_slug.endswith("-guncelgiris"):
-        return full_slug[:-len("-guncelgiris")]
-    return full_slug
-
-
-async def resolve_site_by_base_slug(base_slug: str) -> Dict[str, Any]:
-    """Resolve firm by base slug (company name only, without -guncelgiris suffix)."""
-    # Try exact slug with -guncelgiris suffix
-    site = await db.bonus_sites.find_one({"slug": f"{base_slug}-guncelgiris"}, {"_id": 0})
-    if site:
-        return site
-    # Try exact slug as-is
-    site = await db.bonus_sites.find_one({"slug": base_slug}, {"_id": 0})
-    if site:
-        return site
-    # Try name match
-    site = await db.bonus_sites.find_one(
-        {"name": {"$regex": f"^{re.escape(base_slug).replace('-', '[ -]?')}$", "$options": "i"}},
-        {"_id": 0}
-    )
-    if site:
-        return site
-    raise HTTPException(status_code=404, detail="Firma bulunamadi")
-
-
-@api_router.get("/firma-sub/{base_slug}/{page_type}")
-async def get_firma_sub_page(base_slug: str, page_type: str):
-    """Get company sub-page data for GG2026 SEO folder architecture."""
-    if page_type not in COMPANY_PAGE_TYPES:
-        raise HTTPException(status_code=404, detail="Gecersiz sayfa tipi")
-
-    site = await resolve_site_by_base_slug(base_slug)
-    meta = PAGE_TYPE_META[page_type]
-
-    name = site.get("name", "")
-    bonus_amount = site.get("bonus_amount", "")
-    base = extract_base_slug(site.get("slug", base_slug))
-
-    title = f"{name} {meta['title_suffix']}"
-    description = meta["description_template"].format(name=name, bonus_amount=bonus_amount)
-    h1 = meta["h1_template"].format(name=name)
-
-    # Build internal links to other sub-pages (for cluster interlinking)
-    internal_links = []
-    for pt in COMPANY_PAGE_TYPES:
-        if pt != page_type:
-            pt_meta = PAGE_TYPE_META[pt]
-            internal_links.append({
-                "page_type": pt,
-                "url": f"/{base}/{pt}",
-                "label": pt_meta["h1_template"].format(name=name),
-                "cluster": pt_meta["cluster"],
-            })
-
-    # Cross-cluster links (bonus guide ↔ company guide)
-    cluster = meta["cluster"]
-    company_guide_links = [lnk for lnk in internal_links if lnk["cluster"] == "company-guide"][:3]
-    bonus_guide_links = [lnk for lnk in internal_links if lnk["cluster"] == "bonus-guide"][:3]
-
-    # Similar firms for interlinking
-    similar = await db.bonus_sites.find(
-        {"category": site.get("category", "Turkiye"), "name": {"$ne": name}, "is_active": True},
-        {"_id": 0, "name": 1, "slug": 1, "bonus_amount": 1, "logo_url": 1, "rating": 1}
-    ).sort("rating", -1).limit(6).to_list(6)
-
-    # Build similar firms' same page-type links
-    similar_same_page = []
-    for s in similar:
-        s_base = extract_base_slug(s.get("slug", ""))
-        if s_base:
-            similar_same_page.append({
-                "name": s["name"],
-                "url": f"/{s_base}/{page_type}",
-                "logo_url": s.get("logo_url", ""),
-                "bonus_amount": s.get("bonus_amount", ""),
-                "rating": s.get("rating", 4.5),
-            })
-
-    # Breadcrumb
-    breadcrumb = [
-        {"name": "Ana Sayfa", "url": "/"},
-        {"name": name, "url": f"/{base}"},
-        {"name": h1, "url": f"/{base}/{page_type}"},
-    ]
-
-    # FAQ data
-    raw_faq = PAGE_TYPE_FAQ.get(page_type, [])
-    turnover = str(site.get("turnover_requirement", 10))
-    faq_items = []
-    for item in raw_faq:
-        faq_items.append({
-            "question": item["q"].format(name=name, bonus_amount=bonus_amount, turnover=turnover),
-            "answer": item["a"].format(name=name, bonus_amount=bonus_amount, turnover=turnover),
-        })
-
-    # Last updated
-    last_updated = site.get("updated_at") or site.get("created_at") or datetime.now(timezone.utc).isoformat()
-
-    # Hub page links (linking engine: hub → company pages)
-    hub_links = []
-    for hub_slug, hub_data in BONUS_HUB_PAGES.items():
-        hub_links.append({"slug": hub_slug, "title": hub_data["h1"], "url": f"/{hub_slug}"})
-    for hub_slug, hub_data in PAYMENT_HUB_PAGES.items():
-        hub_links.append({"slug": hub_slug, "title": hub_data["h1"], "url": f"/{hub_slug}"})
-
-    # Related content - companies with their sub-page links
-    related_companies = []
-    for s in similar[:6]:
-        s_base = extract_base_slug(s.get("slug", ""))
-        if s_base:
-            related_companies.append({
-                "name": s["name"],
-                "logo_url": s.get("logo_url", ""),
-                "bonus_amount": s.get("bonus_amount", ""),
-                "rating": s.get("rating", 4.5),
-                "guncel_giris": f"/{s_base}/guncel-giris",
-                "deneme_bonusu": f"/{s_base}/deneme-bonusu",
-                "hosgeldin_bonusu": f"/{s_base}/hosgeldin-bonusu",
-                "odeme_yontemleri": f"/{s_base}/odeme-yontemleri",
-                "same_page": f"/{s_base}/{page_type}",
-            })
-
-    return {
-        "site": site,
-        "page_type": page_type,
-        "cluster": cluster,
-        "seo": {
-            "title": title,
-            "description": description,
-            "h1": h1,
-            "canonical": f"https://guncelgiris.ai/{base}/{page_type}",
-        },
-        "breadcrumb": breadcrumb,
-        "internal_links": {
-            "company_guide": company_guide_links,
-            "bonus_guide": bonus_guide_links,
-            "all": internal_links,
-        },
-        "similar_same_page": similar_same_page,
-        "faq": faq_items,
-        "last_updated": str(last_updated)[:19],
-        "hub_links": hub_links[:8],
-        "related_companies": related_companies,
-    }
-
-
-@api_router.get("/hub/bonus/{hub_slug}")
-async def get_bonus_hub_page(hub_slug: str):
-    """Get bonus hub page data for GG2026 SEO."""
-    hub = BONUS_HUB_PAGES.get(hub_slug)
-    if not hub:
-        raise HTTPException(status_code=404, detail="Hub sayfasi bulunamadi")
-
-    query = {"is_active": True}
-    if hub["filter_type"]:
-        query["bonus_type"] = hub["filter_type"]
-
-    sites = await db.bonus_sites.find(query, {"_id": 0}).sort("sort_order", 1).limit(50).to_list(50)
-
-    # Build company sub-page links for interlinking
-    company_links = []
-    for s in sites[:20]:
-        base = extract_base_slug(s.get("slug", ""))
-        if base:
-            company_links.append({
-                "name": s["name"],
-                "base_slug": base,
-                "bonus_amount": s.get("bonus_amount", ""),
-                "logo_url": s.get("logo_url", ""),
-                "rating": s.get("rating", 4.5),
-                "guncel_giris_url": f"/{base}/guncel-giris",
-                "deneme_bonusu_url": f"/{base}/deneme-bonusu",
-                "affiliate_url": s.get("affiliate_url", ""),
-            })
-
-    # Cross-cluster links to payment hubs
-    payment_hub_links = [
-        {"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in PAYMENT_HUB_PAGES.items()
-    ]
-
-    # Links to other bonus hubs
-    other_bonus_hubs = [
-        {"slug": k, "title": v["h1"], "url": f"/{k}"}
-        for k, v in BONUS_HUB_PAGES.items() if k != hub_slug
-    ]
-
-    breadcrumb = [
-        {"name": "Ana Sayfa", "url": "/"},
-        {"name": hub["h1"], "url": f"/{hub_slug}"},
-    ]
-
-    return {
-        "hub_slug": hub_slug,
-        "seo": {
-            "title": hub["title"],
-            "description": hub["description"],
-            "h1": hub["h1"],
-            "canonical": f"https://guncelgiris.ai/{hub_slug}",
-        },
-        "breadcrumb": breadcrumb,
-        "sites": sites,
-        "company_links": company_links,
-        "related_hubs": {
-            "bonus": other_bonus_hubs,
-            "payment": payment_hub_links,
-        },
-    }
-
-
-@api_router.get("/hub/payment/{hub_slug}")
-async def get_payment_hub_page(hub_slug: str):
-    """Get payment hub page data for GG2026 SEO."""
-    hub = PAYMENT_HUB_PAGES.get(hub_slug)
-    if not hub:
-        raise HTTPException(status_code=404, detail="Hub sayfasi bulunamadi")
-
-    sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).sort("sort_order", 1).limit(50).to_list(50)
-
-    company_links = []
-    for s in sites[:20]:
-        base = extract_base_slug(s.get("slug", ""))
-        if base:
-            company_links.append({
-                "name": s["name"],
-                "base_slug": base,
-                "bonus_amount": s.get("bonus_amount", ""),
-                "logo_url": s.get("logo_url", ""),
-                "rating": s.get("rating", 4.5),
-                "odeme_url": f"/{base}/odeme-yontemleri",
-                "guncel_giris_url": f"/{base}/guncel-giris",
-                "affiliate_url": s.get("affiliate_url", ""),
-            })
-
-    # Cross-cluster links
-    bonus_hub_links = [
-        {"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in BONUS_HUB_PAGES.items()
-    ]
-    other_payment_hubs = [
-        {"slug": k, "title": v["h1"], "url": f"/{k}"}
-        for k, v in PAYMENT_HUB_PAGES.items() if k != hub_slug
-    ]
-
-    breadcrumb = [
-        {"name": "Ana Sayfa", "url": "/"},
-        {"name": hub["h1"], "url": f"/{hub_slug}"},
-    ]
-
-    return {
-        "hub_slug": hub_slug,
-        "seo": {
-            "title": hub["title"],
-            "description": hub["description"],
-            "h1": hub["h1"],
-            "canonical": f"https://guncelgiris.ai/{hub_slug}",
-        },
-        "breadcrumb": breadcrumb,
-        "sites": sites,
-        "company_links": company_links,
-        "related_hubs": {
-            "bonus": bonus_hub_links,
-            "payment": other_payment_hubs,
-        },
-    }
-
-
-@api_router.get("/sitemap-seo-pages.xml")
-async def sitemap_seo_pages(request: Request):
-    """GG2026 SEO hub pages and company sub-pages sitemap."""
-    base_url = "https://guncelgiris.ai"
+@api_router.get("/sitemap-company-articles.xml")
+async def sitemap_company_articles(request: Request):
+    """Company articles sitemap: /companies/{slug}/makaleler and /companies/{slug}/makale/{article_slug}."""
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     urls = []
-
-    # Bonus hub pages
-    for slug in BONUS_HUB_PAGES:
-        urls.append(f"""  <url>
-    <loc>{base_url}/{slug}</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>""")
-
-    # Payment hub pages
-    for slug in PAYMENT_HUB_PAGES:
-        urls.append(f"""  <url>
-    <loc>{base_url}/{slug}</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>""")
-
-    # Company sub-pages
-    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
-    for firm in firms:
-        full_slug = firm.get("slug", "")
-        if not full_slug:
-            continue
-        base = extract_base_slug(full_slug)
-        for pt in COMPANY_PAGE_TYPES:
-            urls.append(f"""  <url>
-    <loc>{base_url}/{base}/{pt}</loc>
+    try:
+        articles = await db.company_articles.find(
+            {"is_published": True},
+            {"_id": 0, "company_slug": 1, "slug": 1, "updated_at": 1}
+        ).to_list(10000)
+        seen_companies = set()
+        for a in articles:
+            company_slug = a.get("company_slug", "")
+            article_slug = a.get("slug", "")
+            if not company_slug:
+                continue
+            if company_slug not in seen_companies:
+                seen_companies.add(company_slug)
+                urls.append(f"""  <url>
+    <loc>{base_url}/companies/{company_slug}/makaleler</loc>
     <lastmod>{today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>""")
-
-    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{chr(10).join(urls)}
-</urlset>"""
-    return Response(content=xml, media_type="application/xml")
-
-
-
-# ============== GG2026 COMPANY ARTICLE SYSTEM ==============
-
-COMPANY_ARTICLE_TYPES = [
-    {"slug": "deneme-bonusu-rehberi", "label": "Deneme Bonusu Rehberi", "cluster": "bonus-guide"},
-    {"slug": "hosgeldin-bonusu-rehberi", "label": "Hosgeldin Bonusu Rehberi", "cluster": "bonus-guide"},
-    {"slug": "bonus-sartlari", "label": "Bonus Sartlari Rehberi", "cluster": "bonus-guide"},
-    {"slug": "giris-rehberi", "label": "Giris Rehberi", "cluster": "company-guide"},
-    {"slug": "mobil-giris-rehberi", "label": "Mobil Giris Rehberi", "cluster": "company-guide"},
-    {"slug": "odeme-rehberi", "label": "Odeme Yontemleri Rehberi", "cluster": "company-guide"},
-    {"slug": "inceleme", "label": "Detayli Inceleme", "cluster": "company-guide"},
-    {"slug": "karsilastirma", "label": "Karsilastirma", "cluster": "bonus-guide"},
-    {"slug": "guvenilirlik-analizi", "label": "Guvenilirlik Analizi", "cluster": "company-guide"},
-]
-
-
-@api_router.get("/company-articles/{base_slug}")
-async def list_company_articles(base_slug: str, limit: int = 20):
-    """List all articles for a company."""
-    site = await resolve_site_by_base_slug(base_slug)
-    name = site.get("name", "")
-    base = extract_base_slug(site.get("slug", base_slug))
-
-    # Find articles linked to this company
-    articles = await db.company_articles.find(
-        {"company_slug": base, "is_published": True},
-        {"_id": 0, "content": 0}
-    ).sort("created_at", -1).limit(limit).to_list(limit)
-
-    # Also find general articles mentioning this company
-    general_articles = await db.articles.find(
-        {"is_published": True, "$or": [
-            {"title": {"$regex": name, "$options": "i"}},
-            {"tags": {"$in": [name.lower(), base]}},
-        ]},
-        {"_id": 0, "content": 0}
-    ).sort("created_at", -1).limit(10).to_list(10)
-
-    # Company sub-page links for internal linking
-    sub_pages = []
-    for pt in COMPANY_PAGE_TYPES:
-        pt_meta = PAGE_TYPE_META[pt]
-        sub_pages.append({
-            "page_type": pt,
-            "url": f"/{base}/{pt}",
-            "label": pt_meta["h1_template"].format(name=name),
-            "cluster": pt_meta["cluster"],
-        })
-
-    # Hub links
-    hub_links = [
-        {"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in BONUS_HUB_PAGES.items()
-    ]
-    hub_links.extend([
-        {"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in PAYMENT_HUB_PAGES.items()
-    ])
-
-    breadcrumb = [
-        {"name": "Ana Sayfa", "url": "/"},
-        {"name": name, "url": f"/{base}"},
-        {"name": "Makaleler", "url": f"/{base}/makaleler"},
-    ]
-
-    return {
-        "site": {
-            "name": name,
-            "slug": site.get("slug", ""),
-            "base_slug": base,
-            "logo_url": site.get("logo_url", ""),
-            "bonus_amount": site.get("bonus_amount", ""),
-            "rating": site.get("rating", 4.5),
-            "affiliate_url": site.get("affiliate_url", ""),
-        },
-        "articles": articles,
-        "general_articles": general_articles[:5],
-        "article_types": COMPANY_ARTICLE_TYPES,
-        "sub_pages": sub_pages,
-        "hub_links": hub_links[:8],
-        "breadcrumb": breadcrumb,
-        "seo": {
-            "title": f"{name} Makaleleri ve Rehberleri 2026",
-            "description": f"{name} hakkinda detayli makaleler, bonus rehberleri ve giris kilavuzlari.",
-            "h1": f"{name} Makaleler",
-            "canonical": f"https://guncelgiris.ai/{base}/makaleler",
-        },
-    }
-
-
-@api_router.get("/company-articles/{base_slug}/{article_slug}")
-async def get_company_article(base_slug: str, article_slug: str):
-    """Get a specific company article."""
-    site = await resolve_site_by_base_slug(base_slug)
-    name = site.get("name", "")
-    base = extract_base_slug(site.get("slug", base_slug))
-
-    article = await db.company_articles.find_one(
-        {"company_slug": base, "slug": article_slug, "is_published": True},
-        {"_id": 0}
-    )
-    if not article:
-        raise HTTPException(status_code=404, detail="Makale bulunamadi")
-
-    # Increment view count
-    await db.company_articles.update_one(
-        {"company_slug": base, "slug": article_slug},
-        {"$inc": {"view_count": 1}}
-    )
-    article["view_count"] = article.get("view_count", 0) + 1
-
-    # Related company articles
-    related_articles = await db.company_articles.find(
-        {"company_slug": base, "slug": {"$ne": article_slug}, "is_published": True},
-        {"_id": 0, "content": 0}
-    ).sort("created_at", -1).limit(5).to_list(5)
-
-    # Related company sub-pages (based on article type cluster)
-    article_type_info = next((t for t in COMPANY_ARTICLE_TYPES if t["slug"] == article.get("article_type")), None)
-    cluster = article_type_info["cluster"] if article_type_info else "company-guide"
-    related_sub_pages = []
-    for pt in COMPANY_PAGE_TYPES:
-        pt_meta = PAGE_TYPE_META[pt]
-        if pt_meta["cluster"] == cluster:
-            related_sub_pages.append({
-                "page_type": pt,
-                "url": f"/{base}/{pt}",
-                "label": pt_meta["h1_template"].format(name=name),
-            })
-
-    # Related hub pages
-    related_hubs = []
-    if cluster == "bonus-guide":
-        related_hubs = [{"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in BONUS_HUB_PAGES.items()]
-    else:
-        related_hubs = [{"slug": k, "title": v["h1"], "url": f"/{k}"} for k, v in PAYMENT_HUB_PAGES.items()]
-
-    # Similar firms' articles
-    similar = await db.bonus_sites.find(
-        {"category": site.get("category", "Turkiye"), "name": {"$ne": name}, "is_active": True},
-        {"_id": 0, "name": 1, "slug": 1, "logo_url": 1, "bonus_amount": 1}
-    ).sort("rating", -1).limit(4).to_list(4)
-    similar_links = []
-    for s in similar:
-        s_base = extract_base_slug(s.get("slug", ""))
-        if s_base:
-            similar_links.append({
-                "name": s["name"],
-                "logo_url": s.get("logo_url", ""),
-                "articles_url": f"/{s_base}/makaleler",
-                "bonus_amount": s.get("bonus_amount", ""),
-            })
-
-    breadcrumb = [
-        {"name": "Ana Sayfa", "url": "/"},
-        {"name": name, "url": f"/{base}"},
-        {"name": "Makaleler", "url": f"/{base}/makaleler"},
-        {"name": article.get("title", ""), "url": f"/{base}/makaleler/{article_slug}"},
-    ]
-
-    return {
-        "site": {
-            "name": name,
-            "slug": site.get("slug", ""),
-            "base_slug": base,
-            "logo_url": site.get("logo_url", ""),
-            "bonus_amount": site.get("bonus_amount", ""),
-            "rating": site.get("rating", 4.5),
-            "affiliate_url": site.get("affiliate_url", ""),
-        },
-        "article": article,
-        "related_articles": related_articles,
-        "related_sub_pages": related_sub_pages,
-        "related_hubs": related_hubs[:5],
-        "similar_company_links": similar_links,
-        "breadcrumb": breadcrumb,
-        "seo": {
-            "title": article.get("seo_title") or article.get("title", ""),
-            "description": article.get("seo_description") or article.get("excerpt", ""),
-            "h1": article.get("title", ""),
-            "canonical": f"https://guncelgiris.ai/{base}/makaleler/{article_slug}",
-        },
-    }
-
-
-@api_router.post("/company-articles")
-async def create_company_article(data: Dict[str, Any]):
-    """Create a company-specific article."""
-    required = ["company_slug", "title", "content"]
-    for field in required:
-        if not data.get(field):
-            raise HTTPException(status_code=400, detail=f"{field} gerekli")
-
-    if not data.get("slug"):
-        data["slug"] = slugify(data["title"])
-    if not data.get("excerpt") and data.get("content"):
-        data["excerpt"] = data["content"][:200].strip() + "..."
-
-    article = {
-        "id": str(uuid.uuid4()),
-        "company_slug": data["company_slug"],
-        "title": data["title"],
-        "slug": data["slug"],
-        "excerpt": data.get("excerpt", ""),
-        "content": data["content"],
-        "article_type": data.get("article_type", "inceleme"),
-        "tags": data.get("tags", []),
-        "author": data.get("author", "Admin"),
-        "is_published": data.get("is_published", True),
-        "seo_title": data.get("seo_title", ""),
-        "seo_description": data.get("seo_description", ""),
-        "related_company_pages": data.get("related_company_pages", []),
-        "related_hub_pages": data.get("related_hub_pages", []),
-        "internal_links": data.get("internal_links", []),
-        "view_count": 0,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    await db.company_articles.insert_one({k: v for k, v in article.items() if k != "_id"})
-    return {k: v for k, v in article.items() if k != "_id"}
-
-
-@api_router.get("/sitemap-company-articles.xml")
-async def sitemap_company_articles(request: Request):
-    """Sitemap for company articles."""
-    base_url = "https://guncelgiris.ai"
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    articles = await db.company_articles.find(
-        {"is_published": True},
-        {"_id": 0, "company_slug": 1, "slug": 1, "updated_at": 1}
-    ).to_list(10000)
-
-    urls = []
-    for a in articles:
-        cs = a.get("company_slug", "")
-        s = a.get("slug", "")
-        if cs and s:
-            lastmod = str(a.get("updated_at", today))[:10]
-            urls.append(f"""  <url>
-    <loc>{base_url}/{cs}/makaleler/{s}</loc>
+            if article_slug:
+                lastmod = str(a.get("updated_at", ""))[:10] or today
+                urls.append(f"""  <url>
+    <loc>{base_url}/companies/{company_slug}/makale/{article_slug}</loc>
     <lastmod>{lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>""")
-
-    # Also add listing pages per company
-    firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
-    for f in firms:
-        full_slug = f.get("slug", "")
-        base = extract_base_slug(full_slug) if full_slug else ""
-        if base:
-            urls.append(f"""  <url>
-    <loc>{base_url}/{base}/makaleler</loc>
-    <lastmod>{today}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>""")
-
+    except Exception:
+        pass
+    body = chr(10).join(urls) if urls else "  <url>" + chr(10) + "    <loc>" + base_url + "/companies</loc>" + chr(10) + "    <lastmod>" + today + "</lastmod>" + chr(10) + "  </url>"
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{chr(10).join(urls)}
+{body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
-
-
-# ============== PROGRAMMATIC SEO ENGINE (Phase 6) ==============
-
-from agents.programmatic_engine import PageRegistry, COMBINATION_TYPES, INTENT_CATEGORIES, LICENSE_CATEGORIES, COUNTRY_CATEGORIES, GUIDE_TOPICS, PAYMENT_METHODS
-
-
-@api_router.get("/programmatic/stats")
-async def programmatic_stats():
-    """Get programmatic SEO engine statistics."""
-    registry = PageRegistry(db)
-    return await registry.get_stats()
-
-
-@api_router.post("/programmatic/generate")
-async def programmatic_generate(data: Dict[str, Any]):
-    """Generate page combinations. Use dry_run=true to preview."""
-    combination_type = data.get("combination_type")
-    dry_run = data.get("dry_run", True)
-    if not combination_type:
-        raise HTTPException(status_code=400, detail="combination_type gerekli")
-    registry = PageRegistry(db)
-    return await registry.generate_combinations(combination_type, dry_run=dry_run)
-
-
-@api_router.post("/programmatic/register")
-async def programmatic_register(data: Dict[str, Any]):
-    """Register a single programmatic page."""
-    combination_type = data.get("combination_type")
-    dimensions = data.get("dimensions", {})
-    seo = data.get("seo", {})
-    filter_query = data.get("filter_query")
-    if not combination_type or not dimensions:
-        raise HTTPException(status_code=400, detail="combination_type ve dimensions gerekli")
-    registry = PageRegistry(db)
-    return await registry.register_page(combination_type, dimensions, seo, filter_query)
-
-
-@api_router.get("/programmatic/pages")
-async def programmatic_list(combination_type: Optional[str] = None, limit: int = 50, offset: int = 0):
-    """List registered programmatic pages."""
-    registry = PageRegistry(db)
-    return await registry.list_pages(combination_type, limit, offset)
-
-
-@api_router.get("/programmatic/page/{slug:path}")
-async def programmatic_get_page(slug: str):
-    """Get a specific programmatic page with data for rendering."""
-    registry = PageRegistry(db)
-    page = await registry.get_page(slug)
-    if not page:
-        raise HTTPException(status_code=404, detail="Programmatic page bulunamadi")
-
-    # Enrich with firm data for rendering
-    combo_type = page.get("combination_type", "")
-    dims = page.get("dimensions", {})
-    sites = []
-    site_detail = None
-
-    if "company" in dims:
-        company = dims["company"]
-        site_detail = await db.bonus_sites.find_one(
-            {"slug": {"$regex": f"^{re.escape(company)}"}}, {"_id": 0}
-        )
-
-    # For hub-type pages, fetch filtered firms
-    if combo_type in ("intent_x_category", "license_x_category", "country_x_category"):
-        fq = dict(page.get("filter_query", {}))
-        fq["is_active"] = True
-        # Convert filter shorthand to mongo query
-        mongo_q: Dict[str, Any] = {"is_active": True}
-        if fq.get("min_rating"):
-            mongo_q["rating"] = {"$gte": fq["min_rating"]}
-        if fq.get("bonus_type"):
-            mongo_q["bonus_type"] = fq["bonus_type"]
-        if fq.get("category"):
-            mongo_q["category"] = fq["category"]
-        if fq.get("min_bonus"):
-            mongo_q["bonus_value"] = {"$gte": fq["min_bonus"]}
-        sites = await db.bonus_sites.find(mongo_q, {"_id": 0}).sort("sort_order", 1).limit(50).to_list(50)
-
-    elif combo_type == "company_x_payment":
-        if site_detail:
-            sites = [site_detail]
-        # Also get similar firms
-        similar = await db.bonus_sites.find(
-            {"is_active": True, "name": {"$ne": site_detail.get("name", "") if site_detail else ""}},
-            {"_id": 0}
-        ).sort("rating", -1).limit(6).to_list(6)
-        sites.extend(similar)
-
-    elif combo_type == "company_x_year":
-        if site_detail:
-            sites = [site_detail]
-
-    elif combo_type == "guide_x_topic":
-        sites = await db.bonus_sites.find({"is_active": True}, {"_id": 0}).sort("sort_order", 1).limit(20).to_list(20)
-
-    # Build breadcrumb
-    breadcrumb = [{"name": "Ana Sayfa", "url": "/"}]
-    slug_parts = page["slug"].split("/")
-    if len(slug_parts) > 1:
-        breadcrumb.append({"name": slug_parts[0].upper(), "url": f"/{slug_parts[0]}"})
-    breadcrumb.append({"name": page["seo"]["h1"], "url": f"/{page['slug']}"})
-
-    # Internal links
-    hub_links = []
-    for k, v in {**INTENT_CATEGORIES}.items():
-        hub_links.append({"slug": k, "title": v["title"], "url": f"/{k}"})
-    for k, v in {**LICENSE_CATEGORIES}.items():
-        hub_links.append({"slug": k, "title": f"{v['license_name']} Lisansli {v['category_name']}", "url": f"/{k}"})
-
-    return {
-        "page": page,
-        "sites": sites,
-        "site_detail": site_detail,
-        "breadcrumb": breadcrumb,
-        "hub_links": hub_links[:10],
-    }
 
 
 @api_router.get("/sitemap-programmatic.xml")
 async def sitemap_programmatic(request: Request):
-    """Sitemap for all indexable programmatic pages."""
-    registry = PageRegistry(db)
-    urls_data = await registry.generate_sitemap_urls()
+    """Programmatic pages sitemap from programmatic_pages collection."""
+    base_url = FRONTEND_BASE_URL.rstrip("/")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     urls = []
-    for u in urls_data:
-        urls.append(f"""  <url>
-    <loc>{u["loc"]}</loc>
-    <lastmod>{u["lastmod"]}</lastmod>
+    try:
+        from agents.programmatic_engine import ProgrammaticEngine
+        engine = ProgrammaticEngine(db)
+        entries = await engine.generate_sitemap_urls(limit=50000)
+        for e in entries:
+            loc = e.get("loc", "").replace("https://guncelgiris.ai", base_url)
+            if not loc.startswith("http"):
+                loc = base_url + "/" + loc.lstrip("/")
+            lastmod = e.get("lastmod", today)[:10]
+            prio = e.get("priority", "0.7")
+            urls.append(f"""  <url>
+    <loc>{loc}</loc>
+    <lastmod>{lastmod}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>{u["priority"]}</priority>
+    <priority>{prio}</priority>
   </url>""")
+    except Exception:
+        pass
+    body = chr(10).join(urls) if urls else "  <url>" + chr(10) + "    <loc>" + base_url + "/</loc>" + chr(10) + "    <lastmod>" + today + "</lastmod>" + chr(10) + "  </url>"
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{chr(10).join(urls)}
+{body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
 
-# ============== CONTROLLED PUBLISHING SYSTEM (Phase 7) ==============
-
-from agents.publish_scheduler import PublishQueue, DAY_CONTENT_MAP
-
-
-@api_router.get("/publish/status")
-async def publish_status():
-    """Get publish queue status, today's schedule, and 7-day forecast."""
-    queue = PublishQueue(db)
-    status = await queue.get_queue_status()
-    status["daemon"] = {
-        "running": publish_daemon.is_running,
-        "last_run": publish_daemon.last_run,
-        "last_result": publish_daemon.last_result,
-        "interval_minutes": publish_daemon.check_interval_minutes,
-    }
-    return status
-
-
-@api_router.post("/publish/enqueue")
-async def publish_enqueue(data: Dict[str, Any]):
-    """Add items to the publish queue.
-    Body: {"items": [{"slug": "...", "title": "...", "content_type": "...", "source": "...", "priority": 5}]}
-    """
-    items = data.get("items", [])
-    if not items:
-        raise HTTPException(status_code=400, detail="items listesi gerekli")
-    queue = PublishQueue(db)
-    return await queue.add_to_queue(items)
-
-
-@api_router.post("/publish/schedule")
-async def publish_schedule(data: Dict[str, Any] = None):
-    """Schedule pending items based on day-of-week rules."""
-    data = data or {}
-    min_per_day = data.get("min_per_day", 8)
-    max_per_day = data.get("max_per_day", 15)
-    queue = PublishQueue(db)
-    return await queue.schedule_items(min_per_day, max_per_day)
-
-
-@api_router.post("/publish/run")
-async def publish_run():
-    """Manually trigger publishing of today's scheduled items."""
-    queue = PublishQueue(db)
-    return await queue.publish_due()
-
-
-@api_router.post("/publish/manual")
-async def publish_manual(data: Dict[str, Any]):
-    """Override: immediately publish specific items.
-    Body: {"queue_ids": ["id1", "id2"]}
-    """
-    queue_ids = data.get("queue_ids", [])
-    if not queue_ids:
-        raise HTTPException(status_code=400, detail="queue_ids gerekli")
-    queue = PublishQueue(db)
-    return await queue.manual_publish(queue_ids)
-
-
-@api_router.get("/publish/queue")
-async def publish_queue_list(status: Optional[str] = None, limit: int = 50, offset: int = 0):
-    """List queue items with optional status filter."""
-    queue = PublishQueue(db)
-    return await queue.get_queue_items(status, limit, offset)
-
-
-@api_router.post("/publish/remove")
-async def publish_remove(data: Dict[str, Any]):
-    """Remove pending/scheduled items from queue.
-    Body: {"queue_ids": ["id1", "id2"]}
-    """
-    queue_ids = data.get("queue_ids", [])
-    queue = PublishQueue(db)
-    return await queue.remove_from_queue(queue_ids)
-
-
-@api_router.post("/publish/reschedule-failed")
-async def publish_reschedule_failed():
-    """Move failed items back to pending for rescheduling."""
-    queue = PublishQueue(db)
-    return await queue.reschedule_failed()
-
-
-@api_router.get("/publish/schedule-map")
-async def publish_schedule_map():
-    """Get the day-of-week content type schedule."""
-    return {"schedule": DAY_CONTENT_MAP}
-
-
-# ============== VIDEO LIBRARY SYSTEM ==============
-
-from fastapi import File, UploadFile
-from agents.video_library import VideoLibrary, init_storage as init_video_storage
-
-
-@api_router.get("/videos/batch-status")
-async def batch_video_status():
-    """Check batch video generation progress."""
-    return _batch_video_state
-
-
-@api_router.get("/videos")
-async def list_videos(company_slug: Optional[str] = None, category: Optional[str] = None, limit: int = 30, offset: int = 0):
-    """List videos for gallery page."""
-    lib = VideoLibrary(db)
-    return await lib.list_videos(company_slug, category, limit, offset)
-
-
-@api_router.get("/videos/{video_id}")
-async def get_video(video_id: str):
-    """Get single video detail."""
-    lib = VideoLibrary(db)
-    video = await lib.get_video(video_id)
-    if not video:
-        raise HTTPException(status_code=404, detail="Video not found")
-
-    # Get related videos from same company
-    related = []
-    if video.get("company_slug"):
-        related_result = await lib.list_videos(company_slug=video["company_slug"], limit=6)
-        related = [v for v in related_result["videos"] if v["video_id"] != video_id][:5]
-
-    # Get company info if linked
-    company = None
-    if video.get("company_slug"):
-        company = await db.bonus_sites.find_one(
-            {"slug": {"$regex": f"^{re.escape(video['company_slug'])}"}},
-            {"_id": 0, "name": 1, "slug": 1, "logo_url": 1, "bonus_amount": 1, "affiliate_url": 1, "rating": 1}
-        )
-
-    return {"video": video, "related": related, "company": company}
-
-
-@api_router.get("/videos/{video_id}/file")
-async def get_video_file(video_id: str):
-    """Stream video file from object storage."""
-    lib = VideoLibrary(db)
-    result = await lib.get_file(video_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Video file not found")
-    data, content_type = result
-    return Response(content=data, media_type=content_type)
-
-
-@api_router.post("/videos/upload")
-async def upload_video(
-    file: UploadFile = File(...),
-    title: str = "",
-    description: str = "",
-    company_slug: str = "",
-    category: str = "general",
-    tags: str = "",
-    request: Request = None,
-):
-    """Upload a video file (max 50MB)."""
-    require_admin_request(request)
-    file_data = await file.read()
-
-    # Get company name if slug provided
-    company_name = ""
-    if company_slug:
-        site = await db.bonus_sites.find_one(
-            {"slug": {"$regex": f"^{re.escape(company_slug)}"}},
-            {"_id": 0, "name": 1}
-        )
-        company_name = site.get("name", "") if site else ""
-
-    metadata = {
-        "title": title or file.filename,
-        "description": description,
-        "company_slug": company_slug,
-        "company_name": company_name,
-        "category": category,
-        "tags": [t.strip() for t in tags.split(",") if t.strip()] if tags else [],
-        "source": "upload",
-    }
-    lib = VideoLibrary(db)
-    return await lib.upload_video(file_data, file.filename, file.content_type or "video/mp4", metadata)
-
-
-@api_router.post("/videos/register")
-async def register_video(data: Dict[str, Any], request: Request = None):
-    """Register an external or AI-generated video URL."""
-    require_admin_request(request)
-    lib = VideoLibrary(db)
-    return await lib.register_external(data)
-
-
-@api_router.delete("/videos/{video_id}")
-async def delete_video(video_id: str, request: Request):
-    """Soft delete a video."""
-    require_admin_request(request)
-    lib = VideoLibrary(db)
-    deleted = await lib.delete_video(video_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Video not found")
-    return {"deleted": True, "video_id": video_id}
-
-
-# Batch video generation state
-_batch_video_state = {"running": False, "total": 0, "completed": 0, "failed": 0, "current": "", "results": []}
-
-
-async def _generate_single_video_cloud(company_slug: str, company_name: str, prompt: str, bonus_amount: str, category: str, tags: list):
-    """Generate one Sora 2 video, upload to cloud, register in library."""
-    global _batch_video_state
-    _batch_video_state["current"] = company_name
-    try:
-        from emergentintegrations.llm.openai.video_generation import OpenAIVideoGeneration
-
-        firm_slug = slugify(company_name) or company_slug
-        filename = f"{firm_slug}-{int(time.time())}.mp4"
-        output_path = GENERATED_VIDEOS_DIR / filename
-
-        def _run():
-            vg = OpenAIVideoGeneration(api_key=EMERGENT_LLM_KEY)
-            video_bytes = vg.text_to_video(prompt=prompt, model="sora-2", size="1280x720", duration=12, max_wait_time=900)
-            if not video_bytes:
-                return None
-            vg.save_video(video_bytes, str(output_path))
-            return video_bytes
-
-        video_bytes = await asyncio.to_thread(_run)
-        if not video_bytes:
-            _batch_video_state["failed"] += 1
-            _batch_video_state["results"].append({"company": company_name, "status": "failed", "error": "No video bytes returned"})
-            return
-
-        # Upload to object storage
-        from agents.video_library import put_object, VideoLibrary
-        video_id = str(uuid.uuid4())
-        storage_path = f"guncelgiris/videos/{video_id}.mp4"
-        file_data = output_path.read_bytes()
-        put_object(storage_path, file_data, "video/mp4")
-
-        # Register in video library
-        lib = VideoLibrary(db)
-        record = {
-            "title": f"{company_name} Tanitim Videosu 2026",
-            "description": f"{company_name} {bonus_amount} bonus firsati. Guncel giris ve detayli inceleme.",
-            "company_slug": company_slug,
-            "company_name": company_name,
-            "category": category,
-            "tags": tags,
-            "source": "ai_generated",
-            "duration_seconds": 12,
-            "thumbnail_url": "",
-            "is_featured": True,
-        }
-        await lib.upload_video(file_data, filename, "video/mp4", record)
-
-        # Also update bonus_sites with video info
-        await db.bonus_sites.update_one(
-            {"slug": {"$regex": f"^{company_slug}"}},
-            {"$set": {
-                "ai_video_status": "ready",
-                "ai_video_url": f"/api/generated-videos/{filename}",
-                "video_url": f"/api/generated-videos/{filename}",
-                "ai_video_generated_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }}
-        )
-
-        # Clean local file (already in cloud)
-        try:
-            output_path.unlink()
-        except Exception:
-            pass
-
-        _batch_video_state["completed"] += 1
-        _batch_video_state["results"].append({"company": company_name, "status": "success", "video_id": video_id})
-        logger.info(f"Video generated for {company_name}: {video_id}")
-    except Exception as e:
-        _batch_video_state["failed"] += 1
-        _batch_video_state["results"].append({"company": company_name, "status": "failed", "error": str(e)})
-        logger.error(f"Video generation failed for {company_name}: {e}")
-
-
-async def _batch_video_task(jobs: list):
-    """Process video generation jobs in batches of 5."""
-    global _batch_video_state
-    _batch_video_state = {"running": True, "total": len(jobs), "completed": 0, "failed": 0, "current": "", "results": []}
-    batch_size = 5
-    for i in range(0, len(jobs), batch_size):
-        batch = jobs[i:i + batch_size]
-        tasks = [_generate_single_video_cloud(**job) for job in batch]
-        await asyncio.gather(*tasks, return_exceptions=True)
-        logger.info(f"Batch {i // batch_size + 1} complete: {_batch_video_state['completed']}/{_batch_video_state['total']}")
-    _batch_video_state["running"] = False
-    _batch_video_state["current"] = ""
-
-
-@api_router.post("/videos/batch-generate")
-async def batch_generate_videos(data: Dict[str, Any], request: Request, background_tasks: BackgroundTasks):
-    """Start batch video generation with custom prompts.
-    Body: {"videos": [{"company_slug": "...", "company_name": "...", "prompt": "...", "bonus_amount": "...", "category": "...", "tags": [...]}]}
-    """
-    require_admin_request(request)
-    if _batch_video_state.get("running"):
-        return {"error": "Batch already running", "state": _batch_video_state}
-
-    videos = data.get("videos", [])
-    if not videos:
-        raise HTTPException(status_code=400, detail="videos list required")
-
-    background_tasks.add_task(_batch_video_task, videos)
-    return {"started": True, "total": len(videos), "batch_size": 5, "message": f"{len(videos)} video generation started"}
-
-
-# ============== URL SHORTENER SYSTEM ==============
-
-SHORTENER_RESERVED = {
-    "admin", "admin-login", "api", "deneme-bonusu", "hosgeldin-bonusu",
-    "spor-haberleri", "companies", "videolar", "gorseller", "makale",
-    "mac", "bonus", "rehber", "link-kisaltici",
-    "deneme-bonusu-veren-siteler", "guncel-deneme-bonusu",
-    "yatirimsiz-deneme-bonusu", "bonus-veren-siteler",
-    "odeme-yontemleri", "mobil-odeme-ile-bahis", "kredi-karti-ile-bahis",
-    "papel-ile-bahis", "havale-ile-bahis", "kripto-ile-bahis",
-    "bddk-onayli-odeme-yontemleri", "guvenli-odeme-yontemleri",
-}
-
-
-@api_router.get("/shortlinks")
-async def list_shortlinks(limit: int = 100):
-    """List all short links."""
-    links = await db.short_links.find({"is_deleted": False}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
-    return {"links": links, "total": len(links)}
-
-
-@api_router.post("/shortlinks")
-async def create_shortlink(data: Dict[str, Any]):
-    """Create a new short link."""
-    original_url = (data.get("original_url") or "").strip()
-    slug = (data.get("slug") or "").strip().lower()
-
-    if not original_url:
-        raise HTTPException(status_code=400, detail="original_url gerekli")
-    if not slug:
-        raise HTTPException(status_code=400, detail="slug gerekli")
-
-    # Validate URL
-    if not original_url.startswith(("http://", "https://")):
-        raise HTTPException(status_code=400, detail="Gecersiz URL formatı. http:// veya https:// ile baslamali")
-
-    # Validate slug format
-    if not re.match(r'^[a-z0-9-]+$', slug):
-        raise HTTPException(status_code=400, detail="Slug sadece kucuk harf, rakam ve tire icermelidir")
-    if len(slug) < 2 or len(slug) > 50:
-        raise HTTPException(status_code=400, detail="Slug 2-50 karakter arasi olmalidir")
-
-    # Check reserved slugs
-    if slug in SHORTENER_RESERVED:
-        raise HTTPException(status_code=400, detail=f"'{slug}' sistem tarafindan kullanilmaktadir")
-
-    # Check duplicate
-    existing = await db.short_links.find_one({"slug": slug, "is_deleted": False}, {"_id": 0})
-    if existing:
-        raise HTTPException(status_code=409, detail=f"'{slug}' slug zaten kullanılıyor")
-
-    # Check if slug conflicts with a firm
-    firm = await db.bonus_sites.find_one({"slug": {"$regex": f"^{re.escape(slug)}"}}, {"_id": 0, "name": 1})
-    if firm:
-        raise HTTPException(status_code=409, detail=f"'{slug}' bir firma slug'ı ile cakisiyor ({firm['name']})")
-
-    link = {
-        "id": str(uuid.uuid4()),
-        "original_url": original_url,
-        "slug": slug,
-        "click_count": 0,
-        "is_deleted": False,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    await db.short_links.insert_one({k: v for k, v in link.items() if k != "_id"})
-    return link
-
-
-@api_router.put("/shortlinks/{link_id}")
-async def update_shortlink(link_id: str, data: Dict[str, Any]):
-    """Update a short link."""
-    update_fields = {}
-    if "original_url" in data:
-        url = data["original_url"].strip()
-        if not url.startswith(("http://", "https://")):
-            raise HTTPException(status_code=400, detail="Gecersiz URL")
-        update_fields["original_url"] = url
-    if "slug" in data:
-        new_slug = data["slug"].strip().lower()
-        if not re.match(r'^[a-z0-9-]+$', new_slug):
-            raise HTTPException(status_code=400, detail="Gecersiz slug formati")
-        if new_slug in SHORTENER_RESERVED:
-            raise HTTPException(status_code=400, detail=f"'{new_slug}' rezerve edilmis")
-        dup = await db.short_links.find_one({"slug": new_slug, "id": {"$ne": link_id}, "is_deleted": False})
-        if dup:
-            raise HTTPException(status_code=409, detail=f"'{new_slug}' zaten kullaniliyor")
-        update_fields["slug"] = new_slug
-    if not update_fields:
-        raise HTTPException(status_code=400, detail="Guncellenecek alan yok")
-    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
-    await db.short_links.update_one({"id": link_id}, {"$set": update_fields})
-    updated = await db.short_links.find_one({"id": link_id}, {"_id": 0})
-    if not updated:
-        raise HTTPException(status_code=404, detail="Link bulunamadi")
-    return updated
-
-
-@api_router.delete("/shortlinks/{link_id}")
-async def delete_shortlink(link_id: str):
-    """Soft delete a short link."""
-    result = await db.short_links.update_one(
-        {"id": link_id, "is_deleted": False},
-        {"$set": {"is_deleted": True, "updated_at": datetime.now(timezone.utc).isoformat()}}
-    )
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="Link bulunamadi")
-    return {"deleted": True, "id": link_id}
-
-
-@api_router.get("/shortlinks/resolve/{slug}")
-async def resolve_shortlink(slug: str):
-    """Check if a slug is a short link. Returns the original URL if found."""
-    link = await db.short_links.find_one({"slug": slug, "is_deleted": False}, {"_id": 0})
-    if not link:
-        raise HTTPException(status_code=404, detail="Short link bulunamadi")
-    # Increment click count
-    await db.short_links.update_one({"slug": slug}, {"$inc": {"click_count": 1}})
-    link["click_count"] = link.get("click_count", 0) + 1
-    return link
-
-
-# ============== WALLPAPER LIBRARY SYSTEM ==============
-
-from agents.wallpaper_library import WallpaperLibrary, build_seo_slug
-
-_batch_wallpaper_state = {"running": False, "total": 0, "completed": 0, "failed": 0, "current": "", "results": []}
-
-
-@api_router.get("/wallpapers/batch-status")
-async def batch_wallpaper_status():
-    """Check batch wallpaper generation progress."""
-    return _batch_wallpaper_state
-
-
-@api_router.get("/wallpapers")
-async def list_wallpapers(company_slug: Optional[str] = None, category: Optional[str] = None, limit: int = 30, offset: int = 0):
-    """List wallpapers for gallery."""
-    lib = WallpaperLibrary(db)
-    return await lib.list_wallpapers(company_slug, category, limit, offset)
-
-
-@api_router.get("/wallpapers/{seo_slug}")
-async def get_wallpaper(seo_slug: str):
-    """Get wallpaper detail by SEO slug."""
-    lib = WallpaperLibrary(db)
-    wp = await lib.get_wallpaper(seo_slug)
-    if not wp:
-        raise HTTPException(status_code=404, detail="Wallpaper not found")
-
-    company = None
-    if wp.get("company_slug"):
-        company = await db.bonus_sites.find_one(
-            {"slug": {"$regex": f"^{re.escape(wp['company_slug'])}"}},
-            {"_id": 0, "name": 1, "slug": 1, "logo_url": 1, "bonus_amount": 1, "affiliate_url": 1, "rating": 1}
-        )
-
-    related = []
-    if wp.get("company_slug"):
-        r = await lib.list_wallpapers(company_slug=wp["company_slug"], limit=6)
-        related = [w for w in r["wallpapers"] if w["seo_slug"] != seo_slug][:5]
-
-    return {"wallpaper": wp, "company": company, "related": related}
-
-
-@api_router.get("/wallpapers/{seo_slug}/file")
-async def get_wallpaper_file(seo_slug: str):
-    """Serve wallpaper image file. SEO-friendly filename in Content-Disposition."""
-    lib = WallpaperLibrary(db)
-    result = await lib.get_file(seo_slug)
-    if not result:
-        raise HTTPException(status_code=404, detail="Wallpaper file not found")
-    data, content_type, filename = result
-    await db.wallpaper_library.update_one({"seo_slug": seo_slug}, {"$inc": {"download_count": 1}})
-    return Response(
-        content=data, media_type=content_type,
-        headers={"Content-Disposition": f'inline; filename="{filename}"'}
-    )
-
-
-@api_router.post("/wallpapers/generate")
-async def generate_wallpaper(data: Dict[str, Any], request: Request):
-    """Generate a single wallpaper."""
-    require_admin_request(request)
-    lib = WallpaperLibrary(db)
-    return await lib.generate_wallpaper(
-        company_slug=data.get("company_slug", ""),
-        company_name=data.get("company_name", ""),
-        bonus_amount=data.get("bonus_amount", ""),
-        bonus_type=data.get("bonus_type", "deneme"),
-        custom_prompt=data.get("prompt"),
-    )
-
-
-async def _batch_wallpaper_task(jobs: list):
-    """Process wallpaper generation in batches of 5."""
-    global _batch_wallpaper_state
-    _batch_wallpaper_state = {"running": True, "total": len(jobs), "completed": 0, "failed": 0, "current": "", "results": []}
-    batch_size = 2
-    lib = WallpaperLibrary(db)
-    for i in range(0, len(jobs), batch_size):
-        batch = jobs[i:i + batch_size]
-
-        async def _gen(job):
-            _batch_wallpaper_state["current"] = job["company_name"]
-            try:
-                result = await lib.generate_wallpaper(**job)
-                if result.get("generated"):
-                    _batch_wallpaper_state["completed"] += 1
-                    _batch_wallpaper_state["results"].append({"company": job["company_name"], "status": "success", "seo_slug": result["wallpaper"]["seo_slug"]})
-                elif result.get("reason") == "already_exists":
-                    _batch_wallpaper_state["completed"] += 1
-                    _batch_wallpaper_state["results"].append({"company": job["company_name"], "status": "exists", "seo_slug": result["seo_slug"]})
-                else:
-                    _batch_wallpaper_state["failed"] += 1
-                    _batch_wallpaper_state["results"].append({"company": job["company_name"], "status": "failed", "error": result.get("error", "unknown")})
-            except Exception as e:
-                _batch_wallpaper_state["failed"] += 1
-                _batch_wallpaper_state["results"].append({"company": job["company_name"], "status": "failed", "error": str(e)})
-
-        tasks = [_gen(job) for job in batch]
-        await asyncio.gather(*tasks, return_exceptions=True)
-        logger.info(f"Wallpaper batch {i // batch_size + 1}: {_batch_wallpaper_state['completed']}/{_batch_wallpaper_state['total']}")
-
-    _batch_wallpaper_state["running"] = False
-    _batch_wallpaper_state["current"] = ""
-
-
-@api_router.post("/wallpapers/batch-generate")
-async def batch_generate_wallpapers(data: Dict[str, Any], request: Request, background_tasks: BackgroundTasks):
-    """Batch generate wallpapers for multiple companies.
-    Body: {"company_slugs": ["onwin","casibom"]} or {"all_turkiye": true}
-    """
-    require_admin_request(request)
-    if _batch_wallpaper_state.get("running"):
-        return {"error": "Batch already running", "state": _batch_wallpaper_state}
-
-    jobs = []
-    if data.get("all_turkiye"):
-        firms = await db.bonus_sites.find(
-            {"is_active": True, "category": "Turkiye"}, {"_id": 0, "name": 1, "slug": 1, "bonus_amount": 1, "bonus_type": 1}
-        ).sort("sort_order", 1).to_list(300)
-        for f in firms:
-            base = f["slug"].replace("-guncelgiris", "") if f.get("slug", "").endswith("-guncelgiris") else f.get("slug", "")
-            if base:
-                jobs.append({"company_slug": base, "company_name": f["name"], "bonus_amount": f["bonus_amount"], "bonus_type": f.get("bonus_type", "deneme")})
-    else:
-        slugs = data.get("company_slugs", [])
-        for slug in slugs:
-            firm = await db.bonus_sites.find_one({"slug": {"$regex": f"^{re.escape(slug)}"}}, {"_id": 0, "name": 1, "slug": 1, "bonus_amount": 1, "bonus_type": 1})
-            if firm:
-                jobs.append({"company_slug": slug, "company_name": firm["name"], "bonus_amount": firm["bonus_amount"], "bonus_type": firm.get("bonus_type", "deneme")})
-
-    if not jobs:
-        raise HTTPException(status_code=400, detail="No companies found")
-
-    background_tasks.add_task(_batch_wallpaper_task, jobs)
-    return {"started": True, "total": len(jobs), "batch_size": 5}
-
-
-@api_router.delete("/wallpapers/{seo_slug}")
-async def delete_wallpaper(seo_slug: str, request: Request):
-    require_admin_request(request)
-    lib = WallpaperLibrary(db)
-    deleted = await lib.delete_wallpaper(seo_slug)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Wallpaper not found")
-    return {"deleted": True, "seo_slug": seo_slug}
-
-
-# ============== ADMIN CONTROL SYSTEM (Phase 8) ==============
-
-from agents.admin_control import AdminControlSystem
-
-
-@api_router.get("/admin/seo/dashboard")
-async def admin_seo_dashboard(request: Request):
-    """Full admin SEO dashboard — all monitoring data in one call."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_dashboard()
-
-
-@api_router.get("/admin/seo/settings")
-async def admin_seo_settings(request: Request):
-    """Get all admin SEO settings (toggles, limits)."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_settings()
-
-
-@api_router.post("/admin/seo/settings")
-async def admin_seo_update_setting(data: Dict[str, Any], request: Request):
-    """Update a specific setting. Body: {"path": "agents.keyword_intelligence", "value": false}"""
-    require_admin_request(request)
-    path = data.get("path", "")
-    value = data.get("value")
-    if not path:
-        raise HTTPException(status_code=400, detail="path gerekli")
-    ctrl = AdminControlSystem(db)
-    return await ctrl.update_settings(path, value)
-
-
-@api_router.get("/admin/seo/page-types")
-async def admin_seo_page_types(request: Request):
-    """Get page type toggles with counts."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_page_type_status()
-
-
-@api_router.get("/admin/seo/agents")
-async def admin_seo_agents(request: Request):
-    """Get AI agent toggles with job stats."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_agent_status()
-
-
-@api_router.get("/admin/seo/publishing")
-async def admin_seo_publishing(request: Request):
-    """Get publish queue overview."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_publish_overview()
-
-
-@api_router.get("/admin/seo/companies")
-async def admin_seo_companies(request: Request, limit: int = 30):
-    """Get company priority list with coverage stats."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_company_priorities(limit)
-
-
-@api_router.post("/admin/seo/companies/priority")
-async def admin_seo_company_priority(data: Dict[str, Any], request: Request):
-    """Update company priority. Body: {"base_slug": "onwin", "sort_order": 1}"""
-    require_admin_request(request)
-    base_slug = data.get("base_slug", "")
-    sort_order = data.get("sort_order", 999)
-    if not base_slug:
-        raise HTTPException(status_code=400, detail="base_slug gerekli")
-    ctrl = AdminControlSystem(db)
-    return await ctrl.update_company_priority(base_slug, sort_order)
-
-
-@api_router.get("/admin/seo/serp")
-async def admin_seo_serp(request: Request):
-    """Get SERP provider sync status."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_serp_status()
-
-
-@api_router.get("/admin/seo/articles")
-async def admin_seo_articles(request: Request):
-    """Get article generation and coverage status."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_article_status()
-
-
-@api_router.get("/admin/seo/sitemap")
-async def admin_seo_sitemap(request: Request):
-    """Get sitemap health monitoring."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_sitemap_health()
-
-
-@api_router.get("/admin/seo/indexing")
-async def admin_seo_indexing(request: Request):
-    """Get indexing status monitoring."""
-    require_admin_request(request)
-    ctrl = AdminControlSystem(db)
-    return await ctrl.get_indexing_status()
-
-
-MIGRATION_SECRET = "dsbn-migrate-2026-guncelgiris"
+MIGRATION_SECRET = get_optional_env("MIGRATION_SECRET", "dsbn-migrate-2026-guncelgiris")
 
 @api_router.post("/migrate/bulk-import")
 async def migrate_bulk_import(data: Dict[str, Any]):
@@ -6273,7 +4971,9 @@ async def migrate_setup_admin(data: Dict[str, Any]):
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
     username = data.get("username", "admin")
-    password = data.get("password", "123123..")
+    password = data.get("password")
+    if not password:
+        raise HTTPException(status_code=400, detail="Password is required")
     
     hashed = pwd_context.hash(password)
     await db.users.update_one(
@@ -6286,39 +4986,14 @@ async def migrate_setup_admin(data: Dict[str, Any]):
 
 @api_router.get("/robots.txt")
 async def robots_txt(request: Request, domain: Optional[str] = None):
-    """Generate robots.txt"""
-    base_url = "https://guncelgiris.ai"
+    """Generate robots.txt (for API domain; frontend uses static public/robots.txt)."""
+    frontend_base = FRONTEND_BASE_URL
     content = f"""User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin-login
-Disallow: /api/
-Allow: /api/sitemap.xml
-Allow: /api/sitemap-pages.xml
-Allow: /api/sitemap-firms.xml
-Allow: /api/sitemap-companies.xml
-Allow: /api/sitemap-videos.xml
-Allow: /api/sitemap-articles.xml
-Allow: /api/sitemap-amp.xml
-Allow: /api/sitemap-amp-videos.xml
-Allow: /api/amp/
-Allow: /api/amp-video/
-Allow: /api/generated-videos/
 
-User-agent: Googlebot
-Allow: /api/sitemap.xml
-Allow: /api/sitemap-pages.xml
-Allow: /api/sitemap-firms.xml
-Allow: /api/sitemap-companies.xml
-Allow: /api/sitemap-videos.xml
-Allow: /api/sitemap-articles.xml
-Allow: /api/sitemap-amp.xml
-Allow: /api/sitemap-amp-videos.xml
-Allow: /api/amp/
-Allow: /api/amp-video/
-Allow: /api/generated-videos/
-
-Sitemap: {base_url}/api/sitemap.xml
+Sitemap: {frontend_base}/sitemap.xml
 """
     return PlainTextResponse(content=content)
 
@@ -6345,9 +5020,9 @@ async def get_seo_data(slug: str):
 
 # ============== TELEGRAM BOT MANAGEMENT ==============
 
-from telegram_bot_manager import (
-    firm_name_to_bot_username, telegram_api_call, set_bot_webhook,
-    delete_bot_webhook, get_bot_info, send_telegram_message,
+from telegram_bot_manager import (  # noqa: E402
+    firm_name_to_bot_username, set_bot_webhook,
+    delete_bot_webhook, send_telegram_message,
     set_bot_commands, set_bot_profile, build_start_message, build_bonus_message,
     build_link_message, build_destek_message,
     create_bot_via_botfather_with_session,
@@ -6842,6 +5517,33 @@ async def admin_firm_bot_map(request: Request):
     return {"firms": result, "total": len(firms), "with_bot": sum(1 for r in result if r["has_bot"])}
 
 
+@api_router.get("/telegram/firm/{slug}")
+async def public_firm_telegram_bot(slug: str):
+    """Public endpoint: get Telegram bot info for a firm by slug."""
+    firm = await db.bonus_sites.find_one(
+        {"slug": slug, "is_active": True},
+        {"_id": 0, "id": 1, "name": 1, "slug": 1},
+    )
+    if not firm:
+        raise HTTPException(status_code=404, detail="Firma bulunamadı")
+
+    bot = await db.telegram_bots.find_one(
+        {"firm_id": firm["id"], "status": "active"},
+        {"_id": 0, "bot_username": 1},
+    )
+    if not bot:
+        return {"has_bot": False}
+
+    deep_link = f"https://t.me/{bot['bot_username']}"
+    return {
+        "has_bot": True,
+        "bot_username": bot["bot_username"],
+        "deep_link": deep_link,
+        "firm_slug": firm.get("slug", ""),
+        "firm_name": firm["name"],
+    }
+
+
 # ── Telegram Webhook Handler (Public - no auth) ──
 
 @api_router.post("/telegram/webhook/{bot_id}")
@@ -6957,7 +5659,7 @@ async def seed_database():
 
 # Include router
 # GG2026 AI Agent Router
-from agents.router import router as agents_router
+from agents.router import router as agents_router  # noqa: E402
 api_router.include_router(agents_router)
 
 app.include_router(api_router)
