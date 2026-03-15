@@ -155,7 +155,7 @@ class TestAdminSEOSettings:
         """POST settings toggles by dot-path"""
         # First get current value
         response = requests.get(f"{BASE_URL}/api/admin/seo/settings", headers=admin_headers)
-        _ = response.json()["agents"]["keyword_intelligence"]
+        response.json()["agents"]["keyword_intelligence"]
 
         # Toggle it off
         response = requests.post(

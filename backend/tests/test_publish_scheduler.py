@@ -585,7 +585,7 @@ class TestDaemonStatus:
         daemon = data.get("daemon", {})
         assert daemon.get("running"), f"Daemon should be running, got {daemon}"
         
-        print(f"✓ Daemon running=True, interval={daemon.get('interval_minutes')} min")
+        print("✓ Daemon running=True, interval={} min".format(daemon.get("interval_minutes")))
 
 
 # ==================== CLEANUP ====================
