@@ -99,6 +99,7 @@ SPORT_KEYS = [
 ]
 
 # CORS configuration
+FRONTEND_BASE_URL = (get_optional_env("FRONTEND_BASE_URL", "https://guncelgiris.ai") or "https://guncelgiris.ai").rstrip("/")
 CORS_ORIGINS = get_optional_env("CORS_ORIGINS", "*")
 CORS_ALLOW_CREDENTIALS = get_optional_env("CORS_ALLOW_CREDENTIALS", "false").lower() == "true"
 
@@ -2158,8 +2159,8 @@ async def get_firma_video_detail(slug: str):
             "ai_video_error": site.get("ai_video_error", ""),
         },
         "video": video_data,
-        "canonical_url": f"https://guncelgiris.ai/{firm_slug}/video",
-        "amp_url": f"https://guncelgiris.ai/api/amp-video/{firm_slug}",
+        "canonical_url": f"{FRONTEND_BASE_URL}/{firm_slug}/video",
+        "amp_url": f"{FRONTEND_BASE_URL}/api/amp-video/{firm_slug}",
     }
 
 
@@ -2325,15 +2326,15 @@ async def get_amp_page(slug: str, request: Request):
         {"_id": 0}
     ).sort("rating", -1).limit(5).to_list(5)
 
-    canonical_url = f"https://guncelgiris.ai/{firm_slug}"
-    amp_url = f"https://guncelgiris.ai/api/amp/{firm_slug}"
+    canonical_url = f"{FRONTEND_BASE_URL}/{firm_slug}"
+    amp_url = f"{FRONTEND_BASE_URL}/api/amp/{firm_slug}"
 
     features_html = "".join(f'<li class="feature-item">{f}</li>' for f in features)
 
     articles_html = ""
     for a in articles:
         date_str = a.get("created_at", "")[:10] if a.get("created_at") else ""
-        articles_html += f'''<a href="https://guncelgiris.ai/makale/{a.get("slug","")}" class="article-link">
+        articles_html += f'''<a href="{FRONTEND_BASE_URL}/makale/{a.get("slug","")}" class="article-link">
             <span class="article-title">{a.get("title","")}</span>
             <span class="article-date">{date_str}</span>
         </a>'''
@@ -2341,7 +2342,7 @@ async def get_amp_page(slug: str, request: Request):
     similar_html = ""
     for s in similar:
         s_slug = s.get("slug", "")
-        similar_html += f'''<a href="https://guncelgiris.ai/{s_slug}" class="similar-item">
+        similar_html += f'''<a href="{FRONTEND_BASE_URL}/{s_slug}" class="similar-item">
             <amp-img src="{s.get("logo_url","")}" width="36" height="36" layout="fixed" alt="{s.get("name","")}"></amp-img>
             <div class="similar-info">
                 <span class="similar-name">{s.get("name","")}</span>
@@ -2424,8 +2425,8 @@ async def get_amp_page(slug: str, request: Request):
 <body>
     <header>
         <div class="container header-inner">
-            <a href="https://guncelgiris.ai" class="logo">DSBN</a>
-            <a href="https://guncelgiris.ai" class="nav-link">Ana Sayfa</a>
+            <a href="{FRONTEND_BASE_URL}" class="logo">DSBN</a>
+            <a href="{FRONTEND_BASE_URL}" class="nav-link">Ana Sayfa</a>
         </div>
     </header>
 
@@ -2485,8 +2486,8 @@ async def get_amp_video_page(slug: str, request: Request):
     video_title = video_data["video_title"]
     video_description = video_data["video_description"]
 
-    canonical_url = f"https://guncelgiris.ai/{firm_slug}/video"
-    firm_url = f"https://guncelgiris.ai/{firm_slug}"
+    canonical_url = f"{FRONTEND_BASE_URL}/{firm_slug}/video"
+    firm_url = f"{FRONTEND_BASE_URL}/{firm_slug}"
 
     youtube_video_id = ""
     if "watch?v=" in video_url:
@@ -2514,7 +2515,7 @@ async def get_amp_video_page(slug: str, request: Request):
         "publisher": {
             "@type": "Organization",
             "name": "guncelgiris.ai",
-            "url": "https://guncelgiris.ai",
+            "url": FRONTEND_BASE_URL,
         },
         "isFamilyFriendly": False,
     }
@@ -4188,7 +4189,7 @@ async def get_company_profile(slug: str):
     return {
         "company": company,
         "alternatives": alternatives,
-        "canonical_url": f"https://guncelgiris.ai/companies/{company.get('slug')}",
+        "canonical_url": f"{FRONTEND_BASE_URL}/companies/{company.get('slug')}",
     }
 
 
@@ -4332,7 +4333,7 @@ async def admin_delete_company(company_id: str, request: Request):
 @api_router.get("/sitemap.xml")
 async def sitemap_xml(request: Request, domain: Optional[str] = None):
     """Generate sitemap index pointing to sub-sitemaps"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -4383,7 +4384,7 @@ async def sitemap_xml(request: Request, domain: Optional[str] = None):
 @api_router.get("/sitemap-pages.xml")
 async def sitemap_pages(request: Request):
     """Static pages + categories sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     categories = await db.categories.find({}, {"_id": 0, "slug": 1}).to_list(100)
     
@@ -4419,7 +4420,7 @@ async def sitemap_pages(request: Request):
 @api_router.get("/sitemap-firms.xml")
 async def sitemap_firms(request: Request):
     """All 264 firm pages sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1, "name": 1}).to_list(500)
     
@@ -4445,7 +4446,7 @@ async def sitemap_firms(request: Request):
 @api_router.get("/sitemap-companies.xml")
 async def sitemap_companies(request: Request):
     """All approved company profile pages sitemap (/companies/{slug})."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     companies = await db.companies.find(
         {"is_active": True, "is_approved": True},
@@ -4474,7 +4475,7 @@ async def sitemap_companies(request: Request):
 @api_router.get("/sitemap-videos.xml")
 async def sitemap_videos(request: Request):
     """Firm video pages sitemap (/{slug}/video)."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
 
@@ -4499,7 +4500,7 @@ async def sitemap_videos(request: Request):
 @api_router.get("/sitemap-articles.xml")
 async def sitemap_articles(request: Request):
     """All published articles sitemap"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     articles = await db.articles.find(
         {"is_published": True},
         {"_id": 0, "slug": 1, "updated_at": 1, "created_at": 1}
@@ -4525,7 +4526,7 @@ async def sitemap_articles(request: Request):
 @api_router.get("/sitemap-amp.xml")
 async def sitemap_amp(request: Request):
     """AMP pages sitemap for all firms"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
     
@@ -4551,7 +4552,7 @@ async def sitemap_amp(request: Request):
 @api_router.get("/sitemap-amp-videos.xml")
 async def sitemap_amp_videos(request: Request):
     """AMP video pages sitemap (/api/amp-video/{slug})."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     firms = await db.bonus_sites.find({"is_active": True}, {"_id": 0, "slug": 1}).to_list(500)
 
@@ -4946,7 +4947,7 @@ async def get_firma_sub_page(base_slug: str, page_type: str):
             "title": title,
             "description": description,
             "h1": h1,
-            "canonical": f"https://guncelgiris.ai/{base}/{page_type}",
+            "canonical": f"{FRONTEND_BASE_URL}/{base}/{page_type}",
         },
         "breadcrumb": breadcrumb,
         "internal_links": {
@@ -5013,7 +5014,7 @@ async def get_bonus_hub_page(hub_slug: str):
             "title": hub["title"],
             "description": hub["description"],
             "h1": hub["h1"],
-            "canonical": f"https://guncelgiris.ai/{hub_slug}",
+            "canonical": f"{FRONTEND_BASE_URL}/{hub_slug}",
         },
         "breadcrumb": breadcrumb,
         "sites": sites,
@@ -5069,7 +5070,7 @@ async def get_payment_hub_page(hub_slug: str):
             "title": hub["title"],
             "description": hub["description"],
             "h1": hub["h1"],
-            "canonical": f"https://guncelgiris.ai/{hub_slug}",
+            "canonical": f"{FRONTEND_BASE_URL}/{hub_slug}",
         },
         "breadcrumb": breadcrumb,
         "sites": sites,
@@ -5084,7 +5085,7 @@ async def get_payment_hub_page(hub_slug: str):
 @api_router.get("/sitemap-seo-pages.xml")
 async def sitemap_seo_pages(request: Request):
     """GG2026 SEO hub pages and company sub-pages sitemap."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     urls = []
 
@@ -5211,7 +5212,7 @@ async def list_company_articles(base_slug: str, limit: int = 20):
             "title": f"{name} Makaleleri ve Rehberleri 2026",
             "description": f"{name} hakkinda detayli makaleler, bonus rehberleri ve giris kilavuzlari.",
             "h1": f"{name} Makaleler",
-            "canonical": f"https://guncelgiris.ai/{base}/makaleler",
+            "canonical": f"{FRONTEND_BASE_URL}/{base}/makaleler",
         },
     }
 
@@ -5306,7 +5307,7 @@ async def get_company_article(base_slug: str, article_slug: str):
             "title": article.get("seo_title") or article.get("title", ""),
             "description": article.get("seo_description") or article.get("excerpt", ""),
             "h1": article.get("title", ""),
-            "canonical": f"https://guncelgiris.ai/{base}/makaleler/{article_slug}",
+            "canonical": f"{FRONTEND_BASE_URL}/{base}/makaleler/{article_slug}",
         },
     }
 
@@ -5351,7 +5352,7 @@ async def create_company_article(data: Dict[str, Any]):
 @api_router.get("/sitemap-company-articles.xml")
 async def sitemap_company_articles(request: Request):
     """Sitemap for company articles."""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     articles = await db.company_articles.find(
         {"is_published": True},
@@ -6423,7 +6424,7 @@ async def migrate_setup_admin(data: Dict[str, Any]):
 @api_router.get("/robots.txt")
 async def robots_txt(request: Request, domain: Optional[str] = None):
     """Generate robots.txt"""
-    base_url = "https://guncelgiris.ai"
+    base_url = FRONTEND_BASE_URL
     content = f"""User-agent: *
 Allow: /
 Disallow: /admin

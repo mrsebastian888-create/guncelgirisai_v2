@@ -29,6 +29,9 @@ import VideoPlayerPage from "@/pages/VideoPlayerPage";
 import WallpaperGalleryPage from "@/pages/WallpaperGalleryPage";
 import WallpaperDetailPage from "@/pages/WallpaperDetailPage";
 import LinkShortenerPage from "@/pages/LinkShortenerPage";
+import ProvidersPage from "@/pages/ProvidersPage";
+import ProviderDetailPage from "@/pages/ProviderDetailPage";
+import ContactPage from "@/pages/ContactPage";
 
 // Components
 import Navbar from "@/components/Navbar";
@@ -37,8 +40,10 @@ import WelcomePopup from "@/components/WelcomePopup";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-// Always use relative API path - works on any domain
-export const API = "/api";
+// Local: proxy /api to backend. Prod: same-origin /api or REACT_APP_BACKEND_URL (e.g. Railway frontend env)
+export const API = process.env.REACT_APP_BACKEND_URL
+  ? `${process.env.REACT_APP_BACKEND_URL.replace(/\/$/, "")}/api`
+  : "/api";
 
 // Admin her domainden /admin-login path'i ile erişilebilir
 export function isAdminDomain() {
@@ -93,6 +98,9 @@ function AppLayout({ isLoading }) {
               <Route path="/mac/:slug" element={<MatchDetailPage />} />
               <Route path="/companies" element={<CompaniesPage />} />
               <Route path="/companies/:slug" element={<CompanyProfilePage />} />
+              <Route path="/saglayicilar" element={<ProvidersPage />} />
+              <Route path="/saglayicilar/:slug" element={<ProviderDetailPage />} />
+              <Route path="/iletisim" element={<ContactPage />} />
 
               {/* Video Gallery & Player */}
               <Route path="/videolar" element={<VideoGalleryPage />} />
