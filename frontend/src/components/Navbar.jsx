@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Gift, Activity, ChevronDown, Globe, Film, Image, LinkIcon } from "lucide-react";
+import { Menu, X, Gift, Activity, ChevronDown, Globe, Film, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { API } from "@/App";
@@ -67,7 +67,6 @@ const Navbar = () => {
     { label: "Spor Haberleri", href: "/spor-haberleri", icon: Activity },
     { label: "Videolar", href: "/videolar", icon: Film },
     { label: "Gorseller", href: "/gorseller", icon: Image },
-    { label: "Link Kisaltici", href: "/link-kisaltici", icon: LinkIcon },
   ];
 
   const isActive = (href) => {

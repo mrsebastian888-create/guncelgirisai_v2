@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { API } from "@/App";
+import LinkShortenerPage from "@/pages/LinkShortenerPage";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Wand2, BarChart3, FileText, RefreshCw,
@@ -10,7 +11,7 @@ import {
   Search, Edit2, Save, X, Eye, ChevronDown, ChevronUp,
   Gift, Calendar, ArrowUp, ArrowDown, Layers, Image,
   Play, Pause, Clock, ListChecks, Zap, Download, Check, Building2,
-  Send, Bot, Users, Radio, MessageSquare, Settings
+  Send, Bot, Users, Radio, MessageSquare, Settings, LinkIcon
 } from "lucide-react";
 import SeoAssistant from "@/components/SeoAssistant";
 import { Button } from "@/components/ui/button";
@@ -2163,7 +2164,7 @@ const AdminPage = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="domains" className="space-y-6">
-          <TabsList className="grid grid-cols-10 w-full max-w-6xl">
+          <TabsList className="grid grid-cols-11 w-full max-w-6xl">
             <TabsTrigger value="domains"><Globe className="w-4 h-4 mr-1.5" />Domainler</TabsTrigger>
             <TabsTrigger value="sites"><Gift className="w-4 h-4 mr-1.5" />Siteler</TabsTrigger>
             <TabsTrigger value="companies" data-testid="admin-companies-tab"><Building2 className="w-4 h-4 mr-1.5" />Companies</TabsTrigger>
@@ -2174,6 +2175,7 @@ const AdminPage = () => {
             <TabsTrigger value="matches"><Activity className="w-4 h-4 mr-1.5" />Maçlar</TabsTrigger>
             <TabsTrigger value="telegram" data-testid="admin-telegram-tab"><Bot className="w-4 h-4 mr-1.5" />Telegram</TabsTrigger>
             <TabsTrigger value="settings"><Settings className="w-4 h-4 mr-1.5" />Ayarlar</TabsTrigger>
+            <TabsTrigger value="shortlinks"><LinkIcon className="w-4 h-4 mr-1.5" />Link Kısaltıcı</TabsTrigger>
           </TabsList>
 
           <TabsContent value="domains"><DomainsTab domains={domains} onRefresh={fetchData} /></TabsContent>
@@ -2191,6 +2193,23 @@ const AdminPage = () => {
           <TabsContent value="matches" className="space-y-6"><MatchesAdminTab /></TabsContent>
           <TabsContent value="telegram"><TelegramTab /></TabsContent>
           <TabsContent value="settings"><SettingsTab /></TabsContent>
+          <TabsContent value="shortlinks" className="space-y-6">
+            <Card className="glass-card border-white/10">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LinkIcon className="w-5 h-5 text-neon-green" />
+                  Link Kısaltıcı
+                </CardTitle>
+                <CardDescription>
+                  Ziyaretçilere göstermeden, sadece admin olarak kısa linkleri yönetin. Aşağıda liste ve CRUD işlemleri doğrudan bu panelde açılır.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* LinkShortenerPage'i admin tab içinde gömülü kullanıyoruz */}
+                <LinkShortenerPage />
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
